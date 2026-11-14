@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Дошка — formlq",
+  title: "Дошка",
   // Shared by link only; keep out of search results.
   robots: { index: false, follow: false },
 };

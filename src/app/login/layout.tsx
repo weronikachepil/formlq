@@ -2,9 +2,9 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Вхід — formlq",
+  title: "Вхід",
   description:
-    "Увійдіть до formlq — платформи для підготовки до НМТ з математики. Тренувальні тести, прогрес, аналіз результатів.",
+    "Увійдіть до formlq: тести НМТ і тести від викладачів з автоперевіркою, прогрес і розбір помилок, математична дошка для уроків.",
   alternates: {
     canonical: "/login",
   },
