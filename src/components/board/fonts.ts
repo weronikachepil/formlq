@@ -1,8 +1,7 @@
-import { JetBrains_Mono, Manrope, Montserrat } from "next/font/google";
+import { JetBrains_Mono, Manrope, Marck_Script, Montserrat } from "next/font/google";
 
-// Fonts of the mathboard design (board.css reads them through these variables).
-// Canvas text fonts (Comfortaa, Marck Script) are loaded app-wide in the root layout,
-// because the engine reads their variables from <html>.
+// Fonts of the mathboard design (board.css reads them through these variables). The canvas also
+// draws with Manrope and Marck Script; the engine reads their variables from `.mathboard`.
 
 /** Body / panels / quiz cards. */
 const manrope = Manrope({
@@ -25,6 +24,14 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "700"],
 });
 
-/** Class names of the board's CSS fonts; put them on the `.mathboard` root. */
-export const boardFonts = [manrope, montserrat, jetbrainsMono].map((f) => f.variable).join(" ");
+/** Handwriting font for canvas text objects (--font-marck-script). */
+const marckScript = Marck_Script({
+  variable: "--font-marck-script",
+  subsets: ["latin", "cyrillic"],
+  weight: "400",
+});
+
+/** Class names of the board's CSS fonts; put them on the `.mathboard` root. Declared here, not in the
+ *  root layout, so only board pages download them. */
+export const boardFonts = [manrope, montserrat, jetbrainsMono, marckScript].map((f) => f.variable).join(" ");
 

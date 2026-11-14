@@ -187,12 +187,12 @@ function PopoverBody({
       </div>
 
       {needsStatus(lesson, now) && (
-        <p className="flex items-center gap-1.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs font-medium">
+        <p className="flex items-center gap-1.5 rounded-[1rem] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs font-medium">
           <AlertCircle size={13} /> Урок минув — позначте статус
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted/70 p-1">
+      <div className="flex gap-0.5 rounded-full bg-muted/70 p-0.5">
         {STATUSES.map((s) => (
           <button
             key={s}
@@ -200,7 +200,7 @@ function PopoverBody({
             onClick={() => onStatus(s)}
             aria-pressed={status === s}
             className={cn(
-              "h-8 rounded-full text-xs font-semibold transition-all",
+              "h-7 flex-1 rounded-full px-1.5 text-[11px] font-semibold transition-all",
               status === s ? cn(STATUS_ACTIVE[s], "shadow-pill") : "text-muted-foreground hover:bg-glass-strong hover:text-foreground",
             )}
           >
@@ -209,26 +209,26 @@ function PopoverBody({
         ))}
       </div>
 
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 px-3 py-2">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ціна</p>
-          <p className="font-semibold tabular-nums">
+      <div className="flex items-center justify-between gap-3 rounded-[1rem] border border-border/60 py-1.5 pl-3 pr-1.5">
+        <p className="flex min-w-0 items-baseline gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ціна</span>
+          <span className="text-sm font-semibold tabular-nums">
             {lesson.price !== undefined ? `${lesson.price.toLocaleString("uk")} ₴` : "не вказано"}
-          </p>
-        </div>
+          </span>
+        </p>
         <button
           type="button"
           role="switch"
           aria-checked={!!lesson.paid}
           onClick={onTogglePaid}
           className={cn(
-            "inline-flex items-center gap-2 h-8 pl-1 pr-3 rounded-full text-xs font-semibold transition-colors",
+            "inline-flex items-center gap-1.5 h-7 pl-1 pr-2.5 rounded-full text-xs font-semibold transition-colors",
             lesson.paid ? "bg-green-600/15 text-green-700 dark:text-green-300" : "bg-muted text-muted-foreground hover:text-foreground",
           )}
         >
           <span
             className={cn(
-              "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors",
+              "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
               lesson.paid ? "bg-green-600 text-white" : "bg-glass-strong shadow-pill",
             )}
           >
@@ -238,12 +238,20 @@ function PopoverBody({
         </button>
       </div>
 
-      <div className="rounded-2xl border border-border/60 px-3 py-2.5 space-y-1.5">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Домашні завдання</p>
-          {overdue > 0 && (
-            <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">Прострочено: {overdue}</span>
-          )}
+      <div className="rounded-[1rem] border border-border/60 px-3 py-2 space-y-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Домашні
+            {overdue > 0 && (
+              <span className="normal-case tracking-normal text-[11px] text-red-600 dark:text-red-400">прострочено: {overdue}</span>
+            )}
+          </p>
+          <Link
+            href={`/tutor/students/${lesson.studentId}`}
+            className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+          >
+            Кабінет учня <ChevronRight size={12} />
+          </Link>
         </div>
         {latest && hwMeta ? (
           <Link href={`/tutor/homework/${latest.id}`} className="block group">
@@ -262,12 +270,6 @@ function PopoverBody({
         ) : (
           <p className="text-xs text-muted-foreground">Домашніх ще не задано</p>
         )}
-        <Link
-          href={`/tutor/students/${lesson.studentId}`}
-          className="inline-flex items-center gap-0.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
-        >
-          Кабінет учня <ChevronRight size={12} />
-        </Link>
       </div>
 
       <div className="flex gap-2">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Comfortaa, JetBrains_Mono, Manrope, Marck_Script, Montserrat, Pinyon_Script } from "next/font/google";
+import { JetBrains_Mono, Manrope, Montserrat, Pinyon_Script } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -8,6 +8,7 @@ import { ExamGuardProvider } from "@/context/ExamGuardContext";
 import { HeaderProvider } from "@/context/HeaderContext";
 import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
+import { SiteIntro } from "@/components/SiteIntro";
 
 /** Body text (MathBoard design). */
 const manrope = Manrope({
@@ -37,40 +38,28 @@ const pinyonScript = Pinyon_Script({
   weight: "400",
 });
 
-/** Whiteboard canvas UI font (read by the board engine through --font-comfortaa). */
-const comfortaa = Comfortaa({
-  variable: "--font-comfortaa",
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "700"],
-});
-
-/** Whiteboard handwriting font; the board engine reads --font-marck-script from <html>. */
-const marckScript = Marck_Script({
-  variable: "--font-marck-script",
-  subsets: ["latin", "cyrillic"],
-  weight: "400",
-});
 
 export const metadata: Metadata = {
   title: {
-    default: "formlq — підготовка до НМТ з математики",
+    default: "formlq — підготовка до НМТ і дошка для уроків математики",
     template: "%s | formlq",
   },
   description:
-    "Безкоштовна онлайн-платформа для підготовки до НМТ з математики. Пробні тести, тренувальні завдання, детальний аналіз результатів. НМТ 2025 математика.",
+    "Безкоштовна платформа з математики: тести НМТ минулих років і тести від викладачів з автоперевіркою та розбором, а ще інтерактивна дошка для уроків, де вчитель і учні працюють разом.",
   keywords: [
     "НМТ математика",
     "підготовка до НМТ",
-    "НМТ 2025",
-    "пробне НМТ",
     "тести НМТ математика",
-    "НМТ завдання",
-    "онлайн тести НМТ",
-    "тренування НМТ",
-    "математика НМТ онлайн",
+    "НМТ минулих років",
+    "пробне НМТ",
+    "онлайн тести з математики",
+    "тести для учнів 5–11 класів",
+    "математична дошка онлайн",
+    "інтерактивна дошка для уроків",
+    "дошка для репетитора",
+    "онлайн уроки математики",
+    "платформа для репетиторів",
     "formlq",
-    "підготовка до іспиту математика",
-    "НМТ підготовка безкоштовно",
   ],
   authors: [{ name: "formlq" }],
   creator: "formlq",
@@ -83,23 +72,21 @@ export const metadata: Metadata = {
     locale: "uk_UA",
     url: "https://www.formlq.com",
     siteName: "formlq",
-    title: "formlq — підготовка до НМТ з математики",
-    description:
-      "Безкоштовна онлайн-платформа для підготовки до НМТ з математики. Пробні тести, тренувальні завдання, аналіз результатів.",
+    title: "formlq — підготовка до НМТ і дошка для уроків математики",
+    description: "Тести НМТ минулих років і тести від викладачів з автоперевіркою, а ще інтерактивна математична дошка для уроків з учнями.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "formlq — підготовка до НМТ з математики",
+        alt: "formlq — тести НМТ і дошка для уроків математики",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "formlq — підготовка до НМТ з математики",
-    description:
-      "Безкоштовна онлайн-платформа для підготовки до НМТ з математики. Пробні тести, аналіз результатів.",
+    title: "formlq — підготовка до НМТ і дошка для уроків математики",
+    description: "Тести НМТ минулих років і тести від викладачів з автоперевіркою, а ще інтерактивна математична дошка для уроків з учнями.",
     images: ["/og-image.png"],
   },
   verification: {
@@ -123,14 +110,20 @@ const jsonLd = {
   "@type": "EducationalOrganization",
   name: "formlq",
   url: "https://www.formlq.com",
-  description:
-    "Онлайн-платформа для підготовки до НМТ з математики. Пробні тести, тренувальні завдання, аналіз результатів.",
+  description: "Безкоштовна платформа з математики: тести НМТ минулих років і тести від викладачів з автоперевіркою та розбором, а ще інтерактивна дошка для уроків, де вчитель і учні працюють разом.",
   inLanguage: "uk",
+  knowsAbout: [
+    "НМТ з математики",
+    "тести НМТ минулих років з автоперевіркою",
+    "тести від викладачів для 5–11 класів з алгебри й геометрії",
+    "інтерактивна математична дошка: графіки, об'ємні фігури, формули, побудови",
+    "уроки вчителя з учнями в реальному часі, домашні завдання й календар",
+  ],
   offers: {
     "@type": "Offer",
     price: "0",
     priceCurrency: "UAH",
-    description: "Безкоштовна підготовка до НМТ з математики",
+    description: "Безкоштовна платформа для учнів і вчителів математики",
   },
 };
 
@@ -142,7 +135,7 @@ export default function RootLayout({
   return (
     <html
       lang="uk"
-      className={`${manrope.variable} ${montserrat.variable} ${jetbrainsMono.variable} ${pinyonScript.variable} ${comfortaa.variable} ${marckScript.variable} h-full antialiased`}
+      className={`${manrope.variable} ${montserrat.variable} ${jetbrainsMono.variable} ${pinyonScript.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -158,6 +151,8 @@ export default function RootLayout({
           <ThemeProvider>
             <AuthProvider>
               <ExamGuardProvider>
+                {/* First, so its pre-paint script runs before the page underneath is drawn. */}
+                <SiteIntro />
                 <HeaderProvider>{children}</HeaderProvider>
                 <Toaster />
               </ExamGuardProvider>

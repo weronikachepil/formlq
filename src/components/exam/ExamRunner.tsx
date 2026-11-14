@@ -536,7 +536,7 @@ export function ExamRunner({
       <main className="max-w-3xl mx-auto px-4 py-5 space-y-4">
         {/* Sticky so the timer and "Завершити" stay in reach on long questions.
             --app-header-h is set by AppShell; 0 on the header-less public page. */}
-        <div className="sticky top-[var(--app-header-h,0px)] z-40 -mx-4 px-4 py-2 flex items-center justify-between gap-3 bg-background/60 backdrop-blur-xl">
+        <div className="sticky top-[calc(var(--app-header-h,0px)+0.5rem)] z-40 flex items-center justify-between gap-3 rounded-full border border-glass-edge bg-glass py-1.5 pl-5 pr-1.5 shadow-pill backdrop-blur-xl">
           <span className="text-sm text-muted-foreground tabular-nums">
             {questions.length - unanswered} / {questions.length}
           </span>

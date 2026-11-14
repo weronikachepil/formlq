@@ -1,7 +1,7 @@
 // MathBoard: the canvas itself (camera, rendering, tools, history, sync).
 // No React dependency; the UI subscribes through `opts.onState`.
 import { Store, History } from "./store";
-import { uiFont } from "./fonts";
+import { marckScriptFamily, uiFont } from "./fonts";
 import { T, uid, measureText, TEXT_FONTS } from "./shapes";
 import { DomLayer } from "./dom";
 import { createTools } from "./tools";
@@ -483,6 +483,7 @@ export class MathBoard {
     this.octx = octx;
     this.dom = new DomLayer(this, this.domEl);
     this.tools = createTools(this);
+    this.loadFonts();
 
     this.unsubStore = this.store.subscribe((changes) => {
       // When the owner changes an object, a student's local view of it is reset to the owner's.
@@ -2664,6 +2665,21 @@ export class MathBoard {
   }
 
   // ---------- rendering ----------
+  /** Canvas text does not trigger a font download, and the board may draw before its fonts have
+   *  arrived, so fetch them here and repaint (cached bitmaps too) once they are ready. */
+  private loadFonts(): void {
+    const fonts = document.fonts;
+    if (!fonts) return;
+    const ui = uiFont();
+    Promise.all([fonts.load(`400 16px ${ui}`), fonts.load(`700 16px ${ui}`), fonts.load(`400 16px ${marckScriptFamily()}`)])
+      .then(() => {
+        if (!this.root.isConnected) return;
+        this.objCache?.clear();
+        this.requestRender();
+      })
+      .catch(() => {});
+  }
+
   requestRender(): void {
     this.dirty = true;
     if (!this.raf) this.raf = requestAnimationFrame(() => { this.raf = 0; this.render(); });

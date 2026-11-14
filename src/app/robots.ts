@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard/", "/admin/"],
+      disallow: ["/dashboard/", "/tutor/", "/admin/"],
     },
     sitemap: "https://www.formlq.com/sitemap.xml",
   };

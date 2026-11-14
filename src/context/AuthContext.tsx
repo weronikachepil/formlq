@@ -18,7 +18,16 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import {
+  clearIndexedDbPersistence,
+  doc,
+  getDoc,
+  getDocFromCache,
+  serverTimestamp,
+  setDoc,
+  terminate,
+  updateDoc,
+} from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { connectPresence } from "@/lib/presence";
 import { UserProfile } from "@/types";
@@ -57,8 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(fallback);
       setUser(firebaseUser);
       if (firebaseUser) {
+        const ref = doc(db, "users", firebaseUser.uid);
+        // A returning user: show the app right away with the cached profile;
+        // the server copy below replaces it a moment later.
         try {
-          const snap = await getDoc(doc(db, "users", firebaseUser.uid));
+          const cached = await getDocFromCache(ref);
+          if (cached.exists()) {
+            setUserProfile(cached.data() as UserProfile);
+            setLoading(false);
+          }
+        } catch {
+          // Not cached yet (first visit on this device).
+        }
+        try {
+          const snap = await getDoc(ref);
           if (snap.exists()) {
             setUserProfile(snap.data() as UserProfile);
           } else {
@@ -137,6 +158,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logOut() {
     await signOut(auth);
+    // Don't leave this account's cached data in the browser (shared school computers).
+    // Clearing needs a terminated Firestore, so the app reloads on the login page.
+    try {
+      await terminate(db);
+      await clearIndexedDbPersistence(db);
+    } catch {
+      // Another tab still holds the cache; it is cleared on a later sign-out.
+    }
+    window.location.assign("/login");
   }
 
   async function updateDisplayName(name: string) {
