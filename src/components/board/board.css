@@ -2352,7 +2352,314 @@
 .mathboard .mb-ask input[type="text"] {
   width: 100%;
 }
-/* The board keeps mathboard's light look even when the app is in dark mode. */
+/* Light by default; the dark-mode overrides are at the end of this file (panels only, the sheet stays white). */
 .mathboard {
   color-scheme: light;
+}
+
+/* Налаштування ручки, маркера, тексту й формули без виділення: тонка смужка зверху по центру.
+   Не обрізаємо її (overflow: visible), бо список шрифтів відкривається поверх. */
+.mathboard .bd-insp.top {
+  top: 14px;
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 420px);
+  max-height: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
+  padding: 7px 10px;
+  border-radius: 999px;
+  overflow: visible;
+}
+.mathboard .bd-insp.top > .bd-sec,
+.mathboard .bd-insp.top > .bd-sec:first-child {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px !important;
+  border-top: 0 !important;
+  border-left: 1px solid var(--mb-line);
+}
+.mathboard .bd-insp.top > .bd-sec:first-child {
+  border-left: 0;
+  padding-left: 2px !important;
+}
+.mathboard .bd-insp.top > .bd-sec:last-child {
+  padding-right: 2px !important;
+}
+/* підписи секцій («Шрифт», «Розмір») у смужці зайві: є підказки при наведенні */
+.mathboard .bd-insp.top .bd-sec > .bd-lbl {
+  display: none;
+}
+.mathboard .bd-insp.top .bd-colors {
+  flex-wrap: nowrap;
+  gap: 5px;
+}
+.mathboard .bd-insp.top .bd-sw {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.mathboard .bd-insp.top .bd-w {
+  width: 30px;
+  height: 28px;
+  flex: none;
+}
+.mathboard .bd-insp.top .bd-chip-btn {
+  white-space: nowrap;
+  flex: none;
+}
+@media (max-width: 1100px) {
+  .mathboard .bd-insp.top {
+    left: auto;
+    right: 14px;
+    top: 72px;
+    transform: none;
+    max-width: calc(100% - 100px);
+  }
+}
+@media (max-width: 760px) {
+  .mathboard .bd-insp.top {
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: 120px;
+    width: auto;
+    max-width: none;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    border-radius: 22px;
+  }
+}
+
+/* Вибір шрифту тексту */
+.mathboard .bd .bd-font-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 14px;
+  border-radius: 999px;
+  background: var(--mb-field);
+  color: var(--mb-ink);
+  font-size: 14px;
+  white-space: nowrap;
+  flex: none;
+}
+.mathboard .bd .bd-font-btn svg {
+  color: var(--mb-muted);
+  transition: transform 0.15s;
+}
+.mathboard .bd .bd-font-btn.open svg {
+  transform: rotate(180deg);
+}
+.mathboard .bd-font-pop {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 18px;
+  background: var(--mb-pop, #fff);
+  border: 1px solid var(--mb-line);
+  box-shadow: var(--mb-shadow-lg);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.mathboard .bd-font-opt {
+  display: block;
+  text-align: left;
+  padding: 7px 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  color: var(--mb-ink);
+  white-space: nowrap;
+  background: transparent;
+  cursor: pointer;
+}
+.mathboard .bd-font-opt:hover {
+  background: var(--mb-field);
+}
+.mathboard .bd-font-opt.on {
+  background: var(--mb-accent-soft);
+  font-weight: 700;
+}
+
+/* =====================================================================
+   Темна тема застосунку (html.dark): темніють панелі, меню й діалоги,
+   а аркуш, на якому малюють, і об'єкти на ньому лишаються світлими.
+   Кольори кнопок задано змінними, щоб на аркуші (.mb-dom) їх можна було
+   повернути до світлих значень одним блоком нижче.
+   ===================================================================== */
+html.dark .mathboard {
+  --mb-bg: #10181a;
+  --mb-card: rgba(26, 34, 38, 0.8);
+  --mb-ink: #e3ebed;
+  --mb-muted: #8ea2a6;
+  --mb-line: rgba(255, 255, 255, 0.1);
+  --mb-field: rgba(255, 255, 255, 0.06);
+  --mb-accent: #3f6a72;
+  --mb-accent-dark: #345a61;
+  --mb-accent-soft: rgba(255, 255, 255, 0.1);
+  --mb-danger: #ff7d97;
+  --mb-danger-soft: rgba(255, 110, 140, 0.14);
+  --mb-glass-border: 1px solid rgba(255, 255, 255, 0.08);
+  --mb-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --mb-shadow-lg: 0 16px 56px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --mb-btn: rgba(255, 255, 255, 0.07);
+  --mb-btn-hover: rgba(255, 255, 255, 0.14);
+  --mb-hi: rgba(255, 255, 255, 0.14);
+  --mb-input: rgba(255, 255, 255, 0.06);
+  --mb-input-focus: rgba(255, 255, 255, 0.1);
+  --mb-pop: #1c2529;
+  --mb-gloss: rgba(255, 255, 255, 0.05);
+  color-scheme: dark;
+  background:
+    radial-gradient(520px 420px at 92% 8%, rgba(120, 100, 200, 0.18), transparent 70%),
+    radial-gradient(640px 520px at 6% 92%, rgba(200, 130, 90, 0.12), transparent 70%),
+    linear-gradient(160deg, #0f1719 0%, #131c1f 48%, #181519 100%);
+  background-attachment: fixed;
+}
+/* аркуш і все, що на ньому, — світлі, як у світлій темі */
+html.dark .mathboard :is(.mb-dom, .mb-text-edit) {
+  --mb-card: rgba(255, 255, 255, 0.66);
+  --mb-ink: #14262a;
+  --mb-muted: #5f777b;
+  --mb-line: rgba(20, 38, 42, 0.09);
+  --mb-field: rgba(255, 255, 255, 0.6);
+  --mb-accent: #14262a;
+  --mb-accent-dark: #0a181b;
+  --mb-accent-soft: rgba(255, 255, 255, 0.85);
+  --mb-danger: #c0264a;
+  --mb-danger-soft: rgba(253, 234, 240, 0.9);
+  --mb-glass-border: 1px solid rgba(255, 255, 255, 0.85);
+  --mb-shadow: 0 10px 40px rgba(40, 80, 90, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --mb-shadow-lg: 0 16px 56px rgba(40, 80, 90, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --mb-btn: rgba(255, 255, 255, 0.72);
+  --mb-btn-hover: #fff;
+  --mb-hi: rgba(255, 255, 255, 0.9);
+  --mb-input: rgba(255, 255, 255, 0.7);
+  --mb-input-focus: #fff;
+  --mb-pop: #fff;
+  --mb-gloss: #fff;
+  color: var(--mb-ink);
+  color-scheme: light;
+}
+/* поля */
+html.dark .mathboard input[type="text"],
+html.dark .mathboard input[type="number"],
+html.dark .mathboard textarea,
+html.dark .mathboard .bd .bd-input,
+html.dark .mathboard .mins {
+  background: var(--mb-input);
+  border-color: var(--mb-line);
+}
+html.dark .mathboard input[type="text"]:focus,
+html.dark .mathboard input[type="number"]:focus,
+html.dark .mathboard textarea:focus,
+html.dark .mathboard .bd .bd-input:focus,
+html.dark .mathboard .prompt-in:focus {
+  background: var(--mb-input-focus);
+}
+/* кнопки */
+html.dark .mathboard button.ghost,
+html.dark .mathboard .btn.ghost,
+html.dark .mathboard .bd .modal button.ghost {
+  background: var(--mb-btn);
+  box-shadow:
+    inset 0 0 0 1px var(--mb-line),
+    0 2px 10px rgba(0, 0, 0, 0.2);
+}
+html.dark .mathboard button.ghost:hover,
+html.dark .mathboard .btn.ghost:hover,
+html.dark .mathboard .bd .modal button.ghost:hover {
+  background: var(--mb-btn-hover);
+}
+html.dark .mathboard button.danger:hover {
+  background: var(--mb-danger-soft);
+  filter: brightness(1.25);
+}
+html.dark .mathboard .bd button:hover {
+  background: var(--mb-hi);
+}
+html.dark .mathboard .bd :is(.bd-item, .bd-row, .bd-shape, .bd-cell, .bd-chip-btn, .bd-page) {
+  background: var(--mb-btn);
+  box-shadow:
+    0 0 9px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 var(--mb-gloss);
+}
+html.dark .mathboard .bd :is(.bd-item, .bd-chip-btn):hover:not(:disabled) {
+  background: var(--mb-btn-hover);
+  border-color: var(--mb-line);
+}
+html.dark .mathboard .bd .bd-chip-btn:disabled {
+  background: var(--mb-field);
+}
+html.dark .mathboard .bd .bd-item.on,
+html.dark .mathboard .bd .bd-w.on {
+  background: var(--mb-hi);
+}
+html.dark .mathboard .bd-item-ic,
+html.dark .mathboard .bd .bd-item-static:hover .bd-item-ic {
+  background: var(--mb-hi);
+  color: var(--mb-ink);
+  box-shadow:
+    0 0 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 var(--mb-gloss);
+}
+html.dark .mathboard .bd .bd-item:hover .bd-item-ic,
+html.dark .mathboard .bd .bd-item.on .bd-item-ic {
+  background: var(--mb-accent);
+  color: #fff;
+}
+/* увімкнені кнопки й наведення на плитки фігур — акцентні */
+html.dark .mathboard .bd :is(.bd-shape, .bd-row, .bd-cell):hover,
+html.dark .mathboard :is(.bd-btn, .bd .bd-ibtn, .bd .bd-chip-btn, .bd .bd-page, .bd .bd-shape, .bd .bd-tri, .bd-cell).on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+html.dark .mathboard :is(.bd-btn, .bd .bd-ibtn, .bd .bd-chip-btn, .bd .bd-page).on:hover:not(:disabled) {
+  background: var(--mb-accent-dark);
+}
+/* діалоги */
+html.dark .mathboard .modal.card {
+  background: var(--mb-pop);
+}
+html.dark .mathboard .modal-back {
+  background: rgba(0, 0, 0, 0.5);
+}
+html.dark .mathboard .parse-box {
+  background: var(--mb-field);
+}
+html.dark .mathboard .step-n {
+  background: var(--mb-hi);
+}
+html.dark .mathboard .bd-progress i {
+  background: var(--mb-line);
+}
+html.dark .mathboard .res-table .q-part,
+html.dark .mathboard .status-pill.draft {
+  background: rgba(255, 212, 59, 0.16);
+}
+html.dark .mathboard .res-table .q-bad,
+html.dark .mathboard .status-pill.closed {
+  background: rgba(255, 107, 107, 0.16);
+}
+html.dark .mathboard .res-table .res-key td {
+  background: rgba(255, 255, 255, 0.06);
+}
+html.dark .mathboard .status-pill.live {
+  background: rgba(64, 192, 87, 0.16);
+  color: #69db7c;
+}
+html.dark .mathboard .status-pill.closed {
+  color: #ff8787;
+}
+html.dark .mathboard .status-pill.draft {
+  color: #ffc078;
 }

@@ -365,7 +365,7 @@ export class MathBoard {
   cam: Camera = { x: 0, y: 0, z: 1 };
   sel = new Set<string>();
   tool = "select";
-  style: DrawStyle = { c: "#1d1b2e", s: 4, f: null, dash: false, fs: 28, ff: "comfortaa", b: false, i: false, hc: "#ffd43b", hs: 24 };
+  style: DrawStyle = { c: "#1d1b2e", s: 4, f: null, dash: false, fs: 28, mfs: 36, ff: "comfortaa", b: false, i: false, hc: "#ffd43b", hs: 24 };
   prefs: BoardPrefs = { grid: "squares", snap: false, keep: false, recognize: true, ...loadPrefs() };
   baseCanEdit: boolean;
   uid: string;
@@ -1050,6 +1050,7 @@ export class MathBoard {
   }
 
   commentReply(id: string, text: string): void {
+    if (!this.canEdit) return;
     const msg = String(text || "").trim().slice(0, 600);
     const o = this.store.get(id);
     if (!msg || o?.type !== "comment") return;
@@ -1059,6 +1060,7 @@ export class MathBoard {
   }
 
   commentPatch(id: string, patch: Partial<CommentObject>): void {
+    if (!this.canEdit) return;
     const o = this.store.get(id);
     if (o?.type !== "comment") return;
     const t = this.tx();
@@ -1067,6 +1069,8 @@ export class MathBoard {
   }
 
   commentDelete(id: string): void {
+    const o = this.store.get(id);
+    if (o?.type !== "comment" || !this.canModify(o)) return;
     const t = this.tx();
     t.del(id);
     t.done();
@@ -1175,8 +1179,10 @@ export class MathBoard {
     return !this.protect || o.by === this.uid;
   }
 
-  /** Whether the user may change an object (move, resize, delete). Locked objects: nobody. */
+  /** Whether the user may change an object (move, resize, delete). Locked objects: nobody.
+   *  Students on a closed board (or a closed test page) may change nothing, not even their own comments. */
   canModify(o: BoardObject): boolean {
+    if (!this.isOwner && !this.canEdit) return false;
     if (o.type === "comment") return this.isOwner || o.by === this.uid;
     if (o.lock) return false;
     return this.canTouch(o);
@@ -1781,7 +1787,9 @@ export class MathBoard {
     if (!this.canEdit) return;
     this.endLive();
     const t = this.tx();
-    const o: BoardObject = { type: "formula", id: uid(), z: this.store.topZ() + 1, x: round(p[0]), y: round(p[1] - 24), w: 90, h: 56, fs: 36, latex: "", c: this.style.c };
+    const fs = this.style.mfs;
+    const k = fs / 36;
+    const o: BoardObject = { type: "formula", id: uid(), z: this.store.topZ() + 1, x: round(p[0]), y: round(p[1] - 24 * k), w: round(90 * k), h: round(56 * k), fs, latex: "", c: this.style.c };
     t.set(o.id, o);
     this.liveTx = t;
     this.setTool("select");

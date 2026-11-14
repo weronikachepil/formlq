@@ -46,7 +46,7 @@ export function CommentPanel({ c }: { c: CommentState }) {
         </span>
       </div>
       <div className="bd-thread">
-        {(o.thread || []).length === 0 && <p className="bd-hint">Напишіть перше повідомлення.</p>}
+        {(o.thread || []).length === 0 && st.canEdit && <p className="bd-hint">Напишіть перше повідомлення.</p>}
         {(o.thread || []).map((m, i) => (
           <div key={i} className="bd-msg">
             <b>{m.name}</b> <small>{new Date(m.t).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}</small>
@@ -54,32 +54,38 @@ export function CommentPanel({ c }: { c: CommentState }) {
           </div>
         ))}
       </div>
-      <textarea
-        ref={ref}
-        className="bd-input"
-        style={{ minHeight: 54 }}
-        placeholder="Повідомлення… (Enter — надіслати)"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            send();
-          }
-          if (e.key === "Escape") b()?.closeComment();
-        }}
-      />
-      <div className="bd-line" style={{ justifyContent: "space-between" }}>
-        <button className="bd-chip-btn on" onClick={send}>
-          Надіслати
-        </button>
-        {c.canModify && (
-          <button className="bd-chip-btn" onClick={() => b()?.commentDelete(o.id)}>
-            Видалити
-          </button>
-        )}
-      </div>
+      {st.canEdit ? (
+        <>
+          <textarea
+            ref={ref}
+            className="bd-input"
+            style={{ minHeight: 54 }}
+            placeholder="Повідомлення… (Enter — надіслати)"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+              }
+              if (e.key === "Escape") b()?.closeComment();
+            }}
+          />
+          <div className="bd-line" style={{ justifyContent: "space-between" }}>
+            <button className="bd-chip-btn on" onClick={send}>
+              Надіслати
+            </button>
+            {c.canModify && (
+              <button className="bd-chip-btn" onClick={() => b()?.commentDelete(o.id)}>
+                Видалити
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
+        <p className="bd-hint">Дошку закрито: коментарі можна лише читати.</p>
+      )}
     </div>
   );
 }

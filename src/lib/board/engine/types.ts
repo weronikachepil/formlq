@@ -896,6 +896,8 @@ export interface DrawStyle {
   dash: boolean;
   /** Font size for new text. */
   fs: number;
+  /** Font size for new formulas. */
+  mfs: number;
   ff: TextFontId;
   b: boolean;
   i: boolean;

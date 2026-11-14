@@ -11,7 +11,7 @@ import { HighlighterPanel } from "./HighlighterPanel";
 import { ChartProps, ColmathProps, CplaneProps, DiceProps, FmodelProps, TrigProps } from "./MathObjProps";
 import { PolygonProps, PolygonValues, QuadProps, TriangleProps } from "./PolygonProps";
 import { SolidProps } from "./SolidProps";
-import { FontProps, TextStyleProps } from "./TextProps";
+import { FontProps, NewSizeProps, TextStyleProps } from "./TextProps";
 
 const STROKE_TYPES = ["stroke", "line", "ellipse", "polygon", "angle", "fmodel", "colmath"];
 const DASH_TYPES = ["line", "ellipse", "polygon", "angle"];
@@ -46,8 +46,11 @@ export function Inspector() {
   const curDash = first?.dash ?? st.style.dash;
   const allLocked = sel.every((o) => o.lock);
 
+  /** Pen, text and formula settings without a selection fit in one row: show them as a slim bar at the top. */
+  const bar = !sel.length && (tool === "pen" || tool === "text" || tool === "formula");
+
   return (
-    <div className="bd-insp">
+    <div className={"bd-insp" + (bar ? " top" : "")}>
       {hasColor && (
         <div className="bd-sec">
           <div className="bd-colors">
@@ -66,9 +69,14 @@ export function Inspector() {
 
       {hasStroke && (
         <div className="bd-sec bd-line">
-          <span className="bd-lbl">Товщина</span>
           {WIDTHS.map((w) => (
-            <button key={w} className={"bd-w" + (curSize === w ? " on" : "")} onClick={() => b()?.setStyle({ s: w })}>
+            <button
+              key={w}
+              className={"bd-w" + (curSize === w ? " on" : "")}
+              title={`Товщина ${w}`}
+              aria-label={`Товщина ${w}`}
+              onClick={() => b()?.setStyle({ s: w })}
+            >
               <i style={{ height: Math.max(2, w) }} />
             </button>
           ))}
@@ -81,17 +89,14 @@ export function Inspector() {
       )}
 
       {tool === "pen" && sel.length === 0 && (
-        <div className="bd-sec">
+        <div className="bd-sec bd-line">
           <button
             className={"bd-chip-btn" + (st.prefs.recognize ? " on" : "")}
+            title="Намалюйте коло, трикутник, прямокутник чи рівну лінію і затримайте ручку — фігура вирівняється. З лінійкою ручка малює вздовж її краю, Shift — рівна лінія."
             onClick={() => b()?.setPrefs({ recognize: !st.prefs.recognize })}
           >
             Розпізнавати фігури
           </button>
-          <p className="bd-hint">
-            Намалюйте коло, трикутник, прямокутник чи рівну лінію і затримайте ручку — фігура вирівняється. З лінійкою ручка малює
-            вздовж її краю, Shift — рівна лінія.
-          </p>
         </div>
       )}
 
@@ -118,6 +123,8 @@ export function Inspector() {
       )}
       {(one?.type === "text" || one?.type === "formula") && <FontProps o={one} />}
       {one?.type === "text" ? <TextStyleProps o={one} /> : tool === "text" && !sel.length && <TextStyleProps o={st.style} />}
+      {tool === "text" && !sel.length && <NewSizeProps />}
+      {tool === "formula" && !sel.length && <NewSizeProps kind="formula" />}
       {one?.type === "graph" && <GraphProps o={one} inter={st.inter === one.id} />}
       {one?.type === "solid" && <SolidProps o={one} secPick={st.secPick === one.id} />}
       {one?.type === "quiz" && <QuizProps o={one} />}
