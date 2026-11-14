@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { SpinnerScreen } from "@/components/ui/spinner";
 
@@ -13,12 +13,15 @@ import { SpinnerScreen } from "@/components/ui/spinner";
 export function LandingGate({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  // With the sign-in/sign-up modal open (/login, /register over the landing) the form
+  // itself sends the user on after signing in, e.g. a new teacher to their students.
+  const onLanding = usePathname() === "/";
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && onLanding) {
       router.replace("/dashboard");
     }
-  }, [user, loading, router]);
+  }, [user, loading, onLanding, router]);
 
   const showLanding = !loading && !user;
 
