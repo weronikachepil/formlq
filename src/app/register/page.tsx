@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, type SignUpRole } from "@/context/AuthContext";
+import { GraduationCap, Presentation } from "lucide-react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +11,11 @@ import { Label } from "@/components/ui/label";
 import { cn, safeNextPath, withNext } from "@/lib/utils";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<SignUpRole>("student");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
@@ -21,17 +24,25 @@ export default function RegisterPage() {
   const nextParam = useSearchParams().get("next");
   const next = safeNextPath(nextParam);
 
+  // A new teacher lands on their students page unless a link sent them somewhere.
+  const afterSignUp = () => (role === "tutor" && !nextParam ? "/tutor/students" : next);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Вкажіть імʼя та прізвище");
+      return;
+    }
     if (password.length < 6) {
       setError("Пароль має бути не менше 6 символів");
       return;
     }
     setLoading(true);
     try {
-      await signUp(email, password, name);
-      router.push(next);
+      // Full name: shown to tutors and as the author of published tests.
+      await signUp(email, password, `${firstName.trim()} ${lastName.trim()}`, role);
+      router.push(afterSignUp());
     } catch {
       setError("Не вдалось зареєструватись. Перевірте дані.");
     } finally {
@@ -43,8 +54,8 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await signInWithGoogle();
-      router.push(next);
+      await signInWithGoogle(role);
+      router.push(afterSignUp());
     } catch {
       setError("Google sign-in error");
     } finally {
@@ -59,13 +70,15 @@ export default function RegisterPage() {
       footerLinkHref={withNext("/login", nextParam ? next : null)}
       footerLinkLabel="Увійти"
     >
+      <RolePicker value={role} onChange={setRole} disabled={loading} />
+
       <button
         type="button"
         onClick={handleGoogle}
         disabled={loading}
         className={cn(
-          "w-full flex items-center justify-center gap-2.5 h-10 rounded-xl border border-border/70 bg-background text-sm font-medium transition-all",
-          "hover:bg-muted hover:border-border hover:shadow-sm active:scale-[0.99]",
+          "w-full flex items-center justify-center gap-2.5 h-11 rounded-full border border-glass-edge bg-glass text-sm font-semibold shadow-pill transition-all",
+          "hover:bg-glass-strong active:scale-[0.98]",
           "disabled:opacity-50 disabled:pointer-events-none",
         )}
       >
@@ -79,35 +92,42 @@ export default function RegisterPage() {
       </button>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-border/60" />
+        <div className="flex-1 h-px bg-foreground/10" />
         <span className="text-xs text-muted-foreground uppercase tracking-wider">або</span>
-        <div className="flex-1 h-px bg-border/60" />
+        <div className="flex-1 h-px bg-foreground/10" />
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="name" className="text-sm font-medium">Імʼя</Label>
-          <Input id="name" type="text" placeholder="Твоє імʼя" value={name}
-            onChange={(e) => setName(e.target.value)} required autoComplete="name" className="h-10 rounded-xl" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="first-name" className="text-sm font-medium">Імʼя</Label>
+            <Input id="first-name" type="text" placeholder="Олена" value={firstName}
+              onChange={(e) => setFirstName(e.target.value)} required autoComplete="given-name" className="h-11" />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="last-name" className="text-sm font-medium">Прізвище</Label>
+            <Input id="last-name" type="text" placeholder="Коваленко" value={lastName}
+              onChange={(e) => setLastName(e.target.value)} required autoComplete="family-name" className="h-11" />
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email" className="text-sm font-medium">Email</Label>
           <Input id="email" type="email" placeholder="you@example.com" value={email}
-            onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className="h-10 rounded-xl" />
+            onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className="h-11" />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password" className="text-sm font-medium">Пароль</Label>
           <Input id="password" type="password" placeholder="Мінімум 6 символів" value={password}
-            onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" className="h-10 rounded-xl" />
+            onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" className="h-11" />
         </div>
 
         {error && (
-          <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3.5 py-2.5">
+          <div className="rounded-2xl bg-destructive/10 border border-destructive/20 px-4 py-2.5">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
-        <Button type="submit" disabled={loading} className="h-10 rounded-xl font-semibold mt-1">
+        <Button type="submit" disabled={loading} size="lg" className="mt-1">
           {loading ? (
             <span className="flex items-center gap-2">
               <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
@@ -117,5 +137,49 @@ export default function RegisterPage() {
         </Button>
       </form>
     </AuthCard>
+  );
+}
+
+const ROLES: { value: SignUpRole; label: string; hint: string; Icon: typeof GraduationCap }[] = [
+  { value: "student", label: "Я учень", hint: "Тести, домашні, заняття", Icon: GraduationCap },
+  { value: "tutor", label: "Я вчитель", hint: "Учні, календар, свої тести", Icon: Presentation },
+];
+
+function RolePicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: SignUpRole;
+  onChange: (r: SignUpRole) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div role="radiogroup" aria-label="Хто ви?" className="grid grid-cols-2 gap-2">
+      {ROLES.map(({ value: v, label, hint, Icon }) => {
+        const active = value === v;
+        return (
+          <button
+            key={v}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled}
+            onClick={() => onChange(v)}
+            className={cn(
+              "flex flex-col items-start gap-1 rounded-2xl border px-3.5 py-3 text-left transition-all",
+              "disabled:opacity-50 disabled:pointer-events-none",
+              active
+                ? "border-primary bg-primary/10 shadow-pill"
+                : "border-glass-edge bg-glass hover:bg-glass-strong",
+            )}
+          >
+            <Icon size={18} className={active ? "text-primary" : "text-muted-foreground"} />
+            <span className="text-sm font-semibold">{label}</span>
+            <span className="text-[11px] leading-snug text-muted-foreground">{hint}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

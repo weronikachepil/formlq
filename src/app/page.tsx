@@ -1,19 +1,18 @@
-"use client";
+import type { Metadata } from "next";
+import { Landing } from "@/components/landing/Landing";
+import { LandingGate } from "@/components/landing/LandingGate";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { SpinnerScreen } from "@/components/ui/spinner";
+export const metadata: Metadata = {
+  title: { absolute: "formlq — підготовка до НМТ і дошка для уроків математики" },
+  description:
+    "Тести НМТ минулих років з автоперевіркою та інтерактивна математична дошка: графіки, фігури, формули, спільна робота вчителя й учнів.",
+  alternates: { canonical: "/" },
+};
 
 export default function HomePage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading) {
-      router.replace(user ? "/dashboard" : "/login");
-    }
-  }, [user, loading, router]);
-
-  return <SpinnerScreen />;
+  return (
+    <LandingGate>
+      <Landing />
+    </LandingGate>
+  );
 }

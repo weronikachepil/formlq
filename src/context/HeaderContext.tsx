@@ -16,7 +16,7 @@ const HeaderContext = createContext<HeaderContextType>({
 });
 
 const ROUTE_MAP: Record<string, { title: string; subtitle: string }> = {
-  "/dashboard/tests":    { title: "Тести НМТ",       subtitle: "Пробні варіанти для підготовки" },
+  "/dashboard/tests":    { title: "Тести",           subtitle: "Пробні НМТ і тести викладачів" },
   "/dashboard/history":  { title: "Історія тестів",   subtitle: "Всі ваші спроби з деталями" },
   "/dashboard/reference":{ title: "Довідка",          subtitle: "Матеріали для підготовки" },
   "/admin/tests":        { title: "Тести",            subtitle: "Управління тестами" },

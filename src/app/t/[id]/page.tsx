@@ -67,7 +67,7 @@ export default function PublicTestPage() {
 
   if (state === "unavailable" || !test)
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-sm text-center space-y-3">
           <p className="text-4xl">🔒</p>
           <h1 className="text-lg font-semibold">Тест недоступний</h1>

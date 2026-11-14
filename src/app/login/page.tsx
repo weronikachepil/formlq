@@ -56,7 +56,7 @@ export default function LoginPage() {
       footerLinkHref={withNext("/register", nextParam ? next : null)}
       footerLinkLabel="Зареєструватись"
     >
-      <p className="text-sm text-muted-foreground -mt-3">
+      <p className="text-sm text-muted-foreground -mt-2">
         Раді бачити тебе знову
       </p>
 
@@ -65,8 +65,8 @@ export default function LoginPage() {
         onClick={handleGoogle}
         disabled={loading}
         className={cn(
-          "w-full flex items-center justify-center gap-2.5 h-10 rounded-xl border border-border/70 bg-background text-sm font-medium transition-all",
-          "hover:bg-muted hover:border-border hover:shadow-sm active:scale-[0.99]",
+          "w-full flex items-center justify-center gap-2.5 h-11 rounded-full border border-glass-edge bg-glass text-sm font-semibold shadow-pill transition-all",
+          "hover:bg-glass-strong active:scale-[0.98]",
           "disabled:opacity-50 disabled:pointer-events-none",
         )}
       >
@@ -92,11 +92,11 @@ export default function LoginPage() {
       </button>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-border/60" />
+        <div className="flex-1 h-px bg-foreground/10" />
         <span className="text-xs text-muted-foreground uppercase tracking-wider">
           або
         </span>
-        <div className="flex-1 h-px bg-border/60" />
+        <div className="flex-1 h-px bg-foreground/10" />
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -112,7 +112,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="h-10 rounded-xl"
+            className="h-11"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -127,12 +127,12 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="h-10 rounded-xl"
+            className="h-11"
           />
         </div>
 
         {error && (
-          <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-3.5 py-2.5">
+          <div className="rounded-2xl bg-destructive/10 border border-destructive/20 px-4 py-2.5">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
@@ -140,7 +140,8 @@ export default function LoginPage() {
         <Button
           type="submit"
           disabled={loading}
-          className="h-10 rounded-xl font-semibold mt-1"
+          size="lg"
+          className="mt-1"
         >
           {loading ? (
             <span className="flex items-center gap-2">

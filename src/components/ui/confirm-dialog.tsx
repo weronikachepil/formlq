@@ -30,13 +30,13 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onClose={onCancel} size="sm">
-      <div className="p-6 space-y-4">
+      <div className="p-7 space-y-5">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
-            <Trash2 size={16} className="text-red-500" />
+          <div className="w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+            <Trash2 size={16} className="text-destructive" />
           </div>
           <div className="space-y-1 min-w-0">
-            <p className="font-semibold text-sm leading-tight">{title}</p>
+            <p className="font-heading font-bold text-sm leading-tight">{title}</p>
             {description && (
               <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
             )}
@@ -55,7 +55,7 @@ export function ConfirmDialog({
           <Button
             size="sm"
             onClick={onConfirm}
-            className="bg-red-500 hover:bg-red-600 text-white gap-1.5"
+            className="bg-destructive hover:bg-destructive/90 text-white shadow-none gap-1.5"
           >
             <Trash2 size={13} />
             {confirmLabel}

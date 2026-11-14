@@ -5,9 +5,16 @@
  */
 export const queryKeys = {
   tests: {
+    /** Platform tests; teachers' lists live under it, so invalidating it refreshes all. */
     all: ["all-tests"] as const,
     published: ["published-tests"] as const,
+    /** All teachers' tests (admin moderation); under `all` so test edits refresh it. */
+    teachers: ["all-tests", "__teachers__"] as const,
     folders: ["test-folders"] as const,
+    /** Tests of one owner (`null` = platform), see `TestOwner`. */
+    of: (owner: string | null) => (owner ? (["all-tests", owner] as const) : (["all-tests"] as const)),
+    foldersOf: (owner: string | null) =>
+      owner ? (["test-folders", owner] as const) : (["test-folders"] as const),
   },
   bankQuestions: ["bank-questions"] as const,
   tips: ["tips"] as const,

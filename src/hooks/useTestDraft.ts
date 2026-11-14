@@ -16,6 +16,7 @@ import {
   type TestQuestion,
   type ScoreRow,
   type ScaleType,
+  type TestSubject,
 } from "@/lib/tests";
 
 type QuestionType = TestQuestion["type"];
@@ -24,7 +25,15 @@ type QuestionType = TestQuestion["type"];
  * Editable draft of a test: loads it, tracks dirtiness against the last
  * saved snapshot and persists it. Redirects to the list if the test is gone.
  */
-export function useTestDraft(id: string) {
+/**
+ * `backHref`: where to go when the test is missing or not ours to open.
+ * `extra`: fields written with every save (a teacher's `authorName`).
+ */
+export function useTestDraft(
+  id: string,
+  backHref = "/admin/tests",
+  extra?: { authorName?: string },
+) {
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -36,6 +45,8 @@ export function useTestDraft(id: string) {
   const [questions, setQuestions] = useState<TestQuestion[]>([]);
   const [scoreTable, setScoreTable] = useState<ScoreRow[]>(NMT_2025_TABLE);
   const [scaleType, setScaleType] = useState<ScaleType>("nmt");
+  const [grade, setGrade] = useState<number | null>(null);
+  const [subject, setSubject] = useState<TestSubject | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -46,10 +57,11 @@ export function useTestDraft(id: string) {
 
   useEffect(() => {
     let cancelled = false;
-    getTest(id).then((test) => {
+    // A permission error (someone else's test) is treated as "not found".
+    getTest(id).catch(() => null).then((test) => {
       if (cancelled) return;
       if (!test) {
-        router.replace("/admin/tests");
+        router.replace(backHref);
         return;
       }
       const data = {
@@ -61,6 +73,8 @@ export function useTestDraft(id: string) {
         questions: test.questions ?? [],
         scoreTable: test.scoreTable?.length ? test.scoreTable : NMT_2025_TABLE,
         scaleType: test.scaleType ?? "nmt",
+        grade: test.grade ?? null,
+        subject: test.subject ?? null,
       };
       setTitle(data.title);
       setSubtitle(data.subtitle);
@@ -70,13 +84,15 @@ export function useTestDraft(id: string) {
       setQuestions(data.questions);
       setScoreTable(data.scoreTable);
       setScaleType(data.scaleType);
+      setGrade(data.grade);
+      setSubject(data.subject);
       setSavedSnapshot(JSON.stringify(data));
       setLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [id, router]);
+  }, [id, router, backHref]);
 
   const draft = useMemo(
     () => ({
@@ -88,6 +104,8 @@ export function useTestDraft(id: string) {
       questions,
       scoreTable,
       scaleType,
+      grade,
+      subject,
     }),
     [
       title,
@@ -98,6 +116,8 @@ export function useTestDraft(id: string) {
       questions,
       scoreTable,
       scaleType,
+      grade,
+      subject,
     ],
   );
   const snapshot = useMemo(() => JSON.stringify(draft), [draft]);
@@ -107,7 +127,7 @@ export function useTestDraft(id: string) {
     if (saving || !isDirty) return;
     setSaving(true);
     try {
-      await updateTest(id, draft);
+      await updateTest(id, { ...draft, ...extra });
       setSavedSnapshot(snapshot);
       queryClient.invalidateQueries({ queryKey: queryKeys.tests.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.tests.published });
@@ -224,6 +244,10 @@ export function useTestDraft(id: string) {
     setScoreTable,
     scaleType,
     setScaleType,
+    grade,
+    setGrade,
+    subject,
+    setSubject,
     isDirty,
     saving,
     /** True for 2s after a successful save. */

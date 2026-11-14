@@ -39,7 +39,8 @@ interface TestRowProps {
   onDragEnd: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
-  onTogglePublished: () => void;
+  /** Omitted where tests aren't published (a teacher's own tests): no toggle, no dimming. */
+  onTogglePublished?: () => void;
   onShare: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -71,6 +72,8 @@ export function TestRow({
   onMoveTo,
   onMoveToNewFolder,
 }: TestRowProps) {
+  const publishable = !!onTogglePublished;
+  const dimmed = publishable && !test.published;
   return (
     <div
       className="relative"
@@ -91,8 +94,7 @@ export function TestRow({
         onDragEnd={onDragEnd}
         className={cn(
           "rounded-2xl border bg-card px-4 py-3 flex items-center gap-3 group transition-all select-none relative overflow-hidden",
-          !test.published && "border-border/30 opacity-60",
-          test.published && "border-border/50",
+          dimmed ? "border-border/30 opacity-60" : "border-border/50",
           isDragSrc && "opacity-40",
         )}
       >
@@ -128,12 +130,14 @@ export function TestRow({
           </>
         )}
 
-        <div
-          className={cn(
-            "w-2 h-2 rounded-full shrink-0",
-            test.published ? "bg-green-500" : "bg-muted-foreground/30",
-          )}
-        />
+        {publishable && (
+          <div
+            className={cn(
+              "w-2 h-2 rounded-full shrink-0",
+              test.published ? "bg-green-500" : "bg-muted-foreground/30",
+            )}
+          />
+        )}
 
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">
@@ -175,16 +179,18 @@ export function TestRow({
               <span>{test.questions?.length ?? 0}</span>
             </div>
 
-            <IconButton
-              label={test.published ? "Деактивувати" : "Активувати"}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onTogglePublished();
-              }}
-            >
-              {test.published ? <Eye size={13} /> : <EyeOff size={13} />}
-            </IconButton>
+            {onTogglePublished && (
+              <IconButton
+                label={test.published ? "Деактивувати" : "Активувати"}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTogglePublished();
+                }}
+              >
+                {test.published ? <Eye size={13} /> : <EyeOff size={13} />}
+              </IconButton>
+            )}
 
             <IconButton
               label="Поділитися"

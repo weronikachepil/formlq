@@ -4,13 +4,15 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Timestamp } from "firebase/firestore";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { isEditor } from "@/lib/roles";
 import { usePageHeader } from "@/context/HeaderContext";
 import { queryKeys, STALE } from "@/lib/queryKeys";
 import { pluralize, PLURAL } from "@/lib/format";
 import { getTutorStudents, assignHomework, NewHomework } from "@/lib/tutor";
 import {
-  getAllTests,
+  getTests,
   getTestFolders,
   bankToTestQuestion,
   makeLinearTable,
@@ -38,7 +40,10 @@ const TYPE_LABEL: Record<TestQuestion["type"], string> = {
 };
 
 export default function NewHomeworkPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  // Editors assign platform tests and bank questions; teachers only their own tests.
+  const editor = isEditor(userProfile?.role);
+  const owner = editor ? null : (user?.uid ?? null);
   const router = useRouter();
   const queryClient = useQueryClient();
   const params = useSearchParams();
@@ -79,9 +84,10 @@ export default function NewHomeworkPage() {
     enabled: !!user,
   });
 
-  const { data: tests = [] } = useQuery({
-    queryKey: queryKeys.tests.all,
-    queryFn: getAllTests,
+  const { data: tests = [], isLoading: testsLoading } = useQuery({
+    queryKey: queryKeys.tests.of(owner),
+    queryFn: () => getTests(owner),
+    enabled: !!user && !!userProfile,
     staleTime: STALE.long,
     // Show all tests (published + drafts), tests with questions first, by order.
     select: (all) =>
@@ -91,14 +97,16 @@ export default function NewHomeworkPage() {
   });
 
   const { data: testFolders = [] } = useQuery({
-    queryKey: queryKeys.tests.folders,
-    queryFn: getTestFolders,
+    queryKey: queryKeys.tests.foldersOf(owner),
+    queryFn: () => getTestFolders(owner),
+    enabled: !!user && !!userProfile,
     staleTime: STALE.long,
   });
 
   const { data: bank = [] } = useQuery({
     queryKey: queryKeys.bankQuestions,
     queryFn: getAllQuestions,
+    enabled: editor,
     staleTime: STALE.long,
     select: (qs) => qs.filter((q) => q.status === "approved"),
   });
@@ -175,7 +183,7 @@ export default function NewHomeworkPage() {
       }
       await assignHomework(payload);
       queryClient.invalidateQueries({ queryKey: queryKeys.studentHomework(studentId) });
-      router.push("/tutor/homework");
+      router.push(`/tutor/students/${studentId}`);
     } finally {
       setSaving(false);
     }
@@ -258,7 +266,8 @@ export default function NewHomeworkPage() {
         )}
       </Field>
 
-      {/* Source switch */}
+      {/* Source switch — the question bank is the platform's, editors only */}
+      {editor && (
       <div className="flex gap-2 p-1 rounded-2xl bg-muted/50 border border-border/40">
         <SourceTab
           active={source === "test"}
@@ -273,9 +282,18 @@ export default function NewHomeworkPage() {
           label="З банку завдань"
         />
       </div>
+      )}
 
-      {source === "test" ? (
-        <Field label="Тест (включно з імітаціями НМТ)">
+      {source === "test" || !editor ? (
+        <Field label={editor ? "Тест (включно з імітаціями НМТ)" : "Тест"}>
+          {!editor && !testsLoading && tests.length === 0 && (
+            <p className="text-xs text-muted-foreground mb-2">
+              У вас ще немає тестів із питаннями.{" "}
+              <Link href="/tutor/tests" className="text-primary font-medium hover:underline">
+                Створити тест
+              </Link>
+            </p>
+          )}
           <TestPicker
             tests={tests}
             folders={testFolders}

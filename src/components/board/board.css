@@ -1,0 +1,2358 @@
+/*
+ * MathBoard styles, ported from mathboard/app/globals.css (base rules + the "glass" theme overrides).
+ * Every rule is scoped under `.mathboard` so nothing leaks into the rest of formlq; mathboard's
+ * :root variables live on `.mathboard` as --mb-*. Fonts come from next/font variables (fonts.ts).
+ * Cabinet-only rules (shell, sidebar, logo, topbar, card decorations) are not ported.
+ * Comments in Ukrainian below are carried over from the original stylesheet.
+ */
+.mathboard {
+  --mb-bg: #f7f7fb;
+  --mb-card: #ffffff;
+  --mb-ink: #1d1b2e;
+  --mb-muted: #7a7891;
+  --mb-line: #ecebf5;
+  --mb-field: #f1f0f8;
+  --mb-accent: #6d3df0;
+  --mb-accent-dark: #5a2fd6;
+  --mb-accent-soft: #efe9ff;
+  --mb-danger: #c0264a;
+  --mb-danger-soft: #fdeaf0;
+  --mb-shadow: 0 2px 18px rgba(80, 60, 160, 0.07);
+}
+.mathboard {
+  font-family:
+    var(--font-comfortaa),
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  background: var(--mb-bg);
+  color: var(--mb-ink);
+}
+.mathboard a {
+  color: var(--mb-accent);
+}
+/* ---------- каркас кабінету ---------- */
+/* ---------- картки ---------- */
+.mathboard .card {
+  background: var(--mb-card);
+  border-radius: 28px;
+  padding: 28px 32px;
+  box-shadow: var(--mb-shadow);
+}
+.mathboard h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+.mathboard h2 {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+.mathboard .sub {
+  color: var(--mb-muted);
+  margin: 0 0 20px;
+}
+/* ---------- поля й кнопки (форма таблетки) ---------- */
+.mathboard input[type="text"],
+.mathboard input[type="number"],
+.mathboard textarea {
+  font: inherit;
+  padding: 14px 22px;
+  background: var(--mb-field);
+  border: 1px solid var(--mb-line);
+  border-radius: 999px;
+  min-width: 0;
+  color: var(--mb-ink);
+  outline: none;
+}
+.mathboard input[type="text"]:focus,
+.mathboard input[type="number"]:focus {
+  border-color: var(--mb-accent);
+  background: #fff;
+}
+.mathboard button,
+.mathboard .btn {
+  font: inherit;
+  padding: 13px 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mb-accent);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.mathboard button:hover,
+.mathboard .btn:hover {
+  background: var(--mb-accent-dark);
+}
+.mathboard button.ghost,
+.mathboard .btn.ghost {
+  background: var(--mb-accent-soft);
+  color: var(--mb-accent);
+}
+.mathboard button.ghost:hover,
+.mathboard .btn.ghost:hover {
+  background: #e2d8ff;
+}
+.mathboard button.danger {
+  background: var(--mb-danger-soft);
+  color: var(--mb-danger);
+}
+.mathboard button.danger:hover {
+  background: #fadbe6;
+}
+.mathboard .row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.mathboard .row.grow > input {
+  flex: 1;
+}
+/* ---------- список дошок ---------- */
+.mathboard .board-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  border-top: 1px solid var(--mb-line);
+  flex-wrap: wrap;
+}
+.mathboard .board-item:first-of-type {
+  border-top: 0;
+}
+.mathboard .board-item .title {
+  flex: 1;
+  min-width: 180px;
+  font-weight: 700;
+}
+.mathboard .board-item .date {
+  color: var(--mb-muted);
+  font-size: 13px;
+}
+.mathboard .board-item button,
+.mathboard .board-item .btn {
+  padding: 9px 16px;
+  font-size: 14px;
+}
+.mathboard .empty {
+  text-align: center;
+  color: var(--mb-muted);
+  padding: 36px 0;
+}
+/* ---------- сторінка дошки ---------- */
+.mathboard .board-wrap {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--mb-bg);
+}
+.mathboard .board-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 16px 0;
+  padding: 8px 12px 8px 22px;
+  background: var(--mb-card);
+  border-radius: 999px;
+  box-shadow: var(--mb-shadow);
+}
+.mathboard .board-bar .title {
+  font-weight: 700;
+  flex: 1;
+}
+.mathboard .board-bar button,
+.mathboard .board-bar .btn {
+  padding: 9px 18px;
+  font-size: 14px;
+}
+.mathboard .board-canvas {
+  flex: 1;
+  position: relative;
+  margin: 12px 16px 16px;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: var(--mb-shadow);
+}
+.mathboard .center {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+.mathboard .err {
+  color: var(--mb-danger);
+}
+.mathboard .toast {
+  color: #1a7f4b;
+  font-size: 14px;
+}
+/* ================= MathBoard: полотно ================= */
+.mathboard .bd {
+  position: absolute;
+  inset: 0;
+}
+.mathboard .bd .bd-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.mathboard .mb-root {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background: #fff;
+}
+.mathboard .mb-canvas,
+.mathboard .mb-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.mathboard .mb-overlay {
+  pointer-events: none;
+}
+.mathboard .mb-dom {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.mathboard .mb-formula {
+  position: absolute;
+  pointer-events: none;
+  width: max-content;
+  line-height: 1;
+  border-radius: 10px;
+}
+.mathboard .mb-formula.editing {
+  pointer-events: auto;
+  background: #fff;
+  outline: 2px solid var(--mb-accent);
+  box-shadow: 0 4px 22px rgba(80, 60, 160, 0.18);
+}
+.mathboard .mb-formula math-field {
+  display: inline-block;
+  background: transparent;
+  border: 0;
+  outline: none;
+  padding: 2px 8px;
+  min-width: 40px;
+  --hue: 260;
+  --smart-fence-color: currentColor;
+  --keyboard-toggle-display: none;
+  --menu-toggle-display: none;
+}
+.mathboard .mb-formula math-field::part(menu-toggle) {
+  display: none;
+}
+.mathboard .mb-formula math-field::part(virtual-keyboard-toggle) {
+  display: none;
+}
+.mathboard .mb-formula.editing math-field::part(virtual-keyboard-toggle) {
+  display: flex;
+}
+.mathboard .mb-sliders {
+  position: absolute;
+  pointer-events: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 8px 14px;
+  box-shadow: var(--mb-shadow);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+}
+.mathboard .mb-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mathboard .mb-slider i {
+  font:
+    italic 17px "Times New Roman",
+    serif;
+  width: 22px;
+  text-align: center;
+}
+.mathboard .mb-slider input {
+  flex: 1;
+  accent-color: var(--mb-accent);
+  min-width: 0;
+}
+.mathboard .mb-slider span {
+  width: 46px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--mb-muted);
+}
+.mathboard .mb-text-edit {
+  position: absolute;
+  z-index: 6;
+  margin: 0;
+  padding: 0 2px;
+  border: 2px dashed var(--mb-accent);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  font-family: var(--font-comfortaa), system-ui, sans-serif;
+  line-height: 1.3;
+  resize: none;
+  outline: none;
+  overflow: hidden;
+  box-sizing: content-box;
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* ================= MathBoard: панелі ================= */
+.mathboard .bd button {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mb-ink);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.mathboard .bd button:hover {
+  background: var(--mb-accent-soft);
+}
+.mathboard .bd button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: none;
+}
+.mathboard .bd i.sep {
+  display: block;
+  height: 1px;
+  background: var(--mb-line);
+  margin: 4px 8px;
+}
+.mathboard .bd i.sep.v {
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+}
+.mathboard .bd-tools,
+.mathboard .bd-people,
+.mathboard .bd-bottom,
+.mathboard .bd-insp,
+.mathboard .bd-menu {
+  background: var(--mb-card);
+  box-shadow: 0 4px 24px rgba(80, 60, 160, 0.14);
+  z-index: 20;
+}
+.mathboard .bd-tools {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  border-radius: 28px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100% - 90px);
+}
+.mathboard .bd-btn {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50% !important;
+}
+.mathboard .bd-btn.on,
+.mathboard .bd .bd-ibtn.on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd-btn.on:hover,
+.mathboard .bd .bd-ibtn.on:hover {
+  background: var(--mb-accent-dark);
+}
+.mathboard .bd-menu {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 0;
+  border-radius: 20px;
+  padding: 12px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mathboard .bd-menu.wide {
+  width: 260px;
+}
+.mathboard .bd-menu-title {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mb-accent);
+  padding: 2px 6px 8px;
+}
+.mathboard .bd-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.mathboard .bd-cell {
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+.mathboard .bd-cell.on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd-row {
+  text-align: left;
+  padding: 10px 12px !important;
+  font-size: 14px;
+  width: 100%;
+}
+.mathboard .bd-hint {
+  color: var(--mb-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 6px 4px 0;
+}
+.mathboard .bd-hint.pad {
+  margin: 0 4px;
+}
+.mathboard .bd-people {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.mathboard .bd-status {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e03131;
+}
+.mathboard .bd-status.online {
+  background: #2f9e44;
+}
+.mathboard .bd-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.mathboard .bd-chip {
+  font-size: 12px;
+  color: var(--mb-muted);
+  padding: 0 4px;
+}
+.mathboard .bd-bottom {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.mathboard .bd-ibtn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50% !important;
+}
+.mathboard .bd .bd-ibtn.danger:hover {
+  background: var(--mb-danger-soft);
+  color: var(--mb-danger);
+}
+.mathboard .bd-zoom {
+  min-width: 54px;
+  height: 34px;
+  font-size: 13px;
+  border-radius: 999px !important;
+}
+.mathboard .bd-insp {
+  position: absolute;
+  right: 14px;
+  top: 64px;
+  width: 292px;
+  border-radius: 22px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100% - 140px);
+  overflow: auto;
+}
+.mathboard .bd-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mathboard .bd-sec.bd-line {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.mathboard .bd-sec.wrap {
+  flex-wrap: wrap;
+}
+.mathboard .bd-lbl {
+  font-size: 12px;
+  color: var(--mb-muted);
+  margin-right: 4px;
+}
+.mathboard .bd-colors {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.mathboard .bd .bd-sw {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--mb-line);
+}
+.mathboard .bd .bd-sw.on {
+  box-shadow: 0 0 0 2.5px var(--mb-accent);
+}
+.mathboard .bd .bd-sw:hover {
+  background-blend-mode: normal;
+  filter: brightness(1.08);
+}
+.mathboard .bd .bd-w {
+  width: 34px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+}
+.mathboard .bd .bd-w i {
+  display: block;
+  width: 20px;
+  background: var(--mb-ink);
+  border-radius: 99px;
+}
+.mathboard .bd .bd-w.on {
+  background: var(--mb-accent-soft);
+}
+.mathboard .bd .bd-chip-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 999px;
+  background: var(--mb-field);
+}
+.mathboard .bd .bd-chip-btn.on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd .bd-chip-btn.on:hover {
+  background: var(--mb-accent-dark);
+}
+.mathboard .bd-num {
+  min-width: 30px;
+  text-align: center;
+  font-size: 14px;
+}
+.mathboard .bd .bd-input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 14px;
+  border-radius: 14px;
+  background: var(--mb-field);
+  border: 1px solid var(--mb-line);
+  outline: none;
+  font-family: ui-monospace, Menlo, monospace;
+}
+.mathboard .bd .bd-input:focus {
+  border-color: var(--mb-accent);
+  background: #fff;
+}
+.mathboard .bd .bd-input.short {
+  width: 90px;
+}
+.mathboard .bd .bd-input.area {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.mathboard .bd input[type="range"] {
+  flex: 1;
+  accent-color: var(--mb-accent);
+}
+.mathboard .bd-actions {
+  border-top: 1px solid var(--mb-line);
+  padding-top: 10px;
+  justify-content: space-between;
+}
+@media (max-width: 760px) {
+  .mathboard .bd-tools {
+    top: auto;
+    bottom: 62px;
+    left: 8px;
+    right: 8px;
+    flex-direction: row;
+    overflow-x: auto;
+    border-radius: 28px;
+    max-height: none;
+  }
+  .mathboard .bd-tools i.sep {
+    width: 1px;
+    height: 26px;
+    margin: 10px 3px;
+  }
+  .mathboard .bd-menu {
+    left: 0;
+    top: auto;
+    bottom: calc(100% + 10px);
+  }
+  .mathboard .bd-bottom {
+    left: 8px;
+    bottom: 8px;
+  }
+  .mathboard .bd-insp {
+    right: 8px;
+    left: 8px;
+    width: auto;
+    top: auto;
+    bottom: 120px;
+    max-height: 40%;
+  }
+}
+.mathboard .bd-slide {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.mathboard .bd-slide i {
+  font-style: normal;
+  color: var(--mb-muted);
+  width: 58px;
+  flex: none;
+}
+.mathboard .bd-slide input {
+  flex: 1;
+  min-width: 0;
+}
+.mathboard .bd .bd-tri {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mathboard .bd .bd-tri.on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd-sub {
+  background: var(--mb-field);
+  border-radius: 14px;
+  padding: 6px;
+}
+.mathboard .bd-cons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.mathboard .bd-cons i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.mathboard .bd-cons span {
+  flex: 1;
+  min-width: 0;
+}
+.mathboard .bd .bd-input.tiny {
+  width: 56px;
+  padding: 5px 8px;
+  font-size: 13px;
+  text-align: center;
+}
+.mathboard .bd-menu {
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+.mathboard .bd-names {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 8px;
+}
+.mathboard .bd-names label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+.mathboard .bd-names small {
+  font-size: 11px;
+  color: var(--mb-muted);
+  text-align: center;
+  line-height: 1.2;
+}
+.mathboard .bd-names .bd-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.mathboard .bd-error {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  max-width: 60%;
+  background: var(--mb-danger-soft);
+  color: var(--mb-danger);
+  padding: 10px 18px;
+  border-radius: 16px;
+  font-size: 13px;
+  z-index: 30;
+}
+/* ===== аркуші, експорт, повідомлення ===== */
+.mathboard .bd-pages {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: 46%;
+  background: var(--mb-card);
+  box-shadow: 0 4px 24px rgba(80, 60, 160, 0.14);
+  border-radius: 999px;
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+}
+.mathboard .bd .bd-page {
+  padding: 7px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.mathboard .bd .bd-page.on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd-drop-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.mathboard .bd-menu.bd-drop {
+  left: auto;
+  right: 0;
+  top: calc(100% + 10px);
+  width: 210px;
+}
+.mathboard .bd-notice {
+  position: absolute;
+  left: 50%;
+  bottom: 74px;
+  transform: translateX(-50%);
+  background: var(--mb-ink);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 14px;
+  font-size: 13px;
+  z-index: 40;
+}
+@media (max-width: 760px) {
+  .mathboard .bd-pages {
+    max-width: 70%;
+    bottom: 62px;
+  }
+}
+.mathboard .modal-back {
+  position: fixed;
+  inset: 0;
+  background: rgba(29, 27, 46, 0.4);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 16px;
+}
+.mathboard .modal {
+  width: min(640px, 100%);
+  max-height: 80vh;
+  overflow: auto;
+}
+.mathboard .bd-vals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 8px;
+}
+.mathboard .bd-val {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+.mathboard .bd-val small {
+  font-size: 11px;
+  color: var(--mb-muted);
+}
+.mathboard .bd .bd-vals .bd-input.tiny {
+  width: 100%;
+}
+/* ===== коментарі ===== */
+.mathboard .bd-comment {
+  position: absolute;
+  z-index: 35;
+  width: 320px;
+  background: var(--mb-card);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 8px 32px rgba(80, 60, 160, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mathboard .bd-thread {
+  max-height: 220px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mathboard .bd-msg {
+  background: var(--mb-field);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.mathboard .bd-msg small {
+  color: var(--mb-muted);
+  margin-left: 6px;
+}
+/* ===== тести ===== */
+.mathboard .mb-quiz {
+  position: absolute;
+  pointer-events: none;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px 24px 20px;
+  box-shadow: 0 6px 24px rgba(80, 60, 160, 0.16);
+  border: 2px solid #ede9ff;
+  font-family: var(--font-comfortaa), system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.5;
+  color: var(--mb-ink);
+  user-select: text;
+}
+.mathboard .mb-quiz [data-ui] {
+  pointer-events: auto;
+}
+.mathboard .q-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.mathboard .q-n {
+  background: var(--mb-accent);
+  color: #fff;
+  font-weight: 700;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  padding: 0 8px;
+}
+.mathboard .q-type {
+  color: var(--mb-muted);
+  font-size: 13px;
+}
+.mathboard .q-pts {
+  margin-left: auto;
+  background: var(--mb-accent-soft);
+  color: var(--mb-accent);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 12px;
+}
+.mathboard .q-text {
+  margin: 4px 0 10px;
+  font-size: 18px;
+}
+.mathboard .q-img {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+  margin: 8px 0;
+  border-radius: 10px;
+}
+.mathboard .q-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mathboard .q-opt {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  text-align: left;
+  background: var(--mb-field);
+  border: 2px solid transparent !important;
+  border-radius: 14px !important;
+  padding: 10px 14px !important;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.mathboard .q-opt b {
+  color: var(--mb-accent);
+  min-width: 22px;
+}
+.mathboard .q-opt:hover:not(:disabled) {
+  background: var(--mb-accent-soft);
+}
+.mathboard .q-opt.sel {
+  border-color: var(--mb-accent) !important;
+  background: var(--mb-accent-soft);
+}
+.mathboard .q-opt.ok {
+  background: #d3f9d8 !important;
+  border-color: #2f9e44 !important;
+}
+.mathboard .q-opt.bad {
+  background: #ffe3e3 !important;
+  border-color: #e03131 !important;
+}
+.mathboard .q-opt:disabled {
+  cursor: default;
+}
+.mathboard .q-match {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+.mathboard .q-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.mathboard .q-li {
+  flex: 1;
+}
+.mathboard .q-sel {
+  font: inherit;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 2px solid var(--mb-line);
+  background: #fff;
+  min-width: 64px;
+}
+.mathboard .q-sel.ok,
+.mathboard .q-input.ok {
+  border-color: #2f9e44;
+  background: #d3f9d8;
+}
+.mathboard .q-sel.bad,
+.mathboard .q-input.bad {
+  border-color: #e03131;
+  background: #ffe3e3;
+}
+.mathboard .q-fix {
+  color: #2f9e44;
+  font-style: normal;
+  font-weight: 700;
+}
+.mathboard .q-ri {
+  margin-bottom: 8px;
+}
+.mathboard .q-ri b {
+  color: var(--mb-accent);
+}
+.mathboard .q-input {
+  font: inherit;
+  width: 220px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 2px solid var(--mb-line);
+  background: var(--mb-field);
+  outline: none;
+}
+.mathboard .q-input:focus {
+  border-color: var(--mb-accent);
+  background: #fff;
+}
+.mathboard .q-key {
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: #d3f9d8;
+  border-radius: 12px;
+  font-size: 15px;
+}
+.mathboard .q-score {
+  margin-top: 10px;
+  font-weight: 700;
+}
+.mathboard .q-score.full {
+  color: #2f9e44;
+}
+.mathboard .q-score.part {
+  color: #f08c00;
+}
+.mathboard .q-score.none,
+.mathboard .q-score.empty {
+  color: #e03131;
+}
+.mathboard .q-expl {
+  margin-top: 10px;
+  background: var(--mb-field);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 15px;
+}
+.mathboard .q-expl summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--mb-accent);
+}
+.mathboard .q-stats {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--mb-muted);
+}
+.mathboard .q-hint {
+  font-size: 12px;
+  color: var(--mb-muted);
+}
+.mathboard .q-math {
+  font-size: 1.05em;
+}
+.mathboard .step {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.mathboard .step-n {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--mb-accent-soft);
+  color: var(--mb-accent);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.mathboard .prompt-box {
+  background: var(--mb-field);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-size: 12px;
+  white-space: pre-wrap;
+  max-height: 240px;
+  overflow: auto;
+  margin-top: 10px;
+}
+.mathboard .prompt-in {
+  width: 100%;
+  min-height: 160px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--mb-line);
+  background: var(--mb-field);
+  font:
+    13px ui-monospace,
+    Menlo,
+    monospace;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.mathboard .prompt-in:focus {
+  border-color: var(--mb-accent);
+  background: #fff;
+}
+.mathboard .parse-box {
+  background: var(--mb-field);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-top: 6px;
+}
+.mathboard .parse-box p {
+  margin: 4px 0 0;
+}
+.mathboard .warn {
+  color: #e8590c;
+}
+.mathboard .res-table {
+  border-collapse: collapse;
+  font-size: 14px;
+  width: 100%;
+}
+.mathboard .res-table th,
+.mathboard .res-table td {
+  border: 1px solid var(--mb-line);
+  padding: 6px 10px;
+  text-align: center;
+}
+.mathboard .res-table td:first-child,
+.mathboard .res-table th:first-child {
+  text-align: left;
+}
+.mathboard .res-table .q-full {
+  background: #d3f9d8;
+}
+.mathboard .res-table .q-part {
+  background: #fff3bf;
+}
+.mathboard .res-table .q-bad {
+  background: #ffe3e3;
+}
+.mathboard .res-table .q-none {
+  color: var(--mb-muted);
+}
+.mathboard .bd-score {
+  position: absolute;
+  left: 50%;
+  top: 66px;
+  transform: translateX(-50%);
+  z-index: 40;
+  background: #2f9e44;
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 18px;
+  font-size: 16px;
+  box-shadow: 0 6px 22px rgba(47, 158, 68, 0.35);
+}
+.mathboard .res-table .res-key td {
+  background: #f3f0ff;
+  font-weight: 700;
+  color: var(--mb-accent);
+}
+.mathboard .res-table td {
+  font-size: 13px;
+  white-space: nowrap;
+}
+.mathboard .bd-avatar.click {
+  cursor: pointer;
+}
+.mathboard .bd-peer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+}
+.mathboard .bd-peer-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+}
+.mathboard .bd-peer-name small {
+  color: var(--mb-muted);
+}
+.mathboard .bd-menu.bd-drop .bd-chip-btn {
+  white-space: nowrap;
+}
+/* ===== кнопки у вікнах дошки (стиль панелі дошки скидав їхній вигляд) ===== */
+.mathboard .bd .modal button:not(.bd-chip-btn):not(.bd-ibtn) {
+  padding: 10px 20px;
+  font-size: 14px;
+  border-radius: 999px;
+  background: var(--mb-accent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(109, 61, 240, 0.25);
+}
+.mathboard .bd .modal button:not(.bd-chip-btn):not(.bd-ibtn):hover {
+  background: var(--mb-accent-dark);
+}
+.mathboard .bd .modal button.ghost {
+  background: var(--mb-accent-soft);
+  color: var(--mb-accent);
+  box-shadow: none;
+}
+.mathboard .bd .modal button.ghost:hover {
+  background: #e2d8ff;
+}
+.mathboard .bd .modal button.danger {
+  background: var(--mb-danger-soft);
+  color: var(--mb-danger);
+  box-shadow: none;
+}
+.mathboard .bd .modal button.stop {
+  background: var(--mb-danger);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(192, 38, 74, 0.3);
+}
+.mathboard .bd .modal button.stop:hover {
+  background: #a01f3d;
+}
+.mathboard .bd .modal button:disabled {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
+}
+.mathboard .modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.mathboard .modal-head h2 {
+  margin: 0;
+}
+.mathboard .test-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+  margin-bottom: 14px;
+  color: var(--mb-muted);
+}
+.mathboard .status-pill {
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.mathboard .status-pill.live {
+  background: #d3f9d8;
+  color: #2b8a3e;
+}
+.mathboard .status-pill.closed {
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+.mathboard .tb-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+.mathboard .tb-group {
+  background: var(--mb-field);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.mathboard .tb-label {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mb-accent);
+  font-weight: 700;
+}
+.mathboard .tb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mathboard .tb-note {
+  font-size: 12px;
+  color: var(--mb-muted);
+}
+.mathboard .mins {
+  width: 76px;
+  padding: 8px 12px !important;
+  border-radius: 999px;
+  border: 1px solid var(--mb-line);
+  background: #fff;
+  font: inherit;
+}
+.mathboard .bd-progress {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  z-index: 38;
+  background: var(--mb-card);
+  box-shadow: 0 4px 24px rgba(80, 60, 160, 0.14);
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 220px;
+  align-items: center;
+}
+.mathboard .bd-progress i {
+  display: block;
+  width: 100%;
+  height: 6px;
+  background: var(--mb-accent-soft);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mathboard .bd-progress i b {
+  display: block;
+  height: 100%;
+  background: var(--mb-accent);
+  transition: width 0.3s;
+}
+.mathboard .bd-viewing {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  z-index: 39;
+  background: #5f3dc4;
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 12px 8px 22px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 6px 22px rgba(95, 61, 196, 0.35);
+}
+.mathboard .bd .bd-viewing .bd-chip-btn {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+.mathboard .bd .bd-viewing .bd-chip-btn:hover {
+  background: rgba(255, 255, 255, 0.34);
+}
+.mathboard .q-saved {
+  margin-left: 12px;
+  font-size: 13px;
+  color: #2f9e44;
+}
+.mathboard .tb-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.3;
+}
+.mathboard .tb-check small {
+  flex-basis: 100%;
+  color: var(--mb-muted);
+  font-size: 11px;
+  margin-left: 22px;
+}
+.mathboard .status-pill.draft {
+  background: #fff3bf;
+  color: #e67700;
+}
+/* ================= Оформлення кнопок і панелей (єдиний вигляд, без накладань) ================= */
+/* Чіпи (перемикачі): текст може переноситись, недоступні — бліді, але видно, що це кнопки */
+.mathboard .bd .bd-chip-btn {
+  padding: 7px 14px;
+  font-size: 13px;
+  line-height: 1.25;
+  border-radius: 14px;
+  background: var(--mb-field);
+  color: var(--mb-ink);
+  white-space: normal;
+  text-align: center;
+  max-width: 100%;
+  border: 1px solid transparent;
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+.mathboard .bd .bd-chip-btn:hover:not(:disabled) {
+  background: var(--mb-accent-soft);
+  border-color: #d9ccff;
+}
+.mathboard .bd .bd-chip-btn.on {
+  background: var(--mb-accent);
+  color: #fff;
+  border-color: transparent;
+}
+.mathboard .bd .bd-chip-btn.on:hover:not(:disabled) {
+  background: var(--mb-accent-dark);
+}
+.mathboard .bd .bd-chip-btn:disabled {
+  background: var(--mb-field);
+  color: var(--mb-muted);
+  opacity: 0.55;
+  cursor: not-allowed;
+  border: 1px dashed var(--mb-line);
+}
+/* Рядки з кнопками: однаковий проміжок, вирівнювання по центру */
+.mathboard .bd-sec.bd-line {
+  gap: 8px;
+  align-items: center;
+}
+.mathboard .bd-sec {
+  gap: 8px;
+}
+.mathboard .bd-line .bd-input.short {
+  flex: 1 1 80px;
+  min-width: 70px;
+  width: auto;
+}
+.mathboard .bd-lbl {
+  white-space: normal;
+}
+/* Інспектор: нижче верхньої смужки, блоки відокремлені, останній рядок не обрізається */
+.mathboard .bd-insp {
+  top: 80px;
+  max-height: calc(100% - 170px);
+  gap: 14px;
+  padding: 16px 16px 20px;
+  scroll-padding-bottom: 20px;
+}
+.mathboard .bd-insp .bd-sec:not(.bd-line):has(> .bd-lbl:first-child) {
+  border-top: 1px solid var(--mb-line);
+  padding-top: 12px;
+}
+.mathboard .bd-insp > .bd-sec:first-child {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+.mathboard .bd-insp .bd-sec > .bd-lbl:first-child {
+  font-weight: 700;
+  color: var(--mb-ink);
+  letter-spacing: 0.01em;
+}
+.mathboard .bd-insp .bd-sub {
+  margin-top: 2px;
+}
+.mathboard .bd-actions {
+  position: sticky;
+  bottom: -20px;
+  background: var(--mb-card);
+  padding-bottom: 4px;
+}
+/* Верхня права смужка: може переноситись, не виходить за межі */
+.mathboard .bd-people {
+  max-width: calc(100% - 28px);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  border-radius: 22px;
+  gap: 8px;
+}
+/* Банери по центру не залазять на смужку учасників */
+.mathboard .bd-progress,
+.mathboard .bd-viewing,
+.mathboard .bd-score,
+.mathboard .bd-error,
+.mathboard .bd-notice {
+  max-width: min(560px, calc(100% - 460px));
+}
+.mathboard .bd-viewing {
+  flex-wrap: wrap;
+  justify-content: center;
+  border-radius: 22px;
+}
+@media (max-width: 1100px) {
+  .mathboard .bd-progress,
+  .mathboard .bd-viewing,
+  .mathboard .bd-score,
+  .mathboard .bd-error {
+    top: 70px;
+    max-width: calc(100% - 28px);
+  }
+}
+/* Нижні панелі: аркуші не налазять на панель масштабу */
+.mathboard .bd-pages {
+  max-width: calc(100% - 700px);
+  min-width: 200px;
+}
+@media (max-width: 1250px) {
+  .mathboard .bd-pages {
+    left: 14px;
+    transform: none;
+    bottom: 72px;
+    max-width: calc(100% - 28px);
+  }
+}
+/* планшет: аркуші в одному рядку з панеллю масштабу, правіше неї, щоб не налазити на колонку інструментів */
+@media (max-width: 1250px) and (min-width: 761px) {
+  .mathboard .bd-pages {
+    left: 620px;
+    bottom: 14px;
+    max-width: calc(100% - 634px);
+    min-width: 140px;
+  }
+}
+/* Ліва панель інструментів: один стовпчик; на невисоких екранах — компактніші кнопки та прокрутка (без смуги) */
+.mathboard .bd-tools {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  max-height: calc(100% - 96px);
+}
+.mathboard .bd-tools::-webkit-scrollbar {
+  display: none;
+}
+@media (max-height: 940px) {
+  .mathboard .bd-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .mathboard .bd-tools {
+    padding: 6px;
+  }
+  .mathboard .bd-tools i.sep {
+    margin: 3px 6px;
+  }
+}
+@media (max-height: 700px) {
+  .mathboard .bd-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+/* Меню інструментів винесені з панелі (щоб прокрутка панелі їх не обрізала) */
+.mathboard .bd-menus {
+  position: absolute;
+  left: 76px;
+  top: 14px;
+  z-index: 25;
+  max-height: calc(100% - 96px);
+}
+.mathboard .bd-menus > .bd-menu {
+  position: relative;
+  left: 0;
+  top: 0;
+}
+/* Випадні меню: однаковий вигляд рядків, не вилазять за екран */
+.mathboard .bd-menu {
+  max-width: calc(100vw - 100px);
+}
+.mathboard .bd .bd-row {
+  border-radius: 12px;
+  line-height: 1.3;
+}
+.mathboard .bd-menu .bd-chip-btn {
+  margin: 2px 0;
+}
+/* Вікна: кнопки в рядку переносяться, а не налазять */
+.mathboard .modal .row {
+  gap: 10px;
+}
+.mathboard .modal-head {
+  flex-wrap: wrap;
+}
+.mathboard .tb-group button {
+  align-self: flex-start;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+}
+.mathboard .bd .modal button:not(.bd-chip-btn):not(.bd-ibtn) {
+  white-space: normal;
+  line-height: 1.25;
+}
+.mathboard .bd-peer {
+  flex-wrap: wrap;
+}
+.mathboard .bd-peer .bd-chip-btn {
+  flex: 0 0 auto;
+}
+/* Іконкові кнопки: однакова висота, видно при наведенні */
+.mathboard .bd .bd-ibtn {
+  flex: 0 0 auto;
+}
+.mathboard .bd .bd-ibtn:disabled {
+  opacity: 0.35;
+}
+/* Усі рядки кнопок: однакова розкладка з проміжками (раніше працювала лише всередині окремих блоків) */
+.mathboard .bd-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.mathboard .bd-line.wrap {
+  flex-wrap: wrap;
+}
+.mathboard .bd-line > .bd-lbl {
+  margin-right: 2px;
+}
+.mathboard .bd-sub.bd-line {
+  gap: 8px;
+  padding: 8px;
+}
+.mathboard .bd-menus > .bd-menu {
+  bottom: auto;
+}
+@media (max-width: 760px) {
+  .mathboard .bd-menus {
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: 116px;
+    max-height: 55%;
+  }
+  .mathboard .bd-tools {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+}
+/* список учнів: ім'я на всю ширину, кнопки окремим рядком */
+.mathboard .bd-peer {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--mb-line);
+}
+.mathboard .bd-peer:last-child {
+  border-bottom: 0;
+}
+.mathboard .bd-peer-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.mathboard .bd-peer-name b {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mathboard .bd-peer-name small {
+  color: var(--mb-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mathboard .bd-peer-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+.mathboard .bd-peer-actions .bd-chip-btn {
+  flex: 1 1 0;
+  padding: 8px 10px;
+}
+/* Миттєва підказка */
+.mathboard .bd-tip {
+  position: fixed;
+  display: none;
+  z-index: 1000;
+  pointer-events: none;
+  background: #1d1b2e;
+  color: #fff;
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+/* ===== Меню: іконка + назва + короткий опис ===== */
+.mathboard .bd-menu.wide {
+  width: 280px;
+}
+.mathboard .bd-menu .bd-menu-title {
+  margin-top: 4px;
+}
+.mathboard .bd-menu .bd-menu-title:first-child {
+  margin-top: 0;
+}
+.mathboard .bd .bd-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border-radius: 14px;
+}
+.mathboard .bd .bd-item.on {
+  background: var(--mb-accent-soft);
+}
+.mathboard .bd-item-ic {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--mb-accent-soft);
+  color: var(--mb-accent);
+}
+.mathboard .bd .bd-item:hover .bd-item-ic,
+.mathboard .bd .bd-item.on .bd-item-ic {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd-item-tx {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.mathboard .bd-item-tx b {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.mathboard .bd-item-tx small {
+  font-size: 11.5px;
+  color: var(--mb-muted);
+  line-height: 1.3;
+}
+.mathboard .bd .bd-item-static:hover {
+  background: none;
+  cursor: default;
+}
+.mathboard .bd .bd-item-static:hover .bd-item-ic {
+  background: var(--mb-accent-soft);
+  color: var(--mb-accent);
+}
+.mathboard .bd-timer-row {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+}
+.mathboard .bd-timer-row .bd-input {
+  width: 56px;
+  padding: 4px 6px;
+  font-family: inherit;
+  text-align: center;
+  font-size: 13px;
+}
+.mathboard .bd-timer-row .bd-chip-btn {
+  padding: 4px 10px;
+}
+.mathboard .bd .bd-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  padding: 0 8px 4px;
+}
+.mathboard .bd .bd-chips.inline {
+  padding: 0;
+  margin-left: auto;
+}
+.mathboard .bd .bd-chips .bd-chip-btn {
+  padding: 4px 11px;
+  margin: 0;
+}
+/* Меню фігур: компактна сітка у 2 колонки з підписами */
+.mathboard .bd-menu.bd-shapes {
+  width: 320px;
+}
+.mathboard .bd-pgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+.mathboard .bd .bd-shape {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  text-align: left;
+  font-size: 12.5px;
+  line-height: 1.2;
+  min-width: 0;
+}
+.mathboard .bd .bd-shape svg {
+  flex: none;
+  color: var(--mb-accent);
+}
+.mathboard .bd .bd-shape.on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd .bd-shape.on svg {
+  color: #fff;
+}
+/* =====================================================================
+   ТЕМА «glass»: пастельний градієнт, скляні картки, темні активні таблетки,
+   жирні заголовки, моноширинні цифри, рожева зірка й золота зірочка.
+   Усе перевизначено змінними й нижче — старі правила вище працюють як база.
+   ===================================================================== */
+.mathboard {
+  --mb-bg: #e6eeee;
+  --mb-card: rgba(255, 255, 255, 0.66);
+  --mb-ink: #14262a;
+  --mb-muted: #5f777b;
+  --mb-line: rgba(20, 38, 42, 0.09);
+  --mb-field: rgba(255, 255, 255, 0.6);
+  --mb-accent: #14262a;
+  --mb-accent-dark: #0a181b;
+  --mb-accent-soft: rgba(255, 255, 255, 0.85);
+  --mb-danger: #c0264a;
+  --mb-danger-soft: rgba(253, 234, 240, 0.9);
+  --mb-gold: #d9a93a;
+  --mb-pink: #f4b8d0;
+  --mb-glass-border: 1px solid rgba(255, 255, 255, 0.85);
+  --mb-shadow: 0 10px 40px rgba(40, 80, 90, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --mb-shadow-lg: 0 16px 56px rgba(40, 80, 90, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --mb-font-head: var(--mb-font-montserrat), var(--mb-font-manrope), system-ui, sans-serif;
+  --mb-font-mono: var(--mb-font-jetbrains), ui-monospace, Menlo, monospace;
+}
+.mathboard {
+  font-family:
+    var(--mb-font-manrope),
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  background:
+    radial-gradient(520px 420px at 92% 8%, rgba(244, 184, 208, 0.55), transparent 70%),
+    radial-gradient(640px 520px at 6% 92%, rgba(250, 214, 190, 0.5), transparent 70%),
+    radial-gradient(700px 600px at 55% 45%, rgba(190, 222, 222, 0.7), transparent 75%),
+    linear-gradient(160deg, #d9e9e8 0%, #e8eff0 48%, #f1e6e8 100%);
+  background-attachment: fixed;
+}
+.mathboard a {
+  color: var(--mb-ink);
+}
+/* скло */
+.mathboard .card,
+.mathboard .board-bar,
+.mathboard .bd-tools,
+.mathboard .bd-people,
+.mathboard .bd-bottom,
+.mathboard .bd-insp,
+.mathboard .bd-menu,
+.mathboard .bd-pages,
+.mathboard .bd-progress,
+.mathboard .bd-comment,
+.mathboard .mb-sliders {
+  background: var(--mb-card);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  backdrop-filter: blur(22px) saturate(1.35);
+  border: var(--mb-glass-border);
+  box-shadow: var(--mb-shadow);
+}
+.mathboard .bd-tools,
+.mathboard .bd-people,
+.mathboard .bd-bottom,
+.mathboard .bd-insp,
+.mathboard .bd-menu,
+.mathboard .bd-pages {
+  box-shadow: var(--mb-shadow-lg);
+}
+/* заголовки: жирні, широкі, великі літери */
+.mathboard h1,
+.mathboard h2,
+.mathboard .board-bar .title {
+  font-family: var(--mb-font-head);
+  letter-spacing: -0.01em;
+}
+.mathboard h1 {
+  font-weight: 800;
+  font-size: 30px;
+}
+.mathboard h2 {
+  font-weight: 800;
+  font-size: 22px;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+.mathboard .board-bar .title {
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+/* логотип-рукопис із золотою зіркою */
+/* кнопки: темна таблетка, «призрачні» — біле скло */
+.mathboard button,
+.mathboard .btn {
+  background: var(--mb-accent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(20, 38, 42, 0.22);
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+.mathboard button:hover,
+.mathboard .btn:hover {
+  background: #274349;
+}
+.mathboard button:active,
+.mathboard .btn:active {
+  transform: scale(0.98);
+}
+.mathboard button.ghost,
+.mathboard .btn.ghost {
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--mb-ink);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 2px 10px rgba(40, 80, 90, 0.08);
+}
+.mathboard button.ghost:hover,
+.mathboard .btn.ghost:hover {
+  background: #fff;
+}
+.mathboard button.danger {
+  background: var(--mb-danger-soft);
+  color: var(--mb-danger);
+  box-shadow: none;
+}
+.mathboard button.danger:hover {
+  background: #fadbe6;
+}
+/* поля */
+.mathboard input[type="text"],
+.mathboard input[type="number"],
+.mathboard textarea {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+.mathboard input[type="text"]:focus,
+.mathboard input[type="number"]:focus {
+  border-color: var(--mb-ink);
+  background: #fff;
+}
+/* кабінет: картки з великим заокругленням і рожевою зіркою */
+.mathboard .card {
+  border-radius: 36px;
+  padding: 30px 34px;
+  position: relative;
+  overflow: hidden;
+}
+.mathboard .board-item {
+  border-top: 1px solid var(--mb-line);
+}
+/* бічна навігація — плаваюча біла таблетка, активна — майже чорна */
+/* пунктирні кола-декор */
+/* сторінка дошки */
+.mathboard .board-wrap {
+  background: transparent;
+}
+.mathboard .board-bar {
+  border-radius: 999px;
+}
+.mathboard .board-canvas {
+  border-radius: 36px;
+  border: var(--mb-glass-border);
+  box-shadow: var(--mb-shadow-lg);
+}
+.mathboard .mb-root {
+  background: #fdfefe;
+}
+/* панелі дошки */
+.mathboard .bd-tools {
+  border-radius: 34px;
+}
+.mathboard .bd-menu {
+  border-radius: 28px;
+}
+.mathboard .bd-insp {
+  border-radius: 30px;
+}
+.mathboard .bd-bottom,
+.mathboard .bd-pages,
+.mathboard .bd-people {
+  border-radius: 999px;
+}
+.mathboard .bd-people {
+  border-radius: 28px;
+}
+.mathboard .bd button:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+.mathboard .bd-btn.on,
+.mathboard .bd .bd-ibtn.on,
+.mathboard .bd .bd-chip-btn.on,
+.mathboard .bd .bd-page.on,
+.mathboard .bd .bd-shape.on,
+.mathboard .bd .bd-tri.on,
+.mathboard .bd-cell.on {
+  background: var(--mb-accent);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(20, 38, 42, 0.3);
+}
+.mathboard .bd-btn.on:hover,
+.mathboard .bd .bd-ibtn.on:hover,
+.mathboard .bd .bd-chip-btn.on:hover,
+.mathboard .bd .bd-page.on:hover {
+  background: #274349;
+}
+.mathboard .bd-menu-title {
+  color: var(--mb-muted);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.mathboard .bd .bd-chip-btn {
+  background: rgba(255, 255, 255, 0.7);
+}
+.mathboard .bd .bd-chip-btn:hover:not(:disabled) {
+  background: #fff;
+  border-color: rgba(20, 38, 42, 0.12);
+}
+.mathboard .bd .bd-chip-btn.on:hover:not(:disabled) {
+  background: #274349;
+}
+.mathboard .bd .bd-chip-btn:disabled {
+  background: rgba(255, 255, 255, 0.4);
+}
+.mathboard .bd .bd-item.on {
+  background: rgba(255, 255, 255, 0.9);
+}
+.mathboard .bd-item-ic {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--mb-ink);
+  box-shadow: 0 2px 8px rgba(40, 80, 90, 0.08);
+}
+.mathboard .bd .bd-item:hover .bd-item-ic,
+.mathboard .bd .bd-item.on .bd-item-ic {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .bd .bd-item-static:hover .bd-item-ic {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--mb-ink);
+}
+.mathboard .bd .bd-shape svg {
+  color: var(--mb-ink);
+}
+.mathboard .bd .bd-w.on {
+  background: rgba(255, 255, 255, 0.9);
+}
+.mathboard .bd .bd-sw.on {
+  box-shadow: 0 0 0 2.5px var(--mb-ink);
+}
+.mathboard .bd .bd-input {
+  background: rgba(255, 255, 255, 0.75);
+  font-family: var(--mb-font-mono);
+}
+.mathboard .bd .bd-input:focus {
+  border-color: var(--mb-ink);
+  background: #fff;
+}
+.mathboard .bd-zoom,
+.mathboard .bd-num,
+.mathboard .mb-slider span,
+.mathboard .q-score,
+.mathboard .bd-progress,
+.mathboard .mins {
+  font-family: var(--mb-font-mono);
+}
+.mathboard .bd-avatar {
+  box-shadow: 0 0 0 2px #fff;
+}
+.mathboard .bd-actions {
+  background: var(--mb-card, #fff);
+  z-index: 2;
+}
+.mathboard .bd-tip,
+.mathboard .bd-notice {
+  background: var(--mb-ink);
+}
+.mathboard .bd-viewing {
+  background: var(--mb-ink);
+  box-shadow: 0 8px 26px rgba(20, 38, 42, 0.35);
+}
+.mathboard .bd-progress i,
+.mathboard .bd-progress i b {
+  border-radius: 3px;
+}
+.mathboard .bd-progress i {
+  background: rgba(20, 38, 42, 0.1);
+}
+.mathboard .bd-progress i b {
+  background: var(--mb-ink);
+}
+/* вікна й тести */
+.mathboard .modal-back {
+  background: rgba(20, 38, 42, 0.32);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.mathboard .modal.card {
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 36px;
+}
+.mathboard .bd .modal button:not(.bd-chip-btn):not(.bd-ibtn) {
+  background: var(--mb-accent);
+  box-shadow: 0 6px 18px rgba(20, 38, 42, 0.22);
+}
+.mathboard .bd .modal button:not(.bd-chip-btn):not(.bd-ibtn):hover {
+  background: #274349;
+}
+.mathboard .bd .modal button.ghost {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--mb-ink);
+}
+.mathboard .bd .modal button.ghost:hover {
+  background: #fff;
+}
+.mathboard .mb-quiz {
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 28px;
+  font-family: var(--mb-font-manrope), system-ui, sans-serif;
+  box-shadow: var(--mb-shadow-lg);
+}
+.mathboard .q-n {
+  background: var(--mb-accent);
+  font-family: var(--mb-font-mono);
+}
+.mathboard .q-pts {
+  background: rgba(20, 38, 42, 0.07);
+  color: var(--mb-ink);
+  font-family: var(--mb-font-mono);
+}
+.mathboard .q-opt {
+  border-radius: 18px !important;
+}
+.mathboard .q-opt b,
+.mathboard .q-ri b {
+  color: var(--mb-ink);
+}
+.mathboard .q-opt:hover:not(:disabled) {
+  background: #fff;
+}
+.mathboard .q-opt.sel {
+  border-color: var(--mb-ink) !important;
+  background: #fff;
+}
+.mathboard .q-input:focus {
+  border-color: var(--mb-ink);
+}
+.mathboard .q-expl summary {
+  color: var(--mb-ink);
+}
+.mathboard .res-table .res-key td {
+  background: rgba(20, 38, 42, 0.06);
+  color: var(--mb-ink);
+}
+.mathboard .q-hint,
+.mathboard .q-type {
+  color: var(--mb-muted);
+}
+.mathboard .mb-text-edit {
+  border-color: var(--mb-ink);
+  font-family: var(--mb-font-manrope), system-ui, sans-serif;
+}
+.mathboard .mb-formula.editing {
+  outline-color: var(--mb-ink);
+}
+.mathboard .mb-slider input,
+.mathboard .bd input[type="range"] {
+  accent-color: var(--mb-ink);
+}
+.mathboard .tb-label,
+.mathboard .status-pill {
+  letter-spacing: 0.1em;
+}
+.mathboard .tb-group,
+.mathboard .bd-sub,
+.mathboard .bd-msg,
+.mathboard .prompt-box,
+.mathboard .parse-box {
+  background: rgba(255, 255, 255, 0.55);
+}
+.mathboard .step-n {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--mb-ink);
+  font-family: var(--mb-font-mono);
+}
+.mathboard .card .toast,
+.mathboard .toast {
+  color: #1a7f4b;
+}
+@media (max-width: 760px) {
+  .mathboard .card {
+    border-radius: 28px;
+    padding: 24px 22px;
+  }
+}
+/* ===== власні штрихи поверх теми glass (щоб не копіювати референс 1:1) ===== */
+.mathboard {
+  --mb-gold: #e3b341;
+  --mb-pink: #cfc6f7;
+}
+.mathboard {
+  background:
+    radial-gradient(520px 420px at 92% 8%, rgba(207, 198, 247, 0.65), transparent 70%),
+    radial-gradient(640px 520px at 6% 92%, rgba(255, 221, 196, 0.6), transparent 70%),
+    radial-gradient(700px 600px at 55% 45%, rgba(200, 232, 226, 0.7), transparent 75%),
+    linear-gradient(160deg, #dcebe8 0%, #eaeff2 48%, #f3e9ec 100%);
+  background-attachment: fixed;
+}
+/* замість гострої зірки — округла 8-пелюсткова квітка, друга картка — бірюзова */
+/* лого: чотирипроменева іскра замість зірки */
+/* ===== об'єм без нижньої тіні: симетричне світіння (без зсуву вниз) + верхній відблиск ===== */
+.mathboard button,
+.mathboard .btn,
+.mathboard .bd button {
+  box-shadow:
+    0 0 10px rgba(40, 80, 90, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.mathboard .bd button {
+  box-shadow: none;
+}
+.mathboard .bd .bd-item,
+.mathboard .bd .bd-row,
+.mathboard .bd .bd-shape,
+.mathboard .bd .bd-cell,
+.mathboard .bd .bd-chip-btn,
+.mathboard .bd .bd-page {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 0 9px rgba(40, 80, 90, 0.1),
+    inset 0 1px 0 #fff;
+}
+.mathboard .bd .bd-item:hover,
+.mathboard .bd .bd-row:hover,
+.mathboard .bd .bd-shape:hover,
+.mathboard .bd .bd-cell:hover,
+.mathboard .bd .bd-chip-btn:hover:not(:disabled) {
+  background: #fff;
+}
+.mathboard .bd-btn.on,
+.mathboard .bd .bd-ibtn.on,
+.mathboard .bd .bd-chip-btn.on,
+.mathboard .bd .bd-page.on,
+.mathboard .bd .bd-shape.on,
+.mathboard .bd .bd-tri.on,
+.mathboard .bd-cell.on,
+.mathboard .bd .modal button:not(.bd-chip-btn):not(.bd-ibtn) {
+  box-shadow:
+    0 0 10px rgba(20, 38, 42, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.mathboard .bd .modal button.ghost,
+.mathboard .bd .modal button.danger {
+  box-shadow:
+    0 0 9px rgba(40, 80, 90, 0.1),
+    inset 0 1px 0 #fff;
+}
+.mathboard .bd-item-ic {
+  box-shadow:
+    0 0 6px rgba(40, 80, 90, 0.1),
+    inset 0 1px 0 #fff;
+}
+.mathboard button.ghost,
+.mathboard .btn.ghost {
+  box-shadow:
+    0 0 10px rgba(40, 80, 90, 0.1),
+    inset 0 1px 0 #fff;
+}
+/* ===== наведення: темна підсвітка, як в «Об'ємних фігурах» ===== */
+.mathboard .bd .bd-shape:hover,
+.mathboard .bd .bd-row:hover,
+.mathboard .bd .bd-cell:hover {
+  background: var(--mb-accent);
+  color: #fff;
+  box-shadow:
+    0 0 10px rgba(20, 38, 42, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.mathboard .bd .bd-shape:hover svg,
+.mathboard .bd .bd-cell:hover svg {
+  color: #fff;
+}
+/* числова пряма: діалог проміжків */
+.mathboard .nl-modal {
+  width: min(760px, 100%);
+}
+.mathboard .nl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border: 1px solid #cfd8e3;
+  border-radius: 14px;
+}
+.mathboard .nl-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #adb5bd;
+  padding: 0;
+  cursor: pointer;
+}
+.mathboard .nl-in {
+  width: 84px;
+  padding: 8px 10px;
+  border: 2px solid #cfd8e3;
+  border-radius: 10px;
+  font-size: 16px;
+  text-align: center;
+}
+.mathboard .nl-in:focus {
+  outline: none;
+  border-color: #3b6fb6;
+}
+.mathboard .nl-in.err {
+  border-color: #e03131;
+}
+.mathboard .nl-chk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #495057;
+}
+.mathboard .nl-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* ===== formlq host wrappers ===== */
+/* Page root (/board/[id]): fills the viewport and shows the glass gradient behind the bar. */
+.mathboard.mb-page {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+/* BoardCanvas root: fills the board-canvas frame; the page root already paints the background. */
+.mathboard.mb-host {
+  position: absolute;
+  inset: 0;
+  background: none;
+}
+/* Confirm / prompt dialogs that replace window.confirm / window.prompt */
+.mathboard .modal.mb-ask {
+  width: min(440px, 100%);
+}
+.mathboard .mb-ask input[type="text"] {
+  width: 100%;
+}
+/* The board keeps mathboard's light look even when the app is in dark mode. */
+.mathboard {
+  color-scheme: light;
+}

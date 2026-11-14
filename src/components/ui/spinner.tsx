@@ -11,7 +11,7 @@ export function Spinner({ size = "md", className }: SpinnerProps) {
   return (
     <div
       className={cn(
-        "rounded-full border-2 border-primary border-t-transparent animate-spin",
+        "rounded-full border-2 border-foreground/80 border-t-transparent animate-spin",
         sizes[size],
         className,
       )}
@@ -30,7 +30,7 @@ export function SpinnerPage({ size = "md" }: { size?: keyof typeof sizes }) {
 /** Full-viewport loader (auth gates, route-level loading). */
 export function SpinnerScreen() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex items-center justify-center">
       <Spinner size="lg" />
     </div>
   );

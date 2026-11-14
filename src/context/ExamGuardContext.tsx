@@ -70,22 +70,22 @@ export function ExamGuardProvider({ children }: { children: ReactNode }) {
     <ExamGuardContext.Provider value={{ isGuarded, setGuarded, requestNav, requestAction }}>
       {children}
       {pendingAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-(--backdrop) backdrop-blur-md">
+          <div className="bg-popover border border-glass-edge rounded-[2rem] p-7 shadow-glass-lg max-w-sm w-full mx-4 space-y-5">
             <div className="space-y-1">
-              <p className="font-semibold text-base">{copy.title}</p>
+              <p className="font-heading font-bold text-base">{copy.title}</p>
               <p className="text-sm text-muted-foreground">{copy.message}</p>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={cancel}
-                className="flex-1 px-4 py-2 rounded-xl border border-border/60 text-sm font-medium hover:bg-muted transition-colors"
+                className="flex-1 px-4 py-2 rounded-full border border-glass-edge bg-glass shadow-pill text-sm font-semibold hover:bg-glass-strong transition-colors"
               >
                 Залишитись
               </button>
               <button
                 onClick={confirm}
-                className="flex-1 px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                className="flex-1 px-4 py-2 rounded-full bg-destructive text-white text-sm font-semibold hover:opacity-90 transition-opacity"
               >
                 {copy.confirmLabel}
               </button>

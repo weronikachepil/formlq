@@ -18,9 +18,10 @@ export function TestQuestionList({
   activeId: string | null;
   onSelect: (id: string | null) => void;
   onAdd: (type: QuestionType) => void;
-  onImport: () => void;
+  /** Omitted = no question bank here (a teacher's own test). */
+  onImport?: () => void;
   onImportFile: () => void;
-  onExport: () => void;
+  onExport?: () => void;
 }) {
   return (
     <div className="space-y-2">
@@ -68,14 +69,16 @@ export function TestQuestionList({
             + {TYPE_LABELS[type]}
           </Button>
         ))}
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-xs border-primary/40 text-primary hover:bg-primary/5"
-          onClick={onImport}
-        >
-          З банку
-        </Button>
+        {onImport && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs border-primary/40 text-primary hover:bg-primary/5"
+            onClick={onImport}
+          >
+            З банку
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
@@ -84,15 +87,17 @@ export function TestQuestionList({
         >
           З файлу
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 text-xs border-orange-400/40 text-orange-600 hover:bg-orange-500/5"
-          onClick={onExport}
-          disabled={questions.length === 0}
-        >
-          В банк
-        </Button>
+        {onExport && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 text-xs border-orange-400/40 text-orange-600 hover:bg-orange-500/5"
+            onClick={onExport}
+            disabled={questions.length === 0}
+          >
+            В банк
+          </Button>
+        )}
       </div>
     </div>
   );

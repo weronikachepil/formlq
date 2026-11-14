@@ -55,13 +55,14 @@ export function Dialog({
       className="fixed inset-0 z-80 flex items-center justify-center p-4"
       onClick={closeOnBackdrop ? onClose : undefined}
     >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-150" />
+      <div className="absolute inset-0 bg-(--backdrop) backdrop-blur-md animate-in fade-in-0 duration-150" />
       <div
         role="dialog"
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative z-10 w-full rounded-2xl border border-border/60 bg-card shadow-xl",
+          // Big-radius glass card; nearly opaque so dense forms stay readable over the blur.
+          "relative z-10 w-full rounded-[2rem] border border-glass-edge bg-popover shadow-glass-lg",
           "animate-in fade-in-0 zoom-in-95 duration-150",
           sizes[size],
           className,

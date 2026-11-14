@@ -19,7 +19,10 @@ export function TutorSection({ tutorId }: { tutorId: string }) {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => subscribeTutorStudents(tutorId, setStudents), [tutorId]);
+  useEffect(
+    () => subscribeTutorStudents(tutorId, setStudents, { includeStaff: true }),
+    [tutorId],
+  );
   useEffect(() => subscribeTutorLessons(tutorId, setLessons), [tutorId]);
 
   async function handleAdd(e: React.FormEvent) {

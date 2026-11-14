@@ -1,60 +1,171 @@
 "use client";
 
-import { queryKeys, STALE } from "@/lib/queryKeys";
-import { pluralize, PLURAL } from "@/lib/format";
-import { useAuth } from "@/context/AuthContext";
-import { getPublishedTests } from "@/lib/tests";
-import { SpinnerPage } from "@/components/ui/spinner";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
-import { ChevronRight, FileText } from "lucide-react";
+import { queryKeys, STALE } from "@/lib/queryKeys";
+import { useAuth } from "@/context/AuthContext";
+import { canTutor, isEditor } from "@/lib/roles";
+import {
+  GRADES,
+  SUBJECT_LABEL,
+  getPublishedTests,
+  getUserResults,
+  type TestDoc,
+  type TestSubject,
+} from "@/lib/tests";
+import { Select, SelectItem } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { TestDoc } from "@/lib/tests";
+import { SearchInput } from "@/components/ui/search-input";
+import { TestCard, bestByTest } from "@/components/tests/TestCard";
 
-function TestCard({ test, index }: { test: TestDoc; index: number }) {
-  return (
-    <Link href={`/dashboard/exam/${test.id}`} className="block">
-      <div className="rounded-2xl border border-border/50 bg-card px-5 py-4 flex items-center gap-4 hover:bg-muted/30 hover:border-border/80 transition-all group">
-        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-          <span className="text-xs font-bold text-primary tabular-nums">{index + 1}</span>
-        </div>
+type Filter = "all" | "nmt" | "teachers";
 
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">{test.title}</p>
-          {test.subtitle && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">{test.subtitle}</p>
-          )}
-        </div>
+const FILTER_LABEL: Record<Filter, string> = {
+  all: "Усі",
+  nmt: "НМТ",
+  teachers: "Від викладачів",
+};
 
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-            <FileText size={11} />
-            <span>{pluralize(test.questions?.length ?? 0, PLURAL.question)}</span>
-          </div>
-          <ChevronRight size={16} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
-        </div>
-      </div>
-    </Link>
-  );
+const ALL = "all";
+
+interface Query {
+  text: string;
+  source: Filter;
+  grade: string; // ALL or "5".."11"
+  subject: TestSubject | typeof ALL;
+}
+
+function matches(t: TestDoc, q: Query): boolean {
+  if (q.source === "nmt" && t.personal) return false;
+  if (q.source === "teachers" && !t.personal) return false;
+  if (q.grade !== ALL && String(t.grade ?? "") !== q.grade) return false;
+  // "Algebra and geometry" tests suit either filter.
+  if (q.subject !== ALL && t.subject !== q.subject && t.subject !== "mixed") return false;
+  if (!q.text) return true;
+  return [t.title, t.subtitle, t.authorName].some((s) => (s ?? "").toLowerCase().includes(q.text));
 }
 
 export default function TestsPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
+  const router = useRouter();
+  // The catalog is for students (and editors); teachers work with their own tests.
+  const teacher = canTutor(userProfile?.role) && !isEditor(userProfile?.role);
+  useEffect(() => {
+    if (teacher) router.replace("/tutor/tests");
+  }, [teacher, router]);
+
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [grade, setGrade] = useState<string>(ALL);
+  const [subject, setSubject] = useState<TestSubject | typeof ALL>(ALL);
 
   const { data: tests = [], isLoading } = useQuery({
     queryKey: queryKeys.tests.published,
     queryFn: getPublishedTests,
-    enabled: !!user,
+    enabled: !!user && !!userProfile && !teacher,
     staleTime: STALE.long,
   });
 
+  // Same cached list as the history page.
+  const { data: results = [] } = useQuery({
+    queryKey: queryKeys.results(user?.uid),
+    queryFn: () => getUserResults(user!.uid),
+    enabled: !!user && !!userProfile && !teacher,
+    staleTime: STALE.short,
+  });
+  const best = useMemo(() => bestByTest(results), [results]);
+
+  // The platform's own tests first (in its order), then teachers' — newest first.
+  const ordered = useMemo(() => {
+    const updated = (t: TestDoc) => t.updatedAt?.toMillis() ?? 0;
+    return [
+      ...tests.filter((t) => !t.personal),
+      ...tests.filter((t) => t.personal).sort((a, b) => updated(b) - updated(a)),
+    ];
+  }, [tests]);
+  const teacherCount = ordered.filter((t) => t.personal).length;
+
+  const q: Query = { text: search.trim().toLowerCase(), source: filter, grade, subject };
+  const visible = ordered.filter((t) => matches(t, q));
+  // Source counts follow the other filters, so the tabs say what you'll get.
+  const counts = Object.fromEntries(
+    (Object.keys(FILTER_LABEL) as Filter[]).map((f) => [f, ordered.filter((t) => matches(t, { ...q, source: f })).length]),
+  ) as Record<Filter, number>;
+  const filtered = !!q.text || filter !== "all" || grade !== ALL || subject !== ALL;
+
+  if (isLoading || teacher || !userProfile) return <SpinnerPage />;
+  if (tests.length === 0) {
+    return <EmptyState emoji="📝" title="Тести ще не додані" description="Зайдіть пізніше" />;
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {isLoading ? <SpinnerPage /> : tests.length === 0 ? (
-        <EmptyState emoji="📝" title="Тести ще не додані" description="Зайдіть пізніше" />
+    <div className="max-w-6xl mx-auto space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Пошук за назвою, описом чи автором"
+          wrapperClassName="flex-1"
+          className="h-10"
+        />
+        <div className="sm:w-36">
+            <Select value={grade} onValueChange={setGrade}>
+              <SelectItem value={ALL}>Усі класи</SelectItem>
+              {GRADES.map((g) => (
+                <SelectItem key={g} value={String(g)}>
+                  {g} клас
+                </SelectItem>
+              ))}
+            </Select>
+          </div>
+        <div className="sm:w-44">
+          <Select value={subject} onValueChange={(v) => setSubject(v as TestSubject | typeof ALL)}>
+            <SelectItem value={ALL}>Усі розділи</SelectItem>
+            <SelectItem value="algebra">{SUBJECT_LABEL.algebra}</SelectItem>
+            <SelectItem value="geometry">{SUBJECT_LABEL.geometry}</SelectItem>
+          </Select>
+        </div>
+      </div>
+
+      {teacherCount > 0 && (
+        <div className="flex">
+          <div role="tablist" className="flex gap-1 p-1 rounded-full bg-glass border border-glass-edge shadow-pill w-fit">
+            {(Object.keys(FILTER_LABEL) as Filter[]).map((f) => (
+              <button
+                key={f}
+                type="button"
+                role="tab"
+                aria-selected={filter === f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "h-8 px-3.5 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                  filter === f
+                    ? "bg-primary text-primary-foreground shadow-pill-dark"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {FILTER_LABEL[f]}
+                <span className="ml-1.5 text-xs opacity-60 tabular-nums">{counts[f]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {visible.length === 0 ? (
+        <EmptyState
+          emoji="🔍"
+          title="Нічого не знайдено"
+          description={filtered ? "Спробуйте інший запит або приберіть фільтри" : undefined}
+        />
       ) : (
-        <div className="space-y-2">
-          {tests.map((test, i) => <TestCard key={test.id} test={test} index={i} />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {visible.map((t) => (
+            <TestCard key={t.id} test={t} best={best.get(t.id)} query={search} />
+          ))}
         </div>
       )}
     </div>

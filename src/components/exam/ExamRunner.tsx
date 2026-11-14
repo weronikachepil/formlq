@@ -413,10 +413,10 @@ export function ExamRunner({
       const end = Date.now() + duration;
       const colors =
         pct >= 80
-          ? ["#f59e0b", "#fbbf24", "#fde68a", "#ffffff"]
+          ? ["#e3b341", "#f3d27a", "#cfc6f7", "#ffffff"]
           : pct >= 50
-            ? ["#6366f1", "#818cf8", "#a5b4fc", "#ffffff"]
-            : ["#64748b", "#94a3b8", "#cbd5e1", "#ffffff"];
+            ? ["#14262a", "#cfc6f7", "#bfe0dd", "#ffffff"]
+            : ["#5f777b", "#bfe0dd", "#dcebe8", "#ffffff"];
       const frame = () => {
         if (cancelled) return;
         confetti({
@@ -469,7 +469,7 @@ export function ExamRunner({
     const maxScaled = isNmt ? 200 : maxScaledScore(scoreTable);
     if (!resultData) return null;
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
         <main className="max-w-2xl mx-auto px-4 pt-8 pb-28 space-y-6">
           {headerSlot}
           <ResultsView
@@ -532,11 +532,11 @@ export function ExamRunner({
   const isLast = currentIdx + 1 >= questions.length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <main className="max-w-3xl mx-auto px-4 py-5 space-y-4">
         {/* Sticky so the timer and "Завершити" stay in reach on long questions.
             --app-header-h is set by AppShell; 0 on the header-less public page. */}
-        <div className="sticky top-[var(--app-header-h,0px)] z-40 -mx-4 px-4 py-2 flex items-center justify-between gap-3 bg-background/90 backdrop-blur-md">
+        <div className="sticky top-[var(--app-header-h,0px)] z-40 -mx-4 px-4 py-2 flex items-center justify-between gap-3 bg-background/60 backdrop-blur-xl">
           <span className="text-sm text-muted-foreground tabular-nums">
             {questions.length - unanswered} / {questions.length}
           </span>
@@ -555,7 +555,7 @@ export function ExamRunner({
                 label={referenceLabel}
                 size="md"
                 onClick={openReference}
-                className="md:hidden rounded-xl"
+                className="md:hidden"
               >
                 <BookOpen size={17} />
               </IconButton>
@@ -646,7 +646,7 @@ export function ExamRunner({
           type="button"
           onClick={openReference}
           className={cn(
-            "hidden md:flex fixed bottom-5 right-5 items-center gap-2 px-4 py-2.5 rounded-2xl bg-card border border-border/60 shadow-lg text-sm font-medium text-foreground hover:bg-muted transition-all z-50",
+            "hidden md:flex fixed bottom-5 right-5 items-center gap-2 px-4 py-2.5 rounded-full bg-popover border border-glass-edge shadow-glass text-sm font-semibold text-foreground hover:bg-glass-strong transition-all z-50",
             drawerOpen && "opacity-0 pointer-events-none",
           )}
         >

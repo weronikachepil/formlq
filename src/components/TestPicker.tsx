@@ -219,7 +219,8 @@ export function TestPicker({
                         type="button"
                         onClick={() => !searching && g.key !== UNFILED && toggleGroup(g.key)}
                         className={cn(
-                          "sticky top-0 z-10 w-full flex items-center gap-2 px-2 py-2 rounded-lg bg-popover text-left",
+                          // Square corners: a rounded sticky header lets scrolled rows peek through its corners.
+                          "sticky top-0 z-10 w-full flex items-center gap-2 px-2 py-2 bg-popover text-left",
                           g.key !== UNFILED && !searching && "hover:bg-muted cursor-pointer",
                           (g.key === UNFILED || searching) && "cursor-default",
                         )}

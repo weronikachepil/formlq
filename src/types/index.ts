@@ -11,6 +11,8 @@ export interface UserProfile {
   lastActivity: Timestamp | null;
   totalXP: number;
   role: UserRole;
+  /** A teacher's invite code for students (src/lib/invites.ts). */
+  inviteCode?: string;
 }
 
 export interface Topic {

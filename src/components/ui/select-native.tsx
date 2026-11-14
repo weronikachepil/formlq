@@ -14,8 +14,10 @@ export function SelectNative({
       <select
         {...props}
         className={cn(
-          "w-full appearance-none pl-3 pr-8 py-2 rounded-xl border border-border/50 bg-background",
-          "text-sm text-foreground focus:outline-none focus:border-primary transition-colors cursor-pointer",
+          "w-full appearance-none pl-4 pr-9 py-2 rounded-full border border-glass-edge bg-glass shadow-pill",
+          "text-sm text-foreground hover:bg-glass-strong focus:outline-none focus:border-foreground/50 transition-colors cursor-pointer",
+          // Native option lists ignore translucency; keep them readable in both modes.
+          "[&>option]:bg-popover [&>option]:text-popover-foreground",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           className,
         )}
@@ -24,7 +26,7 @@ export function SelectNative({
       </select>
       <ChevronDown
         size={14}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
       />
     </div>
   );

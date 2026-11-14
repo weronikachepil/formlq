@@ -10,27 +10,47 @@ import {
   Users,
   ClipboardCheck,
   CalendarDays,
+  Presentation,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useExamGuard } from "@/context/ExamGuardContext";
+import { useHasTutor } from "@/hooks/useHasTutor";
 import { canTutor, isEditor } from "@/lib/roles";
+import type { UserRole } from "@/types";
 
-type NavLink = { icon: LucideIcon; href: string; label: string };
+type NavLink = {
+  icon: LucideIcon;
+  href: string;
+  label: string;
+  /** Other path prefixes that belong to this section. */
+  also?: string[];
+  /** Hidden for tutors/editors (they are never anyone's student). */
+  studentOnly?: boolean;
+  /** The platform's test catalog: hidden from teachers (they have only their own tests). */
+  catalog?: boolean;
+  /** Teachers only: editors manage the same thing in the admin area. */
+  teacherOnly?: boolean;
+  /** Only for students who have a teacher (homework, lessons). */
+  withTutor?: boolean;
+};
 
 export const NAV: NavLink[] = [
   { icon: Home, href: "/dashboard", label: "Головна" },
-  { icon: FileText, href: "/dashboard/tests", label: "Тести" },
-  { icon: ClipboardCheck, href: "/dashboard/homework", label: "Домашні" },
-  { icon: CalendarDays, href: "/dashboard/calendar", label: "Календар" },
+  { icon: FileText, href: "/dashboard/tests", label: "Тести", catalog: true },
+  { icon: ClipboardCheck, href: "/dashboard/homework", label: "Домашні", studentOnly: true, withTutor: true },
+  { icon: CalendarDays, href: "/dashboard/calendar", label: "Календар", studentOnly: true, withTutor: true },
+  { icon: Presentation, href: "/dashboard/boards", label: "Дошки", studentOnly: true },
   { icon: History, href: "/dashboard/history", label: "Історія" },
 ];
 
 export const TUTOR_NAV: NavLink[] = [
-  { icon: Users, href: "/tutor/students", label: "Учні" },
-  { icon: ClipboardCheck, href: "/tutor/homework", label: "Домашні" },
+  // Students and their homework are one section: cabinets per student.
+  { icon: Users, href: "/tutor/students", label: "Учні", also: ["/tutor/homework"] },
+  { icon: FileText, href: "/tutor/tests", label: "Мої тести", teacherOnly: true },
   { icon: CalendarDays, href: "/tutor/calendar", label: "Календар" },
+  { icon: Presentation, href: "/tutor/boards", label: "Дошки" },
 ];
 
 export const ADMIN_NAV: NavLink[] = [
@@ -40,23 +60,37 @@ export const ADMIN_NAV: NavLink[] = [
   { icon: ClipboardCheck, href: "/admin/questions", label: "Завдання" },
 ];
 
-/** Dashboard home matches exactly; every other link matches its subtree. */
-export function isNavActive(path: string, href: string) {
-  return href === "/dashboard" ? path === href : path.startsWith(href);
+/** The common section for this role: staff don't see student-only items. */
+export function navFor(role: UserRole | null | undefined, hasTutor?: boolean): NavLink[] {
+  // While unknown (`undefined`) keep everything, so real students don't see items pop in.
+  if (!canTutor(role)) return NAV.filter((l) => !(l.withTutor && hasTutor === false));
+  return NAV.filter((l) => !l.studentOnly && !(l.catalog && !isEditor(role)));
+}
+
+/** The teacher's section for this role (editors skip what the admin area covers). */
+export function tutorNavFor(role: UserRole | null | undefined): NavLink[] {
+  return isEditor(role) ? TUTOR_NAV.filter((l) => !l.teacherOnly) : TUTOR_NAV;
+}
+
+/** Dashboard home matches exactly; every other link matches its subtree (and its `also` prefixes). */
+export function isNavActive(path: string, href: string, also: string[] = []) {
+  if (href === "/dashboard") return path === href;
+  return [href, ...also].some((p) => path.startsWith(p));
 }
 
 export function AppSidebar() {
   const path = usePathname();
   const { userProfile } = useAuth();
   const { requestNav } = useExamGuard();
+  const hasTutor = useHasTutor();
 
   function renderLinks(links: NavLink[]) {
-    return links.map(({ icon, href, label }) => (
+    return links.map(({ icon, href, label, also }) => (
       <NavItem
         key={href}
         label={label}
         Icon={icon}
-        active={isNavActive(path, href)}
+        active={isNavActive(path, href, also)}
         onClick={() => requestNav(href)}
       />
     ));
@@ -64,26 +98,25 @@ export function AppSidebar() {
 
   return (
     <aside className="fixed left-4 top-1/2 -translate-y-1/2 w-16 hidden md:flex flex-col items-center z-40">
-      {/* Single nav island — sections split by dividers */}
+      {/* Single floating white-glass pill (MathBoard) — sections split by dividers */}
       <div
         className={cn(
-          "flex flex-col items-center gap-1 p-1.5 rounded-3xl",
-          "bg-card border border-border/50",
-          "shadow-[0_2px_16px_rgba(0,0,0,0.07),0_0_0_1px_rgba(0,0,0,0.03)]",
+          "flex flex-col items-center gap-1.5 p-2 rounded-[2.5rem]",
+          "bg-sidebar border border-sidebar-border shadow-glass backdrop-blur-xl",
         )}
       >
-        {renderLinks(NAV)}
+        {renderLinks(navFor(userProfile?.role, hasTutor))}
 
         {canTutor(userProfile?.role) && (
           <>
-            <div className="h-px w-7 bg-border/60 my-1" />
-            {renderLinks(TUTOR_NAV)}
+            <div className="h-px w-6 bg-foreground/10 my-0.5" />
+            {renderLinks(tutorNavFor(userProfile?.role))}
           </>
         )}
 
         {isEditor(userProfile?.role) && (
           <>
-            <div className="h-px w-7 bg-border/60 my-1" />
+            <div className="h-px w-6 bg-foreground/10 my-0.5" />
             {renderLinks(ADMIN_NAV)}
           </>
         )}
@@ -109,11 +142,11 @@ function NavItem({
         onClick={onClick}
         aria-label={label}
         className={cn(
-          "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+          "w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
           active
-            ? "bg-primary text-primary-foreground shadow-[0_3px_10px_color-mix(in_oklch,var(--primary)_45%,transparent)]"
-            : "text-muted-foreground hover:text-foreground hover:bg-background/60",
+            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-pill-dark"
+            : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent hover:shadow-pill",
         )}
       >
         <Icon size={20} className="transition-transform duration-200 group-hover:scale-110" />
@@ -128,16 +161,14 @@ function Tooltip({ label }: { label: string }) {
     <div
       className={cn(
         "pointer-events-none absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 z-50",
-        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg",
-        "bg-popover border border-border/50 shadow-md",
-        "text-xs font-medium text-foreground whitespace-nowrap",
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-full",
+        "bg-primary text-primary-foreground shadow-pill-dark",
+        "text-xs font-semibold whitespace-nowrap",
         "opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0",
         "transition-all duration-150",
       )}
     >
       {label}
-      <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-border/50" />
-      <span className="absolute right-full top-1/2 -translate-y-1/2 ml-px border-[3.5px] border-transparent border-r-popover translate-x-px" />
     </div>
   );
 }

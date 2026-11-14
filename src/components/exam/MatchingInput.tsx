@@ -26,8 +26,8 @@ export function MatchingInput({ question, value, onChange }: MatchingInputProps)
 
   return (
     <div className="flex gap-3 items-start">
-      <div className="flex-2 min-w-0 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/30 p-3 space-y-2">
-        <p className="text-[11px] font-medium text-blue-600/70 dark:text-blue-400/70 uppercase tracking-wide px-1">
+      <div className="flex-2 min-w-0 rounded-2xl bg-mint/35 border border-mint/60 p-3 space-y-2">
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-[0.16em] px-1">
           Вираз
         </p>
         {question.leftItems.map((item) => {
@@ -42,7 +42,7 @@ export function MatchingInput({ question, value, onChange }: MatchingInputProps)
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border-2 transition-all text-left",
                 isActive
                   ? "border-primary bg-primary/10 shadow-sm"
-                  : "border-transparent bg-white/70 dark:bg-white/5 hover:border-primary/30",
+                  : "border-transparent bg-glass hover:border-primary/30",
               )}
             >
               <span className="text-sm font-semibold text-muted-foreground w-5 shrink-0">
@@ -85,8 +85,8 @@ export function MatchingInput({ question, value, onChange }: MatchingInputProps)
                 isUsed
                   ? "border-green-400/60 bg-green-100/60 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                   : activeLeft
-                    ? "border-primary/40 bg-white/70 dark:bg-white/5 hover:border-primary hover:bg-primary/10 cursor-pointer"
-                    : "border-transparent bg-white/70 dark:bg-white/5 text-foreground/80",
+                    ? "border-primary/40 bg-glass hover:border-primary hover:bg-primary/10 cursor-pointer"
+                    : "border-transparent bg-glass text-foreground/80",
               )}
             >
               <span className="shrink-0">{opt.id}.</span>

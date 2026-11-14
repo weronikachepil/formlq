@@ -5,6 +5,81 @@
       "$uid": {
         ".write": "auth != null && auth.uid === $uid"
       }
+    },
+    "boards": {
+      "$b": {
+        ".read": "auth != null && root.child('boards/' + $b + '/meta/owner').val() === auth.uid",
+        ".write": "auth != null && root.child('boards/' + $b + '/meta/owner').val() === auth.uid",
+        "meta": {
+          ".read": "auth != null",
+          ".write": "auth != null && !data.exists() && newData.child('owner').val() === auth.uid",
+          ".validate": "newData.hasChildren(['owner', 'edit', 'protect']) && newData.child('edit').isBoolean() && newData.child('protect').isBoolean()"
+        },
+        "objs": {
+          ".read": "auth != null",
+          "$oid": {
+            ".write": "auth != null && (((newData.child('t').val() === 'vote' || data.child('t').val() === 'vote') && $oid.endsWith('_' + auth.uid) && (!newData.exists() || (newData.child('t').val() === 'vote' && newData.child('by').val() === auth.uid)) && (!data.exists() || data.child('by').val() === auth.uid)) || ((!newData.exists() || (newData.child('t').val().matches(/^(stroke|line|ellipse|polygon|angle|text|formula|graph|solid|image|arc|ruler|protractor|comment|trig|numline|colmath|fmodel|chart|dice|ptree|cplane)$/) && newData.child('lock').val() !== true && newData.child('vis').val() !== 'teacher' && (!newData.child('pg').exists() || ((!root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('for').exists() || root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('for').val() === auth.uid) && !(root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('closed').val() === true && root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('test').val() === true))) && (root.child('boards/' + $b + '/meta/edit').val() === true || (newData.child('pg').exists() && root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('for').val() === auth.uid)))) && (!data.exists() || ((data.child('t').val().matches(/^(stroke|line|ellipse|polygon|angle|text|formula|graph|solid|image|arc|ruler|protractor|comment|trig|numline|colmath|fmodel|chart|dice|ptree|cplane)$/) && data.child('lock').val() !== true && data.child('vis').val() !== 'teacher' && (!data.child('pg').exists() || ((!root.child('boards/' + $b + '/objs/' + data.child('pg').val()).child('for').exists() || root.child('boards/' + $b + '/objs/' + data.child('pg').val()).child('for').val() === auth.uid) && !(root.child('boards/' + $b + '/objs/' + data.child('pg').val()).child('closed').val() === true && root.child('boards/' + $b + '/objs/' + data.child('pg').val()).child('test').val() === true))) && (root.child('boards/' + $b + '/meta/edit').val() === true || (data.child('pg').exists() && root.child('boards/' + $b + '/objs/' + data.child('pg').val()).child('for').val() === auth.uid))) && (!(root.child('boards/' + $b + '/meta/protect').val() === true) || data.child('by').val() === auth.uid || (data.child('t').val() === 'comment' && newData.exists())))) && (!data.exists() || !newData.exists() || (newData.child('by').val() === data.child('by').val() && newData.child('pg').val() === data.child('pg').val())) && (data.exists() || newData.child('by').val() === auth.uid)))",
+            ".validate": "newData.hasChildren(['t', 'd', 'z']) && newData.child('t').isString() && newData.child('z').isNumber() && newData.child('d').isString() && newData.child('d').val().length < 3000000"
+          }
+        },
+        "own": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            "$oid": {
+              ".write": "auth != null && auth.uid === $uid && (($oid.endsWith('_' + $uid) && ((newData.exists() && newData.child('t').val() === 'answer' && newData.child('by').val() === $uid && newData.child('pg').isString() && !(root.child('boards/' + $b + '/own/' + $uid + '/' + newData.child('pg').val()).child('closed').val() === true || root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('closed').val() === true) && !((root.child('boards/' + $b + '/own/' + $uid + '/' + newData.child('pg').val()).child('endsAt').isNumber() && root.child('boards/' + $b + '/own/' + $uid + '/' + newData.child('pg').val()).child('endsAt').val() < now) || (root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('endsAt').isNumber() && root.child('boards/' + $b + '/objs/' + newData.child('pg').val()).child('endsAt').val() < now)) && !root.child('boards/' + $b + '/own/' + $uid + '/flag_' + newData.child('pg').val() + '_' + $uid).exists() && (!data.exists() || data.child('t').val() === 'answer')) || (!newData.exists() && data.child('t').val() === 'answer' && !(root.child('boards/' + $b + '/own/' + $uid + '/' + data.child('pg').val()).child('closed').val() === true || root.child('boards/' + $b + '/objs/' + data.child('pg').val()).child('closed').val() === true) && !root.child('boards/' + $b + '/own/' + $uid + '/flag_' + data.child('pg').val() + '_' + $uid).exists()))) || ($oid.endsWith('_' + $uid) && ((newData.exists() && !data.exists() && newData.child('t').val() === 'flag' && newData.child('by').val() === $uid) || (!newData.exists() && data.child('t').val() === 'flag' && !(root.child('boards/' + $b + '/own/' + $uid + '/' + data.child('pg').val()).child('test').val() === true || root.child('boards/' + $b + '/objs/' + data.child('pg').val()).child('test').val() === true)))) || ((!newData.exists() || (newData.child('t').val().matches(/^(stroke|line|ellipse|polygon|angle|text|formula|graph|solid|image|arc|ruler|protractor|comment|trig|numline|colmath|fmodel|chart|dice|ptree|cplane)$/) && newData.child('lock').val() !== true && root.child('boards/' + $b + '/own/' + $uid + '/' + newData.child('pg').val()).child('for').val() === $uid && !(root.child('boards/' + $b + '/own/' + $uid + '/' + newData.child('pg').val()).child('closed').val() === true && root.child('boards/' + $b + '/own/' + $uid + '/' + newData.child('pg').val()).child('test').val() === true))) && (!data.exists() || (data.child('t').val().matches(/^(stroke|line|ellipse|polygon|angle|text|formula|graph|solid|image|arc|ruler|protractor|comment|trig|numline|colmath|fmodel|chart|dice|ptree|cplane)$/) && data.child('lock').val() !== true && root.child('boards/' + $b + '/own/' + $uid + '/' + data.child('pg').val()).child('for').val() === $uid && !(root.child('boards/' + $b + '/own/' + $uid + '/' + data.child('pg').val()).child('closed').val() === true && root.child('boards/' + $b + '/own/' + $uid + '/' + data.child('pg').val()).child('test').val() === true)))))",
+              ".validate": "newData.hasChildren(['t', 'd', 'z']) && newData.child('t').isString() && newData.child('z').isNumber() && newData.child('d').isString() && newData.child('d').val().length < 3000000"
+            }
+          }
+        },
+        "hidden": {
+          "$oid": {
+            ".validate": "newData.hasChildren(['t', 'd', 'z']) && newData.child('t').isString() && newData.child('z').isNumber() && newData.child('d').isString() && newData.child('d').val().length < 3000000"
+          }
+        },
+        "live": {
+          "peers": {
+            ".read": "auth != null",
+            "$cid": {
+              ".write": "auth != null && ((newData.exists() && newData.child('uid').val() === auth.uid && (!data.exists() || data.child('uid').val() === auth.uid) && (newData.child('owner').val() !== true || root.child('boards/' + $b + '/meta/owner').val() === auth.uid)) || (!newData.exists() && data.child('uid').val() === auth.uid))"
+            }
+          },
+          "cur": {
+            ".read": "auth != null",
+            "$cid": {
+              ".write": "auth != null && root.child('boards/' + $b + '/live/peers/' + $cid + '/uid').val() === auth.uid"
+            }
+          },
+          "laser": {
+            ".read": "auth != null",
+            "$cid": {
+              ".write": "auth != null && root.child('boards/' + $b + '/live/peers/' + $cid + '/uid').val() === auth.uid"
+            }
+          },
+          "pview": {
+            "$cid": {
+              ".write": "auth != null && root.child('boards/' + $b + '/live/peers/' + $cid + '/uid').val() === auth.uid"
+            }
+          },
+          "view": {
+            ".read": "auth != null"
+          },
+          "goto": {
+            ".read": "auth != null"
+          }
+        }
+      }
+    },
+    "boardVersions": {
+      "$b": {
+        ".read": "auth != null && root.child('boards/' + $b + '/meta/owner').val() === auth.uid",
+        ".write": "auth != null && root.child('boards/' + $b + '/meta/owner').val() === auth.uid"
+      }
+    },
+    "boardSnapshots": {
+      "$b": {
+        ".read": "auth != null && root.child('boards/' + $b + '/meta/owner').val() === auth.uid",
+        ".write": "auth != null && root.child('boards/' + $b + '/meta/owner').val() === auth.uid"
+      }
     }
   }
 }

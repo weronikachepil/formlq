@@ -1,11 +1,15 @@
 import { SectionLabel } from "@/components/ui/section-label";
 import { TextInput } from "@/components/ui/text-field";
+import { Select, SelectItem } from "@/components/ui/select";
+import { GRADES, SUBJECT_LABEL, type TestSubject } from "@/lib/tests";
 import { StepButton } from "./primitives";
 
 const MIN_DURATION = 5;
 const MAX_DURATION = 360;
 
-/** Title / subtitle / duration fields of a test. */
+const NONE = "none";
+
+/** Title / description / grade / subject / duration fields of a test. */
 export function TestMetaCard({
   title,
   onTitleChange,
@@ -14,6 +18,11 @@ export function TestMetaCard({
   durationMinutes,
   onDurationChange,
   totalPoints,
+  descriptionRequired = false,
+  grade,
+  onGradeChange,
+  subject,
+  onSubjectChange,
 }: {
   title: string;
   onTitleChange: (v: string) => void;
@@ -22,6 +31,12 @@ export function TestMetaCard({
   durationMinutes: number;
   onDurationChange: (v: number) => void;
   totalPoints: number;
+  /** Mark the description as required (a teacher publishing to the catalog). */
+  descriptionRequired?: boolean;
+  grade: number | null;
+  onGradeChange: (v: number | null) => void;
+  subject: TestSubject | null;
+  onSubjectChange: (v: TestSubject | null) => void;
 }) {
   return (
     <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-3">
@@ -40,15 +55,46 @@ export function TestMetaCard({
         </div>
         <div className="space-y-1">
           <SectionLabel as="label" htmlFor="test-subtitle">
-            Підзаголовок
+            Короткий опис{descriptionRequired && <span className="text-destructive"> *</span>}
           </SectionLabel>
           <TextInput
             id="test-subtitle"
             value={subtitle}
             onChange={(e) => onSubtitleChange(e.target.value)}
-            placeholder="НМТ 2026 · Варіант 1"
+            maxLength={140}
+            placeholder="Тема, рівень, варіант — наприклад «Квадратні рівняння · базовий рівень»"
             className="bg-background"
           />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <SectionLabel>Клас</SectionLabel>
+          <Select
+            value={grade === null ? NONE : String(grade)}
+            onValueChange={(v) => onGradeChange(v === NONE ? null : Number(v))}
+          >
+            <SelectItem value={NONE}>Не вказано</SelectItem>
+            {GRADES.map((g) => (
+              <SelectItem key={g} value={String(g)}>
+                {g} клас
+              </SelectItem>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <SectionLabel>Розділ</SectionLabel>
+          <Select
+            value={subject ?? NONE}
+            onValueChange={(v) => onSubjectChange(v === NONE ? null : (v as TestSubject))}
+          >
+            <SelectItem value={NONE}>Не вказано</SelectItem>
+            {(Object.keys(SUBJECT_LABEL) as TestSubject[]).map((s) => (
+              <SelectItem key={s} value={s}>
+                {SUBJECT_LABEL[s]}
+              </SelectItem>
+            ))}
+          </Select>
         </div>
       </div>
       <div className="space-y-1 w-fit">

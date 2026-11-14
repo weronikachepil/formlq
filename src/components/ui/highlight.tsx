@@ -22,7 +22,7 @@ export function Highlight({ text, query, className }: HighlightProps) {
           <mark
             key={i}
             className={cn(
-              "rounded-[3px] bg-primary/20 text-inherit px-px -mx-px font-semibold",
+              "rounded-[3px] bg-gold/35 text-inherit px-px -mx-px font-semibold",
               className,
             )}
           >

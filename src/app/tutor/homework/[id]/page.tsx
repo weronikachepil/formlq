@@ -37,7 +37,7 @@ export default function TutorHomeworkReviewPage() {
       const hw = await getHomework(id);
       // Owner tutor or any editor may review.
       if (!hw || (hw.tutorId !== user.uid && !isEditor(userProfile?.role))) {
-        router.replace("/tutor/homework");
+        router.replace("/tutor/students");
         return;
       }
       setHomework(hw);
@@ -67,7 +67,7 @@ export default function TutorHomeworkReviewPage() {
 
   async function handleDelete() {
     await deleteHomework(id);
-    router.replace("/tutor/homework");
+    router.replace(homework ? `/tutor/students/${homework.studentId}` : "/tutor/students");
   }
 
   if (loading) return <SpinnerPage />;

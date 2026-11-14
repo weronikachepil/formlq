@@ -60,10 +60,10 @@ function Select({ value, onValueChange, children, className, disabled }: SelectP
           disabled={disabled}
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            "flex items-center justify-between gap-2 rounded-xl border border-border/50 bg-background px-3 py-2",
+            "flex items-center justify-between gap-2 rounded-full border border-glass-edge bg-glass px-4 py-2 shadow-pill",
             "text-sm text-foreground transition-colors cursor-pointer outline-none whitespace-nowrap",
-            "hover:border-border focus-visible:border-primary",
-            open && "border-primary",
+            "hover:bg-glass-strong focus-visible:border-foreground/50",
+            open && "bg-glass-strong border-foreground/40",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             className,
           )}
@@ -78,7 +78,7 @@ function Select({ value, onValueChange, children, className, disabled }: SelectP
         {open && (
           <div
             className={cn(
-              "absolute left-0 top-[calc(100%+6px)] z-50 min-w-full rounded-xl border border-border/50 bg-popover p-1 shadow-xl",
+              "absolute left-0 top-[calc(100%+6px)] z-50 min-w-full rounded-3xl border border-glass-edge bg-popover p-1.5 shadow-glass-lg backdrop-blur-xl",
               "animate-in fade-in-0 zoom-in-95 duration-100",
             )}
           >
@@ -109,17 +109,17 @@ function SelectItem({ value, children, disabled, className }: SelectItemProps) {
       disabled={disabled}
       onClick={() => { onValueChange(value); close(); }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg pl-7 pr-3 py-1.5 text-sm text-left relative",
+        "flex w-full items-center gap-2 rounded-full pl-7 pr-3 py-1.5 text-sm text-left relative",
         "cursor-pointer transition-colors outline-none",
         "hover:bg-muted",
-        selected && "font-medium text-primary",
+        selected && "font-semibold text-foreground",
         "disabled:opacity-50 disabled:cursor-not-allowed",
         className,
       )}
     >
       {selected && (
         <span className="absolute left-2 flex items-center justify-center">
-          <Check size={12} className="text-primary" />
+          <Check size={12} className="text-foreground" />
         </span>
       )}
       {children}
