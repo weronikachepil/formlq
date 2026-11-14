@@ -18,9 +18,10 @@ export function SectionLabel({
     <Tag
       className={cn(
         "uppercase text-muted-foreground",
+        // MathBoard `.label`: small, semibold, widely tracked.
         size === "xs"
-          ? "text-xs font-medium tracking-wide"
-          : "text-[10px] font-semibold tracking-wider px-1",
+          ? "text-xs font-semibold tracking-[0.16em]"
+          : "text-[10px] font-semibold tracking-[0.18em] px-1",
         className,
       )}
       {...props}

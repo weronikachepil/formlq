@@ -7,10 +7,22 @@ import {
   onSnapshot,
   query,
   where,
+  writeBatch,
   Timestamp,
 } from "firebase/firestore";
 import { docsOf } from "@/lib/firestore-helpers";
 import { db } from "@/lib/firebase";
+import { addDays, weeklyOccurrences } from "@/lib/calendar";
+
+/** planned → happened (`done`) / tutor cancelled (`canceled`) / student didn't come (`missed`). */
+export type LessonStatus = "planned" | "done" | "canceled" | "missed";
+
+export const LESSON_STATUS_LABEL: Record<LessonStatus, string> = {
+  planned: "Заплановано",
+  done: "Проведено",
+  canceled: "Скасовано",
+  missed: "Пропущено",
+};
 
 export interface Lesson {
   id: string;
@@ -23,7 +35,20 @@ export interface Lesson {
   durationMin: number;
   note?: string;
   meetingUrl?: string; // Zoom / Google Meet link
+  /** Shared by every occurrence of a weekly lesson. */
+  seriesId?: string;
+  /** Missing on older lessons = "planned". */
+  status?: LessonStatus;
+  /** Price in UAH. */
+  price?: number;
+  paid?: boolean;
+  /** Whiteboard opened for this lesson (src/lib/boards.ts). */
+  boardId?: string;
 }
+
+export const lessonStatus = (l: Pick<Lesson, "status">): LessonStatus => l.status ?? "planned";
+export const lessonEndMs = (l: Pick<Lesson, "start" | "durationMin">) =>
+  l.start.toMillis() + l.durationMin * 60000;
 
 export type NewLesson = Omit<Lesson, "id">;
 
@@ -75,4 +100,62 @@ export function subscribeStudentLessons(
         ),
       ),
   );
+}
+
+// --- Weekly series ----------------------------------------------------------
+
+/** Upper bound for one series, so a typo in the end date can't create thousands of docs. */
+export const MAX_SERIES_LESSONS = 52;
+
+/**
+ * Creates a lesson every week from `data.start` until `until` (inclusive), each a
+ * separate document sharing a `seriesId`, so any single one can be moved,
+ * cancelled or marked paid on its own. Returns the number created.
+ */
+export async function createLessonSeries(data: NewLesson, until: Date): Promise<number> {
+  const seriesId = doc(collection(db, "lessons")).id;
+  const first = data.start.toDate();
+  const batch = writeBatch(db);
+  // Same wall-clock time every week, also across DST changes; the count matches
+  // the preview in the lesson dialog.
+  const n = weeklyOccurrences(first, until, MAX_SERIES_LESSONS);
+  for (let i = 0; i < n; i++) {
+    const start = Timestamp.fromDate(addDays(first, i * 7));
+    batch.set(doc(collection(db, "lessons")), { ...data, seriesId, start });
+  }
+  await batch.commit();
+  return n;
+}
+
+/** Lessons of the same series starting at or after `from` (incl. `from` itself). */
+export function seriesFrom(all: Lesson[], from: Lesson): Lesson[] {
+  if (!from.seriesId) return [from];
+  const t = from.start.toMillis();
+  return all.filter((l) => l.seriesId === from.seriesId && l.start.toMillis() >= t);
+}
+
+/**
+ * Applies an edit to this and the following lessons of a series. A time change is
+ * applied as a shift (same weekday offset / clock change for every occurrence).
+ */
+export async function updateLessonsFrom(
+  lessons: Lesson[],
+  anchor: Lesson,
+  patch: Partial<Omit<Lesson, "id" | "start">>,
+  newStart?: Date,
+): Promise<void> {
+  const shift = newStart ? newStart.getTime() - anchor.start.toMillis() : 0;
+  const batch = writeBatch(db);
+  for (const l of lessons) {
+    const next: Partial<Lesson> = { ...patch };
+    if (shift) next.start = Timestamp.fromMillis(l.start.toMillis() + shift);
+    batch.update(doc(db, "lessons", l.id), next);
+  }
+  await batch.commit();
+}
+
+export async function deleteLessons(ids: string[]): Promise<void> {
+  const batch = writeBatch(db);
+  for (const id of ids) batch.delete(doc(db, "lessons", id));
+  await batch.commit();
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AppShell } from "@/components/AppShell";
+import { AppShell, SectionGreeting } from "@/components/AppShell";
 
 function timeGreeting(hour: number) {
   if (hour < 5) return "Доброї ночі";
@@ -31,14 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       redirectMode="push"
       homePath="/dashboard"
       fallbackName="Учень"
-      greeting={(name) => (
-        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-          <span className="text-xl font-bold">{name}</span>
-          <span className="text-sm text-muted-foreground">
-            · {timeGreeting(new Date().getHours())}
-          </span>
-        </div>
-      )}
+      greeting={(name) => <SectionGreeting label={timeGreeting(new Date().getHours())} name={name} />}
     >
       {children}
     </AppShell>

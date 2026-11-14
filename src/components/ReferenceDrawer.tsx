@@ -150,7 +150,7 @@ export function ReferenceDrawer() {
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-95 bg-black/30 backdrop-blur-[2px] transition-opacity duration-300",
+          "fixed inset-0 z-95 bg-(--backdrop) backdrop-blur-[2px] transition-opacity duration-300",
           open ? "opacity-100" : "opacity-0 pointer-events-none",
         )}
         onClick={closeDrawer}
@@ -170,7 +170,7 @@ export function ReferenceDrawer() {
             "flex items-center justify-between px-5 py-3.5 shrink-0 transition-all duration-200",
             "bg-background/85 backdrop-blur-sm",
             scrolled
-              ? "border-b border-border/40 shadow-[0_1px_16px_color-mix(in_oklch,var(--primary)_8%,transparent)]"
+              ? "border-b border-border/40 shadow-glass"
               : "border-b border-transparent",
           )}
         >
@@ -226,7 +226,7 @@ export function ReferenceDrawer() {
             "bg-background/85 backdrop-blur-sm",
             atBottom
               ? "border-t border-transparent"
-              : "border-t border-border/40 shadow-[0_-1px_16px_color-mix(in_oklch,var(--primary)_8%,transparent)]",
+              : "border-t border-border/40 shadow-glass",
           )}
         >
           <PdfToolbar

@@ -99,9 +99,8 @@ export default function AdminUserHistoryPage() {
         <TutorSection tutorId={uid} />
       )}
 
-      {/* Student side — shown whenever the user has tutors/homework/lessons,
-          regardless of role (a tutor/editor can also be someone's student). */}
-      {profile && <StudentSection studentId={uid} />}
+      {/* Student side — only students have tutors, homework and lessons. */}
+      {profile?.role === "student" && <StudentSection studentId={uid} />}
 
       {results.length === 0 ? (
         <EmptyState emoji="📋" title="Ще немає пройдених тестів" />

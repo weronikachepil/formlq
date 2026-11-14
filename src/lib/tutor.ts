@@ -11,11 +11,13 @@ import {
   serverTimestamp,
   query,
   where,
+  documentId,
   Timestamp,
 } from "firebase/firestore";
 import { docsOf } from "@/lib/firestore-helpers";
 import { db } from "@/lib/firebase";
 import { getUserByEmail, getUserById } from "@/lib/users";
+import { canTutor } from "@/lib/roles";
 import type { TestQuestion, ScoreRow, ScaleType } from "@/lib/tests";
 
 // --- Tutor ↔ Student link ---------------------------------------------------
@@ -40,6 +42,7 @@ export async function addStudentByEmail(
   const student = await getUserByEmail(email);
   if (!student) throw new Error("Користувача з таким email не знайдено");
   if (student.uid === tutorId) throw new Error("Не можна додати себе як учня");
+  if (canTutor(student.role)) throw new Error("Вчителя чи редактора не можна додати як учня");
 
   const id = `${tutorId}_${student.uid}`;
   const ref = doc(db, "tutorStudents", id);
@@ -64,6 +67,7 @@ async function linkTutorStudent(
 ): Promise<TutorStudent> {
   if (tutorId === studentId) throw new Error("Не можна призначити себе вчителем");
   const student = await getUserById(studentId);
+  if (canTutor(student?.role)) throw new Error("Вчителю чи редактору не можна призначити вчителя");
   const id = `${tutorId}_${studentId}`;
   const ref = doc(db, "tutorStudents", id);
   const existing = await getDoc(ref);
@@ -92,13 +96,36 @@ export async function removeStudent(linkId: string): Promise<void> {
   await deleteDoc(doc(db, "tutorStudents", linkId));
 }
 
+/** Uids among `uids` whose current role is tutor or editor. */
+async function staffAmong(uids: string[]): Promise<Set<string>> {
+  // Firestore `in` takes at most 30 values; the chunks are fetched in parallel.
+  const chunks: string[][] = [];
+  for (let i = 0; i < uids.length; i += 30) chunks.push(uids.slice(i, i + 30));
+  const snaps = await Promise.all(
+    chunks.map((ids) => getDocs(query(collection(db, "users"), where(documentId(), "in", ids)))),
+  );
+  const staff = new Set<string>();
+  for (const snap of snaps) for (const d of snap.docs) if (canTutor(d.data().role)) staff.add(d.id);
+  return staff;
+}
+
+/**
+ * Tutors and editors never get homework or lessons as students, even if an old
+ * link says so (e.g. the user was promoted later); hide such links.
+ */
+async function onlyStudents(links: TutorStudent[]): Promise<TutorStudent[]> {
+  if (!links.length) return links;
+  const staff = await staffAmong([...new Set(links.map((l) => l.studentId))]);
+  return links.filter((l) => !staff.has(l.studentId));
+}
+
 export async function getTutorStudents(
   tutorId: string,
 ): Promise<TutorStudent[]> {
   const snap = await getDocs(
     query(collection(db, "tutorStudents"), where("tutorId", "==", tutorId)),
   );
-  return docsOf<TutorStudent>(snap);
+  return onlyStudents(docsOf<TutorStudent>(snap));
 }
 
 /** Links where this user is the student — i.e. the tutors they belong to. */
@@ -111,14 +138,27 @@ export async function getStudentTutorLinks(
   return docsOf<TutorStudent>(snap);
 }
 
+/**
+ * Live list of a tutor's students. Staff accounts are filtered out unless
+ * `includeStaff` (the admin view, so stale links can still be removed).
+ */
 export function subscribeTutorStudents(
   tutorId: string,
   cb: (list: TutorStudent[]) => void,
+  { includeStaff = false }: { includeStaff?: boolean } = {},
 ): () => void {
+  let seq = 0;
   return onSnapshot(
     query(collection(db, "tutorStudents"), where("tutorId", "==", tutorId)),
-    (snap) =>
-      cb(docsOf<TutorStudent>(snap)),
+    (snap) => {
+      const links = docsOf<TutorStudent>(snap);
+      if (includeStaff) return cb(links);
+      // Drop results of an older snapshot that resolves after a newer one.
+      const mine = ++seq;
+      onlyStudents(links)
+        .then((list) => mine === seq && cb(list))
+        .catch(() => mine === seq && cb(links));
+    },
   );
 }
 
@@ -202,6 +242,22 @@ export function subscribeTutorHomework(
           docsOf<Homework>(snap),
         ),
       ),
+  );
+}
+
+/** One student's homework from this tutor (the tutor's student cabinet). */
+export function subscribeTutorStudentHomework(
+  tutorId: string,
+  studentId: string,
+  cb: (list: Homework[]) => void,
+): () => void {
+  return onSnapshot(
+    query(
+      collection(db, "homework"),
+      where("tutorId", "==", tutorId),
+      where("studentId", "==", studentId),
+    ),
+    (snap) => cb(sortByAssigned(docsOf<Homework>(snap))),
   );
 }
 

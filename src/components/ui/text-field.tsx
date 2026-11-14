@@ -1,14 +1,15 @@
 import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
-/** Shared look for app text inputs/textareas (rounded-xl card field, primary focus ring). */
+/** Shared look for app text inputs/textareas (MathBoard white-glass field, ink focus edge). */
 export const fieldClass = cn(
-  "w-full rounded-xl border border-border/50 bg-card text-sm outline-none transition-colors",
-  "placeholder:text-muted-foreground/70 hover:border-border focus:border-primary focus:ring-2 focus:ring-primary/20",
+  "w-full rounded-xl border border-glass-edge bg-glass text-sm shadow-pill outline-none transition-colors",
+  "placeholder:text-muted-foreground/70 hover:bg-glass-strong focus:bg-glass-strong focus:border-foreground/50 focus:ring-2 focus:ring-ring/15",
   "disabled:opacity-50 disabled:cursor-not-allowed",
 );
 
-const inputSizes = { sm: "h-8 px-3", md: "h-10 px-4" } as const;
+// Single-line inputs are pills; textareas keep the rounded-xl corner from fieldClass.
+const inputSizes = { sm: "h-8 px-3.5 rounded-full", md: "h-10 px-4 rounded-full" } as const;
 
 interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: keyof typeof inputSizes;

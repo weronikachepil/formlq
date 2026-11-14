@@ -1,64 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { usePageHeader } from "@/context/HeaderContext";
+import { queryKeys, STALE } from "@/lib/queryKeys";
 import { subscribeStudentHomework, Homework } from "@/lib/tutor";
-import { isHomeworkOverdue } from "@/lib/homework-status";
-import { cn } from "@/lib/utils";
+import { getUserResults, type TestResult } from "@/lib/tests";
+import { useNow } from "@/components/calendar/tutor/useNow";
 import { SpinnerPage } from "@/components/ui/spinner";
-import { EmptyState } from "@/components/ui/empty-state";
-import { HomeworkDue, HomeworkListItem } from "@/components/homework/HomeworkListItem";
+import { StudentHomeworkCabinet } from "@/components/homework/StudentHomeworkCabinet";
 
 export default function StudentHomeworkPage() {
   const { user } = useAuth();
-  const [list, setList] = useState<Homework[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [now] = useState(() => Date.now());
+  const [list, setList] = useState<Homework[] | null>(null);
+  const now = useNow();
 
-  usePageHeader("Домашні завдання", "Завдання від вашого вчителя");
+  usePageHeader("Домашні завдання", "Завдання від ваших вчителів");
 
   useEffect(() => {
     if (!user) return;
-    return subscribeStudentHomework(user.uid, (l) => {
-      setList(l);
-      setLoading(false);
-    });
+    return subscribeStudentHomework(user.uid, setList);
   }, [user]);
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      {loading ? (
-        <SpinnerPage />
-      ) : list.length === 0 ? (
-        <EmptyState
-          emoji="📭"
-          title="Немає домашніх завдань"
-          description="Коли вчитель призначить завдання, воно зʼявиться тут."
-        />
-      ) : (
-        <div className="space-y-2">
-          {list.map((hw) => {
-            const overdue = isHomeworkOverdue(hw, now);
-            return (
-              <HomeworkListItem
-                key={hw.id}
-                hw={hw}
-                href={`/dashboard/homework/${hw.id}`}
-                audience="student"
-                overdue={overdue}
-                subtitle={
-                  hw.dueAt ? (
-                    <HomeworkDue hw={hw} withTime className={cn(overdue && "text-red-500")} />
-                  ) : (
-                    "Без дедлайну"
-                  )
-                }
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+  // Scores of completed homework: one query for all the student's results — the
+  // same cached list as the history page — instead of a read per homework.
+  const hasCompleted = !!list?.some((h) => h.status === "completed" && h.resultId);
+  const { data: results = [] } = useQuery({
+    queryKey: queryKeys.results(user?.uid),
+    queryFn: () => getUserResults(user!.uid),
+    enabled: !!user && hasCompleted,
+    staleTime: STALE.short,
+  });
+  const byId = useMemo(() => new Map<string, TestResult>(results.map((r) => [r.id, r])), [results]);
+
+  if (!list) return <SpinnerPage />;
+  return <StudentHomeworkCabinet homework={list} results={byId} now={now} />;
 }

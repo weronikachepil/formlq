@@ -169,6 +169,18 @@ export interface ScoreRow {
   nmt: number; // scaled score for this raw bracket
 }
 
+/** Which part of the maths course a test covers. */
+export type TestSubject = "algebra" | "geometry" | "mixed";
+
+export const SUBJECT_LABEL: Record<TestSubject, string> = {
+  algebra: "Алгебра",
+  geometry: "Геометрія",
+  mixed: "Алгебра і геометрія",
+};
+
+/** School grades a test can be marked for. */
+export const GRADES = [5, 6, 7, 8, 9, 10, 11] as const;
+
 // "nmt" = official НМТ scale (100–200, ≥5 raw to pass);
 // "custom" = teacher-defined scale, any numbers, no minimum
 export type ScaleType = "nmt" | "custom";
@@ -190,6 +202,17 @@ export interface TestDoc {
   linkAccess?: LinkAccess; // who can open it by link/QR, independent of `published`
   /** @deprecated Early boolean form of linkAccess "anyone"; cleared on the next save. */
   publicAccess?: boolean;
+  /**
+   * A teacher's own test (`createdBy` is the teacher): only they edit it. They may
+   * publish it to the catalog, with a description (`subtitle`) and their name shown.
+   */
+  personal?: boolean;
+  /** Teacher's name shown in the catalog (personal tests). */
+  authorName?: string;
+  /** School grade (5–11) the test is for; null/absent = not set. */
+  grade?: number | null;
+  /** Algebra, geometry or both; null/absent = not set. */
+  subject?: TestSubject | null;
 }
 
 /**
@@ -230,6 +253,8 @@ export interface TestFolder {
   name: string;
   order: number;
   createdAt: Timestamp | null;
+  /** Set on a teacher's own folders; absent = a platform folder. */
+  ownerId?: string;
 }
 
 export interface QuestionResult {
@@ -385,8 +410,32 @@ export async function getPublishedTests(): Promise<TestDoc[]> {
   return docsOf<TestDoc>(snap).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
+/**
+ * Whose tests a list shows: `null` = the platform's own tests (editors),
+ * a uid = that teacher's personal tests (only theirs, see firestore.rules).
+ */
+export type TestOwner = string | null;
+
+/** Platform tests (editors): everything except teachers' personal tests. */
 export async function getAllTests(): Promise<TestDoc[]> {
   const snap = await getDocs(collection(db, "tests"));
+  return docsOf<TestDoc>(snap).filter((t) => !t.personal);
+}
+
+/** Every teacher's test (editors only — moderation of the catalog). */
+export async function getTeacherTests(): Promise<TestDoc[]> {
+  const snap = await getDocs(
+    query(collection(db, "tests"), where("personal", "==", true)),
+  );
+  return docsOf<TestDoc>(snap);
+}
+
+/** The tests a list for `owner` shows (see `TestOwner`). */
+export async function getTests(owner: TestOwner): Promise<TestDoc[]> {
+  if (!owner) return getAllTests();
+  const snap = await getDocs(
+    query(collection(db, "tests"), where("createdBy", "==", owner)),
+  );
   return docsOf<TestDoc>(snap);
 }
 
@@ -400,11 +449,16 @@ export async function createTest(
   createdBy: string,
   folderId: string | null = null,
   order?: number,
+  /** A teacher's own test: only they edit it; see `TestDoc.personal`. */
+  personal = false,
+  authorName?: string,
 ): Promise<string> {
   const ref = await addDoc(collection(db, "tests"), {
     title: "Новий тест",
     subtitle: "",
     published: false,
+    ...(personal && { personal: true }),
+    ...(personal && authorName && { authorName }),
     folderId,
     ...(order !== undefined && { order }),
     createdBy,
@@ -435,20 +489,27 @@ export async function deleteTest(id: string): Promise<void> {
 
 // ── Test folders ──────────────────────────────────────────────
 
-export async function getTestFolders(): Promise<TestFolder[]> {
-  const snap = await getDocs(collection(db, "testFolders"));
-  return docsOf<TestFolder>(snap).sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0),
+/** Folders of the platform (`null`) or of one teacher (see `TestOwner`). */
+export async function getTestFolders(owner: TestOwner = null): Promise<TestFolder[]> {
+  const snap = await getDocs(
+    owner
+      ? query(collection(db, "testFolders"), where("ownerId", "==", owner))
+      : collection(db, "testFolders"),
   );
+  return docsOf<TestFolder>(snap)
+    .filter((f) => (owner ? true : !f.ownerId))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
 export async function createTestFolder(
   name: string,
   order: number,
+  owner: TestOwner = null,
 ): Promise<string> {
   const ref = await addDoc(collection(db, "testFolders"), {
     name,
     order,
+    ...(owner && { ownerId: owner }),
     createdAt: serverTimestamp(),
   });
   return ref.id;

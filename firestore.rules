@@ -43,26 +43,78 @@ service cloud.firestore {
 
     // Users — any signed-in user may read profiles (needed to find students by email);
     // writes only by the owner or an editor.
+    // At sign-up a user may only pick "student" or "tutor"; afterwards nobody but an
+    // editor changes a role (so no one can make themselves an editor).
     match /users/{uid} {
       allow read: if isAuth();
-      allow write: if (isOwner(uid) || isEditor()) && protectedRoleOk();
+      allow create: if (isEditor() || (isOwner(uid) && request.resource.data.role in ["student", "tutor"]))
+        && protectedRoleOk();
+      allow update: if (
+          isEditor()
+          || (isOwner(uid) && request.resource.data.get("role", "student") == resource.data.get("role", "student"))
+        ) && protectedRoleOk();
+      allow delete: if isEditor();
+
+      // Boards this user opened (shown in their «Дошки»); private to them.
+      match /boardVisits/{boardId} {
+        allow read, write: if isOwner(uid);
+      }
     }
 
-    // Tests — read by any auth user, write by editors only.
-    // A single test with link access "anyone" may be fetched without an account (QR / public link),
-    // published or not; publicAccess is the legacy form of the same. Listing still requires sign-in.
+    // A non-editor tutor: a teacher, who sees only their own tests.
+    function isTeacher() {
+      return isAuth() && role() == "tutor";
+    }
+
+    // A teacher's test: theirs and marked personal. Published to the catalog only
+    // with a description (subtitle) and the author's name.
+    function nonEmpty(field) {
+      return request.resource.data.get(field, "") is string
+        && request.resource.data.get(field, "").size() > 0;
+    }
+    function teacherTestOk() {
+      return request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.get("personal", false) == true
+        && (request.resource.data.get("published", false) == false
+            || (nonEmpty("subtitle") && nonEmpty("authorName")));
+    }
+
+    // Tests. Editors: everything. Teachers: only their own (createdBy), plus a test
+    // someone shared by link; they may publish theirs to the catalog (see teacherTestOk).
+    // Students: any test by id (catalog, homework, links).
+    // A test with link access "anyone" may be fetched without an account (QR / public link),
+    // published or not; publicAccess is the legacy form of the same. Listing requires sign-in.
     match /tests/{testId} {
-      allow get: if isAuth()
-        || resource.data.get("linkAccess", "off") == "anyone"
-        || resource.data.get("publicAccess", false) == true;
-      allow list: if isAuth();
-      allow write: if isEditor();
+      allow get: if resource.data.get("linkAccess", "off") == "anyone"
+        || resource.data.get("publicAccess", false) == true
+        || (isAuth() && (
+          isEditor()
+          || resource.data.get("createdBy", "") == request.auth.uid
+          || resource.data.get("linkAccess", "off") == "students"
+          || !isTeacher()
+        ));
+      // Queries must be filtered to match: published == true (catalog) or createdBy == me.
+      allow list: if isEditor()
+        || (isAuth() && resource.data.createdBy == request.auth.uid)
+        || (isAuth() && resource.data.published == true && !isTeacher());
+      allow create: if isEditor() || (isTeacher() && teacherTestOk());
+      allow update: if isEditor()
+        || (isTeacher() && resource.data.get("createdBy", "") == request.auth.uid && teacherTestOk());
+      allow delete: if isEditor() || (isTeacher() && resource.data.get("createdBy", "") == request.auth.uid);
     }
 
-    // Test folders — grouping for the admin tests list; write by editors only
+    // Test folders. Platform folders (no ownerId) — editors; a teacher's own folders carry ownerId.
     match /testFolders/{folderId} {
-      allow read: if isAuth();
-      allow write: if isEditor();
+      allow get: if isEditor() || (isAuth() && resource.data.get("ownerId", "") == request.auth.uid);
+      // Teachers' queries filter on ownerId == me.
+      allow list: if isEditor() || (isAuth() && resource.data.ownerId == request.auth.uid);
+      allow create: if isEditor()
+        || (isTeacher() && request.resource.data.ownerId == request.auth.uid);
+      allow update: if isEditor()
+        || (isTeacher() && resource.data.get("ownerId", "") == request.auth.uid
+            && request.resource.data.ownerId == request.auth.uid);
+      allow delete: if isEditor()
+        || (isTeacher() && resource.data.get("ownerId", "") == request.auth.uid);
     }
     
     // Test results
@@ -108,8 +160,20 @@ service cloud.firestore {
         || resource.data.studentId == request.auth.uid
         || isEditor()
       );
-      allow create: if isEditor() || (isTutor() && request.resource.data.tutorId == request.auth.uid);
+      // Only students can be linked: tutors/editors never get a tutor of their own.
+      allow create: if (isEditor() || (isTutor() && request.resource.data.tutorId == request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.resource.data.studentId)).data.role == "student";
+      // A student joins a teacher by invite code/link: only themselves, only to a tutor/editor,
+      // under the canonical `${tutorId}_${studentId}` id.
+      allow create: if isAuth()
+        && request.resource.data.studentId == request.auth.uid
+        && role() == "student"
+        && linkId == request.resource.data.tutorId + "_" + request.auth.uid
+        && get(/databases/$(database)/documents/users/$(request.resource.data.tutorId)).data.role in ["tutor", "editor"];
       allow delete: if isAuth() && (resource.data.tutorId == request.auth.uid || isEditor());
+      // A student who renamed themselves refreshes their name on the link.
+      allow update: if isAuth() && resource.data.studentId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentName"]);
     }
 
     // Lessons (calendar)
@@ -121,6 +185,19 @@ service cloud.firestore {
       );
       allow create: if isEditor() || (isTutor() && request.resource.data.tutorId == request.auth.uid);
       allow update, delete: if isAuth() && (resource.data.tutorId == request.auth.uid || isEditor());
+      // A student who renamed themselves refreshes their name on their lessons.
+      allow update: if isAuth() && resource.data.studentId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentName"]);
+    }
+
+    // Whiteboards — listing metadata only; the live board is in the Realtime Database.
+    // Any signed-in user with the link may open a board; anyone may create their own.
+    match /boards/{boardId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAuth() && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAuth() && (resource.data.ownerId == request.auth.uid || isEditor());
     }
 
     // Tips — read by any auth user, write by editors only
@@ -129,9 +206,10 @@ service cloud.firestore {
       allow write: if isEditor();
     }
 
-    // Questions bank — read by any auth user, write by editors only
+    // Questions bank — the platform's: read by students and editors (daily question,
+    // test building), not by teachers; write by editors only
     match /questions/{questionId} {
-      allow read: if isAuth();
+      allow read: if isAuth() && !isTeacher();
       allow write: if isEditor();
     }
 

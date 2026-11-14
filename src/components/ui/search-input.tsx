@@ -24,7 +24,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
       <div className={cn("relative", wrapperClassName)}>
         <Search
           size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
         />
         <input
           ref={ref}
@@ -40,8 +40,8 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             onKeyDown?.(e);
           }}
           className={cn(
-            "w-full rounded-xl border border-border/50 bg-card pl-9 pr-8 text-sm outline-none transition-colors",
-            "placeholder:text-muted-foreground/70 hover:border-border focus:border-primary",
+            "w-full rounded-full border border-glass-edge bg-glass pl-9 pr-8 text-sm shadow-pill outline-none transition-colors",
+            "placeholder:text-muted-foreground/70 hover:bg-glass-strong focus:bg-glass-strong focus:border-foreground/50",
             size === "sm" ? "h-8" : "h-10",
             className,
           )}
@@ -52,7 +52,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             type="button"
             aria-label="Очистити пошук"
             onClick={() => onChange("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <X size={12} />
           </button>

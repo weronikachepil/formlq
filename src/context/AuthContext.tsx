@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -17,20 +18,26 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { connectPresence } from "@/lib/presence";
 import { UserProfile } from "@/types";
+
+/** Roles anyone may pick at sign-up; editors are appointed by an editor (firestore.rules). */
+export type SignUpRole = "student" | "tutor";
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signUp: (email: string, password: string, name: string, role?: SignUpRole) => Promise<void>;
+  /** `role` applies only when this creates the account (first Google sign-in). */
+  signInWithGoogle: (role?: SignUpRole) => Promise<void>;
   logOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  /** Changes the signed-in user's display name (Auth + profile). */
+  updateDisplayName: (name: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -39,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  // What the sign-up in progress chose. The auth listener below fires as soon as
+  // the account exists — often before signUp writes the profile — so its
+  // self-heal must create the profile with these, not the defaults.
+  const pending = useRef<{ name?: string; role: SignUpRole }>({ role: "student" });
 
   useEffect(() => {
     const fallback = setTimeout(() => setLoading(false), 8000);
@@ -54,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Self-heal: Auth account exists but the Firestore profile is
             // missing (e.g. signup interrupted after account creation). Create
             // it now so the user becomes visible to admins/tutors.
-            await createUserDoc(firebaseUser);
+            await createUserDoc(firebaseUser, pending.current.name, pending.current.role);
           }
         } catch {
           // profile fetch failed, proceed without it
@@ -79,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return connectPresence(presenceUid, presenceName);
   }, [presenceUid, presenceName]);
 
-  async function createUserDoc(user: User, name?: string) {
+  async function createUserDoc(user: User, name?: string, role: SignUpRole = "student") {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
@@ -89,10 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } = {
         uid: user.uid,
         email: user.email ?? "",
-        displayName: name || user.displayName || "Учень",
+        displayName: name || user.displayName || (role === "tutor" ? "Вчитель" : "Учень"),
         photoURL: user.photoURL ?? undefined,
         totalXP: 0,
-        role: "student",
+        role,
         createdAt: serverTimestamp(),
         lastActivity: serverTimestamp(),
       };
@@ -102,27 +113,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signIn(email: string, password: string) {
+    pending.current = { role: "student" };
     await signInWithEmailAndPassword(auth, email, password);
   }
 
-  async function signUp(email: string, password: string, name: string) {
+  async function signUp(email: string, password: string, name: string, role: SignUpRole = "student") {
+    pending.current = { name, role };
     const { user } = await createUserWithEmailAndPassword(
       auth,
       email,
       password,
     );
     await updateProfile(user, { displayName: name });
-    await createUserDoc(user, name);
+    await createUserDoc(user, name, role);
   }
 
-  async function signInWithGoogle() {
+  async function signInWithGoogle(role: SignUpRole = "student") {
+    pending.current = { role };
     const provider = new GoogleAuthProvider();
     const { user } = await signInWithPopup(auth, provider);
-    await createUserDoc(user);
+    await createUserDoc(user, undefined, role);
   }
 
   async function logOut() {
     await signOut(auth);
+  }
+
+  async function updateDisplayName(name: string) {
+    const current = auth.currentUser;
+    if (!current) return;
+    await updateDoc(doc(db, "users", current.uid), { displayName: name });
+    await updateProfile(current, { displayName: name });
+    setUserProfile((p) => (p ? { ...p, displayName: name } : p));
   }
 
   async function refreshProfile() {
@@ -142,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithGoogle,
         logOut,
         refreshProfile,
+        updateDisplayName,
       }}
     >
       {children}

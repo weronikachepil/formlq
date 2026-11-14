@@ -20,7 +20,8 @@ interface FolderSectionProps {
   /** Search query to mark in the folder name. */
   highlight?: string;
   count: number;
-  publishedCount: number;
+  /** Omitted where tests aren't published (a teacher's own tests). */
+  publishedCount?: number;
   expanded: boolean;
   renaming: boolean;
   draggable: boolean;
@@ -154,7 +155,9 @@ export function FolderSection({
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {count === 0
                     ? "Порожня папка"
-                    : `${pluralize(count, PLURAL.test)} · активних: ${publishedCount}`}
+                    : publishedCount === undefined
+                      ? pluralize(count, PLURAL.test)
+                      : `${pluralize(count, PLURAL.test)} · активних: ${publishedCount}`}
                 </p>
               </>
             )}

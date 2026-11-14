@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import type { User } from "firebase/auth";
-import { LogOut } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useHeader } from "@/context/HeaderContext";
 import { useExamGuard } from "@/context/ExamGuardContext";
@@ -55,7 +55,7 @@ export function AppShell({
   const router = useRouter();
   const pathname = usePathname();
   const { title, subtitle } = useHeader();
-  const { requestAction } = useExamGuard();
+  const { requestAction, requestNav } = useExamGuard();
   const [scrolled, setScrolled] = useState(false);
 
   const allowed = allow({ user, userProfile });
@@ -90,25 +90,31 @@ export function AppShell({
   return (
     <ReferenceDrawerProvider>
       <div
-        className="min-h-screen bg-background flex flex-col md:[--app-sidebar-w:4.5rem]"
+        // No background here: the MathBoard gradient lives on <body>; `mb-dots` adds the dotted circles.
+        className="mb-dots min-h-screen flex flex-col md:[--app-sidebar-w:4.5rem]"
         // Header height / sidebar width, so sticky & fixed bars (exam) can offset by them.
         style={{ "--app-header-h": "4rem" } as React.CSSProperties}
       >
         <header
           className={cn(
-            "sticky top-0 z-50 w-full pl-4 md:pl-20 pr-6 h-16 flex items-center gap-3 justify-between transition-all duration-200",
-            "bg-background/85 backdrop-blur-md",
+            "sticky top-0 z-50 w-full pl-4 md:pl-6 pr-4 md:pr-6 h-16 flex items-center gap-3 justify-between transition-all duration-200",
             scrolled
-              ? "border-b border-border/40 shadow-[0_1px_16px_color-mix(in_oklch,var(--primary)_8%,transparent)]"
+              ? "bg-background/70 backdrop-blur-xl border-b border-glass-edge shadow-glass"
               : "border-b border-transparent",
           )}
         >
           <MobileNav />
+          {/* Handwritten MathBoard-style logo with the gold spark. */}
+          <span className="mb-logo text-[1.85rem] hidden md:inline-block shrink-0 mr-3 -mt-1 select-none">
+            formlq
+          </span>
           {showGreeting ? (
             greeting(firstName)
           ) : (
-            <div className="flex items-baseline gap-2 flex-1 min-w-0">
-              <span className="font-semibold text-xl leading-tight truncate">{title}</span>
+            <div className="flex items-baseline gap-3 flex-1 min-w-0">
+              <span className="font-heading font-extrabold uppercase tracking-[0.02em] text-lg md:text-xl leading-tight truncate">
+                {title}
+              </span>
               {subtitle && (
                 <span className="text-sm text-muted-foreground leading-tight truncate hidden sm:block">
                   {subtitle}
@@ -118,14 +124,34 @@ export function AppShell({
           )}
 
           <div className="flex items-center gap-2">
-            <ThemeSelector />
+            <ThemeSelector className="w-10 h-10" />
             <div className="hidden md:contents">
               <div className="relative group">
+                <IconButton
+                  label="Профіль"
+                  title=""
+                  size="md"
+                  onClick={() => requestNav("/dashboard/profile")}
+                  className="w-10 h-10 bg-glass text-foreground shadow-pill hover:bg-glass-strong"
+                >
+                  <UserRound size={16} />
+                </IconButton>
+                <div className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 flex items-center px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-pill-dark text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150">
+                  Профіль
+                </div>
+              </div>
+              <div className="relative group">
                 {/* Empty title: the styled tooltip below replaces the native one. */}
-                <IconButton label="Вийти" title="" size="md" onClick={handleLogout}>
+                <IconButton
+                  label="Вийти"
+                  title=""
+                  size="md"
+                  onClick={handleLogout}
+                  className="w-10 h-10 bg-glass text-foreground shadow-pill hover:bg-glass-strong"
+                >
                   <LogOut size={16} />
                 </IconButton>
-                <div className="pointer-events-none absolute right-0 top-[calc(100%+6px)] z-50 flex items-center px-2.5 py-1.5 rounded-lg bg-popover border border-border/50 shadow-md text-xs font-medium text-foreground whitespace-nowrap opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150">
+                <div className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 flex items-center px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-pill-dark text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150">
                   Вийти
                 </div>
               </div>
@@ -143,12 +169,14 @@ export function AppShell({
   );
 }
 
-/** Two-line greeting: small section label above the user's first name. */
+/** Two-line MathBoard greeting: tracked uppercase label above the first name in the heavy head font. */
 export function SectionGreeting({ label, name }: { label: string; name: string }) {
   return (
-    <div className="flex flex-col justify-center flex-1 min-w-0">
-      <span className="text-xs text-muted-foreground leading-tight">{label}</span>
-      <span className="text-xl font-semibold leading-tight">{name}</span>
+    <div className="flex flex-col justify-center gap-0.5 flex-1 min-w-0">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground leading-tight truncate">
+        {label}
+      </span>
+      <span className="font-heading text-xl md:text-2xl font-extrabold uppercase leading-none truncate">{name}</span>
     </div>
   );
 }

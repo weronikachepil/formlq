@@ -3,12 +3,13 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, ClipboardCheck } from "lucide-react";
+import { ArrowRight, CalendarClock, ClipboardCheck, FileText } from "lucide-react";
 import { queryKeys, STALE } from "@/lib/queryKeys";
 import { getStudentHomework, Homework } from "@/lib/tutor";
-import { getHomeworkStatusMeta } from "@/lib/homework-status";
+import { formatDueCountdown, getHomeworkStatusMeta, isHomeworkOverdue } from "@/lib/homework-status";
+import { cn } from "@/lib/utils";
+import { useNow } from "@/components/calendar/tutor/useNow";
 import { Spinner } from "@/components/ui/spinner";
-import { HomeworkDue } from "@/components/homework/HomeworkListItem";
 
 /** The pending homework with the nearest deadline. */
 export function UpcomingHomework({ userId }: { userId: string }) {
@@ -17,6 +18,7 @@ export function UpcomingHomework({ userId }: { userId: string }) {
     queryFn: () => getStudentHomework(userId),
     staleTime: STALE.short,
   });
+  const now = useNow();
 
   const next = useMemo(() => {
     const pending = list.filter((h) => h.status !== "completed");
@@ -58,14 +60,28 @@ export function UpcomingHomework({ userId }: { userId: string }) {
             <ClipboardCheck size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold truncate">{next.title}</p>
+            <p className="font-semibold truncate flex items-center gap-1.5">
+              <span className="truncate">{next.title}</span>
+              {next.pdfUrl && <FileText size={13} className="shrink-0 text-muted-foreground" aria-label="Є конспект" />}
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
               {next.status === "in_progress" && (
                 <span className="text-amber-600 dark:text-amber-400 font-medium">
                   {getHomeworkStatusMeta("in_progress", "student").label}
                 </span>
               )}
-              {next.dueAt ? <HomeworkDue hw={next} withTime /> : <span>Без дедлайну</span>}
+              {next.dueAt ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1",
+                    isHomeworkOverdue(next, now) && "text-red-600 dark:text-red-400 font-medium",
+                  )}
+                >
+                  <CalendarClock size={11} /> {formatDueCountdown(next.dueAt.toMillis(), now)}
+                </span>
+              ) : (
+                <span>Без дедлайну</span>
+              )}
             </p>
           </div>
           <span className="shrink-0 text-sm font-medium text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">

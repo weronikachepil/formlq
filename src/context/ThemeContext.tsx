@@ -1,61 +1,66 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { LEGACY_THEME_KEYS, THEME_MODE_KEY, type ThemeMode } from "@/lib/theme-mode";
 
-export type ColorTheme = "violet" | "blue" | "green" | "rose" | "orange" | "teal" | "amber" | "indigo";
-export type FontTheme = "geist" | "nunito" | "roboto" | "montserrat" | "unbounded" | "comfortaa" | "geologica";
+export type { ThemeMode };
 
 interface ThemeContextType {
-  colorTheme: ColorTheme;
-  setColorTheme: (t: ColorTheme) => void;
-  fontTheme: FontTheme;
-  setFontTheme: (f: FontTheme) => void;
+  mode: ThemeMode;
+  setMode: (m: ThemeMode) => void;
+  toggleMode: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  colorTheme: "violet",
-  setColorTheme: () => {},
-  fontTheme: "geist",
-  setFontTheme: () => {},
+  mode: "light",
+  setMode: () => {},
+  toggleMode: () => {},
 });
 
+function applyMode(mode: ThemeMode) {
+  document.documentElement.classList.toggle("dark", mode === "dark");
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [colorTheme, setColorThemeState] = useState<ColorTheme>("violet");
-  const [fontTheme, setFontThemeState] = useState<FontTheme>("geist");
+  const [mode, setModeState] = useState<ThemeMode>("light");
 
   // Sync from localStorage after mount (reading it during render would break SSR hydration).
+  // The pre-paint script in the root layout has already set the `dark` class.
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    const savedColor = localStorage.getItem("color-theme") as ColorTheme | null;
-    if (savedColor) {
-      setColorThemeState(savedColor);
-      document.documentElement.setAttribute("data-theme", savedColor);
+    let saved: ThemeMode = "light";
+    try {
+      saved = localStorage.getItem(THEME_MODE_KEY) === "dark" ? "dark" : "light";
+      // The colour/font pickers are gone: drop their stored values and attributes.
+      for (const key of LEGACY_THEME_KEYS) localStorage.removeItem(key);
+    } catch {
+      // Storage unavailable (private mode etc.): stay on light.
     }
-    const savedFont = localStorage.getItem("font-theme") as FontTheme | null;
-    if (savedFont) {
-      setFontThemeState(savedFont);
-      document.documentElement.setAttribute("data-font", savedFont);
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
+    document.documentElement.removeAttribute("data-theme");
+    document.documentElement.removeAttribute("data-font");
+    applyMode(saved);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setModeState(saved);
   }, []);
 
-  function setColorTheme(theme: ColorTheme) {
-    setColorThemeState(theme);
-    localStorage.setItem("color-theme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
+  function setMode(next: ThemeMode) {
+    setModeState(next);
+    applyMode(next);
+    try {
+      localStorage.setItem(THEME_MODE_KEY, next);
+    } catch {
+      // Not persisted; the mode still applies for this session.
+    }
   }
 
-  function setFontTheme(font: FontTheme) {
-    setFontThemeState(font);
-    localStorage.setItem("font-theme", font);
-    document.documentElement.setAttribute("data-font", font);
+  function toggleMode() {
+    setMode(mode === "dark" ? "light" : "dark");
   }
 
   return (
-    <ThemeContext.Provider value={{ colorTheme, setColorTheme, fontTheme, setFontTheme }}>
+    <ThemeContext.Provider value={{ mode, setMode, toggleMode }}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
-export const useColorTheme = () => useContext(ThemeContext);
+export const useTheme = () => useContext(ThemeContext);

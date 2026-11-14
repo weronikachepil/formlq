@@ -29,7 +29,8 @@ export default function ResultPage() {
     getResult(id).then(async (r) => {
       if (!r || r.userId !== user.uid) { router.replace("/dashboard/history"); return; }
       setResult(r);
-      const test = await getTest(r.testId);
+      // Not readable (a teacher looking at a platform test) = not available to retake.
+      const test = await getTest(r.testId).catch(() => null);
       setTestAvailable(!!test && test.published === true);
       setLoading(false);
     });

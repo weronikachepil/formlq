@@ -3,36 +3,9 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Lesson } from "@/lib/lessons";
+import { Lesson, lessonStatus } from "@/lib/lessons";
 import { IconButton } from "@/components/ui/icon-button";
-
-const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
-const MONTHS = [
-  "Січень",
-  "Лютий",
-  "Березень",
-  "Квітень",
-  "Травень",
-  "Червень",
-  "Липень",
-  "Серпень",
-  "Вересень",
-  "Жовтень",
-  "Листопад",
-  "Грудень",
-];
-
-function sameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function dayKey(d: Date) {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
+import { MONTHS, WEEKDAYS, dayKey, monthCells, sameDay } from "@/lib/calendar";
 
 /** "16:00" — lesson start time. */
 export function formatLessonTime(ts: Lesson["start"]) {
@@ -57,15 +30,7 @@ export function MonthCalendar({
 
   const year = view.getFullYear();
   const month = view.getMonth();
-  const firstDay = new Date(year, month, 1);
-  // JS getDay(): 0=Sun..6=Sat → convert to Monday-first offset
-  const leading = (firstDay.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const cells: (Date | null)[] = [];
-  for (let i = 0; i < leading; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
-  while (cells.length % 7 !== 0) cells.push(null);
+  const cells = monthCells(year, month);
 
   // Group once per lessons change instead of filtering all lessons for every cell.
   const byDay = useMemo(() => {
@@ -144,6 +109,7 @@ export function MonthCalendar({
                     }}
                     className={cn(
                       "text-[9px] leading-tight bg-primary/15 text-primary rounded px-1 py-0.5 truncate",
+                      lessonStatus(l) === "canceled" && "line-through opacity-50",
                       onSelectLesson &&
                         "cursor-pointer hover:bg-primary/30 transition-colors",
                     )}

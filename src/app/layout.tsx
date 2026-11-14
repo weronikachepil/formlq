@@ -1,82 +1,54 @@
 import type { Metadata } from "next";
-import {
-  Geist,
-  Geist_Mono,
-  Nunito,
-  Roboto,
-  Montserrat,
-  Unbounded,
-  Comfortaa,
-  Geologica,
-  Fredoka,
-} from "next/font/google";
-import localFont from "next/font/local";
+import { Comfortaa, JetBrains_Mono, Manrope, Marck_Script, Montserrat, Pinyon_Script } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-mode";
 import { ExamGuardProvider } from "@/context/ExamGuardContext";
 import { HeaderProvider } from "@/context/HeaderContext";
 import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const nunito = Nunito({
-  variable: "--font-nunito",
+/** Body text (MathBoard design). */
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "700"],
-});
-
+/** Headings: heavy, wide. */
 const montserrat = Montserrat({
   variable: "--font-montserrat",
   subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["600", "700", "800", "900"],
 });
 
-const unbounded = Unbounded({
-  variable: "--font-unbounded",
+/** Numbers, timers, code. */
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "700"],
 });
 
+/** Handwritten "formlq" logo. */
+const pinyonScript = Pinyon_Script({
+  variable: "--font-pinyon-script",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+/** Whiteboard canvas UI font (read by the board engine through --font-comfortaa). */
 const comfortaa = Comfortaa({
   variable: "--font-comfortaa",
   subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "700"],
 });
 
-const bubbleboddy = localFont({
-  src: [
-    { path: "../../public/fonts/BubbleboddyNeue-Regular.ttf", weight: "400" },
-    { path: "../../public/fonts/BubbleboddyNeue-Bold.ttf", weight: "700" },
-  ],
-  variable: "--font-bubbleboddy",
-});
-
-const fredoka = Fredoka({
-  variable: "--font-fredoka",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const geologica = Geologica({
-  variable: "--font-geologica",
+/** Whiteboard handwriting font; the board engine reads --font-marck-script from <html>. */
+const marckScript = Marck_Script({
+  variable: "--font-marck-script",
   subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -170,10 +142,12 @@ export default function RootLayout({
   return (
     <html
       lang="uk"
-      className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} ${roboto.variable} ${montserrat.variable} ${unbounded.variable} ${comfortaa.variable} ${geologica.variable} ${fredoka.variable} ${bubbleboddy.variable} h-full antialiased`}
+      className={`${manrope.variable} ${montserrat.variable} ${jetbrainsMono.variable} ${pinyonScript.variable} ${comfortaa.variable} ${marckScript.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
+        {/* Applies the saved light/dark mode before first paint (no flash). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
