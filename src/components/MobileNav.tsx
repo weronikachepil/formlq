@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Menu, X, LogOut, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -13,7 +13,6 @@ import { useHasTutor } from "@/hooks/useHasTutor";
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const path = usePathname();
-  const router = useRouter();
   const { userProfile, logOut } = useAuth();
   const hasTutor = useHasTutor();
   const { requestNav, requestAction } = useExamGuard();
@@ -42,8 +41,7 @@ export function MobileNav() {
   function handleLogout() {
     setOpen(false);
     requestAction(async () => {
-      await logOut();
-      router.push("/login");
+      await logOut(); // reloads on /login
     });
   }
 

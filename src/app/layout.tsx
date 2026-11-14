@@ -37,11 +37,16 @@ const pinyonScript = Pinyon_Script({
   weight: "400",
 });
 
+// Board-only fonts below: declared app-wide because the board engine reads their
+// variables from <html>, but not preloaded, so the browser downloads them only on
+// pages that actually use them (the board), not on every page.
+
 /** Whiteboard canvas UI font (read by the board engine through --font-comfortaa). */
 const comfortaa = Comfortaa({
   variable: "--font-comfortaa",
   subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "700"],
+  preload: false,
 });
 
 /** Whiteboard handwriting font; the board engine reads --font-marck-script from <html>. */
@@ -49,6 +54,7 @@ const marckScript = Marck_Script({
   variable: "--font-marck-script",
   subsets: ["latin", "cyrillic"],
   weight: "400",
+  preload: false,
 });
 
 export const metadata: Metadata = {

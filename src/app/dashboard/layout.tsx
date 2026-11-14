@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AppShell, SectionGreeting } from "@/components/AppShell";
+import { useAuth } from "@/context/AuthContext";
 
 function timeGreeting(hour: number) {
   if (hour < 5) return "Доброї ночі";
@@ -11,8 +12,12 @@ function timeGreeting(hour: number) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  // Warm PDF cache in idle time so drawer opens instantly
+  const { user } = useAuth();
+  // Warm the PDF cache in idle time so the drawer opens instantly. Only once signed in:
+  // a signed-out visitor is about to be sent to the login page.
+  const signedIn = !!user;
   useEffect(() => {
+    if (!signedIn) return;
     const cb = () => {
       import("@/lib/pdf-cache").then((m) => m.preloadPdf());
     };
@@ -22,7 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     const id = setTimeout(cb, 1000);
     return () => clearTimeout(id);
-  }, []);
+  }, [signedIn]);
 
   return (
     <AppShell
