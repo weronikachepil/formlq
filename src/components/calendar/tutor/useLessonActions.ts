@@ -12,11 +12,11 @@ import {
   deleteLesson,
   deleteLessons,
   seriesFrom,
+  setLessonsBoard,
   updateLesson,
   updateLessonsFrom,
 } from "@/lib/lessons";
-import { createBoard } from "@/lib/boards";
-import { formatShortDate } from "@/lib/calendar";
+import { createBoard, getBoard } from "@/lib/boards";
 import { conflictMessage, findConflict } from "./lesson-utils";
 import type { CalendarStudent, SeriesScope } from "./types";
 
@@ -192,6 +192,21 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
     [askScope, lessons],
   );
 
+  /**
+   * The student's board: one per student, shared by all their lessons. Older data may
+   * have a board per lesson; then the most recent lesson's board becomes the student's.
+   */
+  const studentBoardId = useCallback(
+    (studentId: string): string | undefined => {
+      let latest: Lesson | undefined;
+      for (const l of lessons) {
+        if (l.studentId === studentId && l.boardId && (!latest || l.start.toMillis() > latest.start.toMillis())) latest = l;
+      }
+      return latest?.boardId;
+    },
+    [lessons],
+  );
+
   /** Create or edit from the dialog. Returns true when the dialog may close. */
   const saveLesson = useCallback(
     async (v: LessonFormValues): Promise<boolean> => {
@@ -212,6 +227,7 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
             start: Timestamp.fromDate(v.start),
             note: v.note.trim() || undefined,
             meetingUrl: v.meetingUrl.trim() || undefined,
+            boardId: studentBoardId(v.studentId),
           };
           if (v.repeatUntil) {
             const n = await createLessonSeries(data, v.repeatUntil);
@@ -225,7 +241,9 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
         const lesson = lessons.find((l) => l.id === v.id);
         if (!lesson) return true;
         // Empty strings clear the fields (undefined would be skipped by Firestore).
-        const patch = { ...common, note: v.note.trim(), meetingUrl: v.meetingUrl.trim() };
+        const patch: Partial<Lesson> = { ...common, note: v.note.trim(), meetingUrl: v.meetingUrl.trim() };
+        // Moved to another student: the lesson now uses that student's board ("" = none yet).
+        if (v.studentId !== lesson.studentId) patch.boardId = studentBoardId(v.studentId) ?? "";
         const shift = v.start.getTime() - lesson.start.toMillis();
         const scope = lesson.seriesId ? await askScope("Зберегти зміни?") : "one";
         if (!scope) return false;
@@ -247,33 +265,42 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
         return false;
       }
     },
-    [askScope, conflictFor, lessons, students, tutorId, tutorName],
+    [askScope, conflictFor, lessons, studentBoardId, students, tutorId, tutorName],
   );
 
-  /** Opens the lesson's whiteboard in a new tab, creating (and linking) it on first use. */
+  /** Opens the student's board in a new tab, creating it on first use, and links it to all their lessons. */
   const openBoard = useCallback(
     async (lesson: Lesson) => {
-      if (lesson.boardId) {
-        window.open(`/board/${lesson.boardId}`, "_blank", "noopener");
-        return;
-      }
       // Open the tab synchronously (inside the click) so popup blockers allow it.
       const tab = window.open("about:blank", "_blank");
       setBoardBusy(lesson.id);
       try {
-        const title = `${lesson.title} — ${lesson.studentName ?? "учень"}, ${formatShortDate(lesson.start.toDate())}`;
-        const boardId = await createBoard(tutorId, tutorName ?? "", title);
-        await optimistic({ [lesson.id]: { boardId } }, () => updateLesson(lesson.id, { boardId }), "Не вдалося привʼязати дошку");
+        const known = studentBoardId(lesson.studentId);
+        // The board may have been deleted from the boards list since.
+        let boardId = known && (await getBoard(known)) ? known : undefined;
+        if (!boardId) {
+          boardId = await createBoard(tutorId, tutorName ?? "", `Уроки — ${lesson.studentName ?? "учень"}`);
+        }
         if (tab) tab.location.href = `/board/${boardId}`;
         else window.open(`/board/${boardId}`, "_blank");
+
+        const id = boardId;
+        const unlinked = lessons.filter((l) => l.studentId === lesson.studentId && l.boardId !== id);
+        if (unlinked.length) {
+          await optimistic(
+            Object.fromEntries(unlinked.map((l) => [l.id, { boardId: id }])),
+            () => setLessonsBoard(unlinked.map((l) => l.id), id),
+            "Не вдалося привʼязати дошку до уроків",
+          );
+        }
       } catch {
         tab?.close();
-        toast.error("Не вдалося створити дошку");
+        toast.error("Не вдалося відкрити дошку");
       } finally {
         setBoardBusy(null);
       }
     },
-    [optimistic, tutorId, tutorName],
+    [lessons, optimistic, studentBoardId, tutorId, tutorName],
   );
 
   return {

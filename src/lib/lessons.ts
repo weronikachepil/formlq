@@ -42,7 +42,7 @@ export interface Lesson {
   /** Price in UAH. */
   price?: number;
   paid?: boolean;
-  /** Whiteboard opened for this lesson (src/lib/boards.ts). */
+  /** The student's whiteboard (src/lib/boards.ts): the same one on every lesson with them. */
   boardId?: string;
 }
 
@@ -125,6 +125,16 @@ export async function createLessonSeries(data: NewLesson, until: Date): Promise<
   }
   await batch.commit();
   return n;
+}
+
+/** Points the given lessons at one board: all lessons with a student share theirs. */
+export async function setLessonsBoard(ids: string[], boardId: string): Promise<void> {
+  // A batch holds at most 500 writes.
+  for (let i = 0; i < ids.length; i += 500) {
+    const batch = writeBatch(db);
+    for (const id of ids.slice(i, i + 500)) batch.update(doc(db, "lessons", id), { boardId });
+    await batch.commit();
+  }
 }
 
 /** Lessons of the same series starting at or after `from` (incl. `from` itself). */
