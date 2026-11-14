@@ -6,7 +6,7 @@ export function LandingNav() {
       <nav className="nav">
         <a className="logo" href="#top">formlq</a>
         <ul>
-          <li><a href="#tests">Тести НМТ</a></li>
+          <li><a href="#tests">Тести</a></li>
           <li><a href="#board">Дошка</a></li>
           <li><a href="#how">Як це працює</a></li>
           <li><a href="#faq">Питання</a></li>

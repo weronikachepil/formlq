@@ -235,7 +235,7 @@
 
 /* ─── MathBoard decorations ──────────────────────────────────── */
 
-/* Handwritten logo with a gold spark. */
+/* Handwritten logo with the duck (same as on the landing page). */
 .mb-logo {
   position: relative;
   display: inline-block;
@@ -247,13 +247,13 @@
   letter-spacing: 0;
 }
 .mb-logo::after {
-  content: "\2726";
+  content: "";
   position: absolute;
-  right: 0;
-  top: -0.05em;
-  font-family: system-ui, sans-serif;
-  font-size: 0.5em;
-  color: var(--gold);
+  right: -0.12em;
+  top: -0.18em;
+  width: 0.76em;
+  height: 0.76em;
+  background: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Cpath%20d='M2%2016c0-4%206-5%2011-3%203%201%205%200%207-1l2%202c0%207-6%2012-13%2011-4-1-7-4-7-9z'%20fill='%23f4c430'/%3E%3Ccircle%20cx='21'%20cy='9'%20r='6'%20fill='%23f4c430'/%3E%3Cpath%20d='M26%207.5l5.5%202.3L26%2012z'%20fill='%23ef8a2b'/%3E%3Cpath%20d='M7%2018c3-2%208-1%208%202-3%203-8%202-8-2z'%20fill='%23e2a516'/%3E%3Ccircle%20cx='22.6'%20cy='8'%20r='1'%20fill='%232b2b2b'/%3E%3C/svg%3E") no-repeat center / contain;
 }
 
 /* Rounded 8-petal flower peeking from a card corner (lavender; `-mint` variant bottom-left).
@@ -267,8 +267,8 @@
   width: 210px;
   height: 210px;
   opacity: 0.85;
-  -webkit-mask: radial-gradient(circle 34px at 50% 14%, #000 98%, transparent), radial-gradient(circle 34px at 86% 50%, #000 98%, transparent), radial-gradient(circle 34px at 50% 86%, #000 98%, transparent), radial-gradient(circle 34px at 14% 50%, #000 98%, transparent), radial-gradient(circle 34px at 24% 24%, #000 98%, transparent), radial-gradient(circle 34px at 76% 24%, #000 98%, transparent), radial-gradient(circle 34px at 76% 76%, #000 98%, transparent), radial-gradient(circle 34px at 24% 76%, #000 98%, transparent), radial-gradient(circle 50px at 50% 50%, #000 98%, transparent);
-  mask: radial-gradient(circle 34px at 50% 14%, #000 98%, transparent), radial-gradient(circle 34px at 86% 50%, #000 98%, transparent), radial-gradient(circle 34px at 50% 86%, #000 98%, transparent), radial-gradient(circle 34px at 14% 50%, #000 98%, transparent), radial-gradient(circle 34px at 24% 24%, #000 98%, transparent), radial-gradient(circle 34px at 76% 24%, #000 98%, transparent), radial-gradient(circle 34px at 76% 76%, #000 98%, transparent), radial-gradient(circle 34px at 24% 76%, #000 98%, transparent), radial-gradient(circle 50px at 50% 50%, #000 98%, transparent);
+  -webkit-mask: radial-gradient(circle 34px at 50% 17%, #000 98%, transparent), radial-gradient(circle 34px at 83% 50%, #000 98%, transparent), radial-gradient(circle 34px at 50% 83%, #000 98%, transparent), radial-gradient(circle 34px at 17% 50%, #000 98%, transparent), radial-gradient(circle 34px at 27% 27%, #000 98%, transparent), radial-gradient(circle 34px at 73% 27%, #000 98%, transparent), radial-gradient(circle 34px at 73% 73%, #000 98%, transparent), radial-gradient(circle 34px at 27% 73%, #000 98%, transparent), radial-gradient(circle 50px at 50% 50%, #000 98%, transparent);
+  mask: radial-gradient(circle 34px at 50% 17%, #000 98%, transparent), radial-gradient(circle 34px at 83% 50%, #000 98%, transparent), radial-gradient(circle 34px at 50% 83%, #000 98%, transparent), radial-gradient(circle 34px at 17% 50%, #000 98%, transparent), radial-gradient(circle 34px at 27% 27%, #000 98%, transparent), radial-gradient(circle 34px at 73% 27%, #000 98%, transparent), radial-gradient(circle 34px at 73% 73%, #000 98%, transparent), radial-gradient(circle 34px at 27% 73%, #000 98%, transparent), radial-gradient(circle 50px at 50% 50%, #000 98%, transparent);
 }
 .mb-flower::after {
   right: -40px;

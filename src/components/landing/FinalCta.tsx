@@ -13,7 +13,7 @@ export function FinalCta() {
           <p className="lead">Відкрийте дошку або візьміть перший тест — це займе хвилину.</p>
           <div className="cta">
             <Link className="btn" href="/register">Спробувати дошку</Link>
-            <a className="btn ghost" href="#tests">Тести НМТ</a>
+            <a className="btn ghost" href="#tests">Тести</a>
           </div>
         </div>
       </div>

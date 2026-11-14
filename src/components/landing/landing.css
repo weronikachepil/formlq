@@ -28,6 +28,8 @@
   background-attachment: fixed;
 }
 html:has(.landing) { scroll-behavior: smooth; }
+/* Anchor targets stop below the sticky nav instead of under it. */
+.landing :is(section, article)[id] { scroll-margin-top: 112px; }
 .landing * { box-sizing: border-box; }
 .landing a { color: inherit; text-decoration: none; }
 .landing .wrap { width: min(1160px, 100% - 40px); margin: 0 auto; }
@@ -75,8 +77,8 @@ html:has(.landing) { scroll-behavior: smooth; }
 .landing .card > * { position: relative; z-index: 1; }
 .landing .flower {
   position: absolute; z-index: 0; width: 210px; height: 210px; background: var(--lav); opacity: .85; pointer-events: none;
-  -webkit-mask: radial-gradient(circle 34px at 50% 14%,#000 98%,transparent), radial-gradient(circle 34px at 86% 50%,#000 98%,transparent), radial-gradient(circle 34px at 50% 86%,#000 98%,transparent), radial-gradient(circle 34px at 14% 50%,#000 98%,transparent), radial-gradient(circle 34px at 24% 24%,#000 98%,transparent), radial-gradient(circle 34px at 76% 24%,#000 98%,transparent), radial-gradient(circle 34px at 76% 76%,#000 98%,transparent), radial-gradient(circle 34px at 24% 76%,#000 98%,transparent), radial-gradient(circle 50px at 50% 50%,#000 98%,transparent);
-  mask: radial-gradient(circle 34px at 50% 14%,#000 98%,transparent), radial-gradient(circle 34px at 86% 50%,#000 98%,transparent), radial-gradient(circle 34px at 50% 86%,#000 98%,transparent), radial-gradient(circle 34px at 14% 50%,#000 98%,transparent), radial-gradient(circle 34px at 24% 24%,#000 98%,transparent), radial-gradient(circle 34px at 76% 24%,#000 98%,transparent), radial-gradient(circle 34px at 76% 76%,#000 98%,transparent), radial-gradient(circle 34px at 24% 76%,#000 98%,transparent), radial-gradient(circle 50px at 50% 50%,#000 98%,transparent);
+  -webkit-mask: radial-gradient(circle 34px at 50% 17%,#000 98%,transparent), radial-gradient(circle 34px at 83% 50%,#000 98%,transparent), radial-gradient(circle 34px at 50% 83%,#000 98%,transparent), radial-gradient(circle 34px at 17% 50%,#000 98%,transparent), radial-gradient(circle 34px at 27% 27%,#000 98%,transparent), radial-gradient(circle 34px at 73% 27%,#000 98%,transparent), radial-gradient(circle 34px at 73% 73%,#000 98%,transparent), radial-gradient(circle 34px at 27% 73%,#000 98%,transparent), radial-gradient(circle 50px at 50% 50%,#000 98%,transparent);
+  mask: radial-gradient(circle 34px at 50% 17%,#000 98%,transparent), radial-gradient(circle 34px at 83% 50%,#000 98%,transparent), radial-gradient(circle 34px at 50% 83%,#000 98%,transparent), radial-gradient(circle 34px at 17% 50%,#000 98%,transparent), radial-gradient(circle 34px at 27% 27%,#000 98%,transparent), radial-gradient(circle 34px at 73% 27%,#000 98%,transparent), radial-gradient(circle 34px at 73% 73%,#000 98%,transparent), radial-gradient(circle 34px at 27% 73%,#000 98%,transparent), radial-gradient(circle 50px at 50% 50%,#000 98%,transparent);
 }
 .landing .flower.mint { background: var(--mint); } .landing .flower.peach { background: var(--peach); }
 
