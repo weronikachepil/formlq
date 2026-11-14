@@ -24,12 +24,6 @@ import type {
   PolygonObject, StrokeObject, TextFontId, TextObject, TypeRegistry,
 } from "./types";
 
-/**
- * Static fallback of the UI font family list. Canvas code should call `uiFont()` (./fonts),
- * which resolves the next/font family from `--font-comfortaa` at runtime.
- */
-export const FONT = "Comfortaa, system-ui, sans-serif";
-
 export interface TextFont {
   /** Display name for the font picker. */
   readonly name: string;
@@ -39,7 +33,8 @@ export interface TextFont {
 
 // Fonts for text objects (all support Cyrillic)
 export const TEXT_FONTS: Record<TextFontId, TextFont> = {
-  comfortaa: { name: "Comfortaa", get css() { return uiFont(); } },
+  // The id stays "comfortaa": it is stored on existing text objects. The font is now Manrope.
+  comfortaa: { name: "Manrope", get css() { return uiFont(); } },
   sans: { name: "Arial", css: "Arial, Helvetica, sans-serif" },
   serif: { name: "Times New Roman", css: '"Times New Roman", Times, serif' },
   georgia: { name: "Georgia", css: "Georgia, serif" },
@@ -50,7 +45,7 @@ export const TEXT_FONTS: Record<TextFontId, TextFont> = {
 export const isTextFontId = (v: unknown): v is TextFontId =>
   typeof v === "string" && Object.prototype.hasOwnProperty.call(TEXT_FONTS, v);
 
-/** CSS font-family list for a text font id (Comfortaa for unknown ids). */
+/** CSS font-family list for a text font id (the default, Manrope, for unknown ids). */
 export const fontFamily = (id: unknown): string => (isTextFontId(id) ? TEXT_FONTS[id] : TEXT_FONTS.comfortaa).css;
 
 /** Style fields that affect text font: italic, bold, font id. */

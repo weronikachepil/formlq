@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Comfortaa, JetBrains_Mono, Manrope, Marck_Script, Montserrat, Pinyon_Script } from "next/font/google";
+import { JetBrains_Mono, Manrope, Montserrat, Pinyon_Script } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -38,25 +38,6 @@ const pinyonScript = Pinyon_Script({
   weight: "400",
 });
 
-// Board-only fonts below: declared app-wide because the board engine reads their
-// variables from <html>, but not preloaded, so the browser downloads them only on
-// pages that actually use them (the board), not on every page.
-
-/** Whiteboard canvas UI font (read by the board engine through --font-comfortaa). */
-const comfortaa = Comfortaa({
-  variable: "--font-comfortaa",
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "700"],
-  preload: false,
-});
-
-/** Whiteboard handwriting font; the board engine reads --font-marck-script from <html>. */
-const marckScript = Marck_Script({
-  variable: "--font-marck-script",
-  subsets: ["latin", "cyrillic"],
-  weight: "400",
-  preload: false,
-});
 
 export const metadata: Metadata = {
   title: {
@@ -149,7 +130,7 @@ export default function RootLayout({
   return (
     <html
       lang="uk"
-      className={`${manrope.variable} ${montserrat.variable} ${jetbrainsMono.variable} ${pinyonScript.variable} ${comfortaa.variable} ${marckScript.variable} h-full antialiased`}
+      className={`${manrope.variable} ${montserrat.variable} ${jetbrainsMono.variable} ${pinyonScript.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

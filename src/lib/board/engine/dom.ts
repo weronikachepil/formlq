@@ -42,6 +42,20 @@ interface DomNode {
 }
 
 /** Pending debounce timers of short-answer inputs. */
+/**
+ * The quiz layout stores each card's position and height (`y`, `h`) back on the object;
+ * that alone must not rebuild the card, or opening an explanation (which makes the card
+ * taller) would at once rebuild it collapsed.
+ */
+function onlyLayoutChanged(prev: BoardObject | null | undefined, next: QuizObject): boolean {
+  if (!prev || prev.type !== "quiz") return false;
+  const a = prev as unknown as Record<string, unknown>;
+  const b = next as unknown as Record<string, unknown>;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) if (k !== "y" && k !== "h" && a[k] !== b[k]) return false;
+  return true;
+}
+
 const inputTimers = new WeakMap<HTMLInputElement, ReturnType<typeof setTimeout>>();
 
 export class DomLayer {
@@ -155,11 +169,15 @@ export class DomLayer {
     // while the student types, their own save does not rebuild the card (the caret would be lost)
     const active = typeof document !== "undefined" ? document.activeElement : null;
     const typing = !!active && n.el.contains(active) && active instanceof HTMLElement && active.dataset.act === "short";
-    const same = n.obj === o && (n.mine === ctx.mineRef || typing) && n.statsKey === ctx.statsKey && n.viewing === ctx.viewing && n.locked === ctx.locked && n.showKey === ctx.showKey && n.css === this.cssReady;
+    const same = (n.obj === o || onlyLayoutChanged(n.obj, o)) && (n.mine === ctx.mineRef || typing) && n.statsKey === ctx.statsKey && n.viewing === ctx.viewing && n.locked === ctx.locked && n.showKey === ctx.showKey && n.css === this.cssReady;
     n.el.style.left = o.x + "px";
     n.el.style.width = (o.w || 640) + "px";
     if (o.auto === false) n.el.style.top = o.y + "px";
-    if (same) { if (typing) n.mine = ctx.mineRef; return; }
+    if (same) {
+      n.obj = o;
+      if (typing) n.mine = ctx.mineRef;
+      return;
+    }
     n.obj = o;
     n.mine = ctx.mineRef;
     n.statsKey = ctx.statsKey;
@@ -167,7 +185,14 @@ export class DomLayer {
     n.locked = ctx.locked;
     n.showKey = ctx.showKey;
     n.css = this.cssReady;
+    // Rebuilding the card must not collapse an explanation the user has opened (or reopen a closed one).
+    const expl = n.el.querySelector<HTMLDetailsElement>(".q-expl");
+    const explOpen = expl ? expl.open : null;
     n.el.innerHTML = buildQuizHtml(o, ctx);
+    if (explOpen !== null) {
+      const next = n.el.querySelector<HTMLDetailsElement>(".q-expl");
+      if (next) next.open = explOpen;
+    }
     this.scheduleQuizLayout();
   }
 

@@ -2665,8 +2665,8 @@ export class MathBoard {
   }
 
   // ---------- rendering ----------
-  /** The canvas fonts are not preloaded app-wide (root layout) and canvas text does not
-   *  trigger a download, so fetch them here and repaint (cached bitmaps too) once they arrive. */
+  /** Canvas text does not trigger a font download, and the board may draw before its fonts have
+   *  arrived, so fetch them here and repaint (cached bitmaps too) once they are ready. */
   private loadFonts(): void {
     const fonts = document.fonts;
     if (!fonts) return;
