@@ -314,3 +314,65 @@
     display: none;
   }
 }
+
+/* Site intro (SiteIntro): blurred page, «formlq» written left to right, then everything
+   dissolves: the word drifts slightly closer and blurs while the page comes back into focus. */
+.site-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in oklab, var(--background) 45%, transparent);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  transition:
+    opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    backdrop-filter 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    -webkit-backdrop-filter 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.site-intro.leave {
+  opacity: 0;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  pointer-events: none;
+}
+html[data-intro-seen] .site-intro {
+  display: none;
+}
+/* A wide, soft-edged mask glides from left to right: the word appears as if written in ink. */
+.site-intro-ink {
+  display: inline-block;
+  /* The script font's flourishes reach far outside the letters (the «f» tail on the left). */
+  padding: 0.35em 0.4em 0.35em 0.6em;
+  font-size: clamp(4rem, 14vw, 8.5rem);
+  -webkit-mask-image: linear-gradient(90deg, #000 36%, transparent 64%);
+  mask-image: linear-gradient(90deg, #000 36%, transparent 64%);
+  -webkit-mask-size: 320% 100%;
+  mask-size: 320% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+  animation: site-intro-write 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards;
+  transition:
+    transform 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+    filter 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.site-intro.leave .site-intro-ink {
+  transform: scale(1.04);
+  filter: blur(6px);
+}
+@keyframes site-intro-write {
+  to {
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-intro {
+    display: none;
+  }
+}

@@ -21,7 +21,8 @@ export function Spinner({ size = "md", className }: SpinnerProps) {
 
 export function SpinnerPage({ size = "md" }: { size?: keyof typeof sizes }) {
   return (
-    <div className="flex justify-center py-16">
+    // data-page-loading: PageTransition waits for this to go before fading the page in.
+    <div className="flex justify-center py-16" data-page-loading="">
       <Spinner size={size} />
     </div>
   );

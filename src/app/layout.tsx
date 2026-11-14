@@ -8,6 +8,7 @@ import { ExamGuardProvider } from "@/context/ExamGuardContext";
 import { HeaderProvider } from "@/context/HeaderContext";
 import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
+import { SiteIntro } from "@/components/SiteIntro";
 
 /** Body text (MathBoard design). */
 const manrope = Manrope({
@@ -164,6 +165,8 @@ export default function RootLayout({
           <ThemeProvider>
             <AuthProvider>
               <ExamGuardProvider>
+                {/* First, so its pre-paint script runs before the page underneath is drawn. */}
+                <SiteIntro />
                 <HeaderProvider>{children}</HeaderProvider>
                 <Toaster />
               </ExamGuardProvider>
