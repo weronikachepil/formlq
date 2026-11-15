@@ -103,19 +103,54 @@ function mipFor(o: ImageObject, img: HTMLImageElement, scale: number): MipLevel 
   return e.levels[m];
 }
 
+const FULL_CROP: [number, number, number, number] = [0, 0, 1, 1];
+
+/** Where the whole (uncropped) image lies on the board, given the object's visible frame. */
+export function imageFullRect(o: ImageObject): Bounds {
+  const [cx, cy, cw, ch] = o.crop || FULL_CROP;
+  const w = o.w / cw;
+  const h = o.h / ch;
+  return { x: o.x - cx * w, y: o.y - cy * h, w, h };
+}
+
+/** The image showing `frame` of its whole rect `full`; `crop` is dropped when nothing is cut off. */
+export function cropToFrame(o: ImageObject, full: Bounds, frame: Bounds): ImageObject {
+  const r = (v: number) => Math.round(v * 1e5) / 1e5;
+  const crop: [number, number, number, number] = [
+    r((frame.x - full.x) / full.w), r((frame.y - full.y) / full.h), r(frame.w / full.w), r(frame.h / full.h),
+  ];
+  const whole = crop[0] <= 0.001 && crop[1] <= 0.001 && crop[2] >= 0.999 && crop[3] >= 0.999;
+  const next: ImageObject = { ...o, x: round1(frame.x), y: round1(frame.y), w: round1(frame.w), h: round1(frame.h) };
+  if (whole) delete next.crop;
+  else next.crop = crop;
+  return next;
+}
+
+/** Draws the image (or its loading placeholder) so its whole rect lands on `full`, clipped to the object's frame. */
+export function drawImageObject(ctx: CanvasRenderingContext2D, o: ImageObject, env: { zoom?: number; repaint?: () => void } | undefined, full = false): void {
+  const img = imageFor(o, env?.repaint);
+  const fr = imageFullRect(o);
+  if (!(img.complete && img.naturalWidth)) {
+    ctx.save();
+    ctx.fillStyle = "#f1f0f8";
+    if (full) ctx.fillRect(fr.x, fr.y, fr.w, fr.h);
+    else ctx.fillRect(o.x, o.y, o.w, o.h);
+    ctx.restore();
+    return;
+  }
+  const scale = ((env?.zoom || 1) * (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1) * fr.w) / img.naturalWidth;
+  const src = mipFor(o, img, scale);
+  if (full || !o.crop) { ctx.drawImage(src, fr.x, fr.y, fr.w, fr.h); return; }
+  const sw = (src instanceof HTMLImageElement && src.naturalWidth) || src.width;
+  const sh = (src instanceof HTMLImageElement && src.naturalHeight) || src.height;
+  const [cx, cy, cw, ch] = o.crop;
+  ctx.drawImage(src, cx * sw, cy * sh, cw * sw, ch * sh, o.x, o.y, o.w, o.h);
+}
+
 export const IMAGE_TYPE: ObjectTypeDef<ImageObject> = withRotation<ImageObject>({
   bounds: box,
   draw(ctx, o, env) {
-    const img = imageFor(o, env?.repaint);
-    if (img.complete && img.naturalWidth) {
-      const scale = ((env?.zoom || 1) * (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1) * o.w) / img.naturalWidth;
-      ctx.drawImage(mipFor(o, img, scale), o.x, o.y, o.w, o.h);
-    } else {
-      ctx.save();
-      ctx.fillStyle = "#f1f0f8";
-      ctx.fillRect(o.x, o.y, o.w, o.h);
-      ctx.restore();
-    }
+    drawImageObject(ctx, o, env);
   },
   hit: (o, p, tol) => inBounds(box(o), p, tol),
   move: (o, dx, dy) => ({ ...o, x: round1(o.x + dx), y: round1(o.y + dy) }),
