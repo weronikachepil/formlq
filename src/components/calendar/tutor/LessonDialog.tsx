@@ -9,7 +9,7 @@ import { addDays, addMonths, weeklyOccurrences } from "@/lib/calendar";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
-import { SelectNative } from "@/components/ui/select-native";
+import { Select, SelectItem, SelectLabel } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-field";
 import { conflictMessage, findConflict, lastPriceFor } from "./lesson-utils";
 import type { LessonFormValues } from "./useLessonActions";
@@ -203,12 +203,12 @@ function LessonForm({
 
       <div className="space-y-2.5">
         <Field label={groups.length && (isNew || d.groupId) ? "Учень або група" : "Учень"}>
-          <SelectNative
+          <Select
             value={d.groupId ? `g:${d.groupId}` : d.studentId}
             // An existing group lesson stays with its group (members are separate copies).
             disabled={!isNew && !!d.groupId}
-            onChange={(e) => {
-              const v = e.target.value;
+            className="w-full"
+            onValueChange={(v) => {
               const groupId = v.startsWith("g:") ? v.slice(2) : "";
               const studentId = groupId ? "" : v;
               const patch: Partial<LessonDraft> = { studentId, groupId };
@@ -220,27 +220,31 @@ function LessonForm({
               set(patch);
             }}
           >
-            <option value="">Оберіть...</option>
+            <SelectItem value="">
+              <span className="text-muted-foreground">Оберіть...</span>
+            </SelectItem>
             {(isNew || d.groupId) && (groups.length > 0 || !!d.groupId) && (
-              <optgroup label="Групи">
+              <>
+                <SelectLabel>Групи</SelectLabel>
                 {groups.map((g) => (
-                  <option key={g.id} value={`g:${g.id}`}>
-                    👥 {g.name} ({g.studentIds.length})
-                  </option>
+                  <SelectItem key={g.id} value={`g:${g.id}`}>
+                    👥 {g.name} <span className="text-muted-foreground">· {g.studentIds.length}</span>
+                  </SelectItem>
                 ))}
-                {d.groupId && !group && <option value={`g:${d.groupId}`}>👥 {d.groupName ?? "Група"}</option>}
-              </optgroup>
+                {d.groupId && !group && <SelectItem value={`g:${d.groupId}`}>👥 {d.groupName ?? "Група"}</SelectItem>}
+              </>
             )}
-            {!d.groupId || isNew ? (
-              <optgroup label="Учні">
+            {(!d.groupId || isNew) && (
+              <>
+                {groups.length > 0 && <SelectLabel>Учні</SelectLabel>}
                 {students.map((s) => (
-                  <option key={s.studentId} value={s.studentId}>
+                  <SelectItem key={s.studentId} value={s.studentId}>
                     {s.studentName}
-                  </option>
+                  </SelectItem>
                 ))}
-              </optgroup>
-            ) : null}
-          </SelectNative>
+              </>
+            )}
+          </Select>
           {group && isNew && (
             <span className="block text-xs text-muted-foreground px-1 pt-0.5">
               {groupSize

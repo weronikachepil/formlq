@@ -28,13 +28,17 @@ function Select({ value, onValueChange, children, className, disabled }: SelectP
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
+  // The chosen item's content, also when items sit inside fragments (e.g. under a SelectLabel).
   const label = React.useMemo(() => {
     let found: React.ReactNode = value;
-    React.Children.forEach(children, (child) => {
-      if (React.isValidElement(child) && (child.props as { value?: string }).value === value) {
-        found = (child.props as { children?: React.ReactNode }).children ?? value;
-      }
-    });
+    const walk = (nodes: React.ReactNode) =>
+      React.Children.forEach(nodes, (child) => {
+        if (!React.isValidElement(child)) return;
+        const props = child.props as { value?: string; children?: React.ReactNode };
+        if (child.type === SelectItem && props.value === value) found = props.children ?? value;
+        else if (child.type === React.Fragment) walk(props.children);
+      });
+    walk(children);
     return found;
   }, [children, value]);
 
@@ -127,4 +131,13 @@ function SelectItem({ value, children, disabled, className }: SelectItemProps) {
   );
 }
 
-export { Select, SelectItem };
+/** Non-selectable heading above a run of items. */
+function SelectLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground first:pt-1">
+      {children}
+    </div>
+  );
+}
+
+export { Select, SelectItem, SelectLabel };
