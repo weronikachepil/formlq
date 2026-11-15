@@ -47,7 +47,7 @@ export const NAV: NavLink[] = [
 
 export const TUTOR_NAV: NavLink[] = [
   // Students and their homework are one section: cabinets per student.
-  { icon: Users, href: "/tutor/students", label: "Учні", also: ["/tutor/homework"] },
+  { icon: Users, href: "/tutor/students", label: "Учні", also: ["/tutor/homework", "/tutor/groups"] },
   { icon: FileText, href: "/tutor/tests", label: "Мої тести", teacherOnly: true },
   { icon: CalendarDays, href: "/tutor/calendar", label: "Календар" },
   { icon: Presentation, href: "/tutor/boards", label: "Дошки" },

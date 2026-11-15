@@ -49,8 +49,10 @@
   status: "assigned" | "in_progress" | "completed",
   resultId?,                   // лінк на testResult після здачі
   progress?: { answers, answerImages }  // автозбереження для resume
+  groupId?, groupName?, assignId?       // видано групі: копії всіх учнів мають спільний assignId
 }
 ```
+Домашка групі (`assignHomeworkToGroup`) — одна копія на кожного учня групи одним batch. Сторінка [`/tutor/groups/[groupId]`](../src/app/tutor/groups/[groupId]/page.tsx) будує таблицю «учні × завдання» з копій із цим `groupId` (стовпець = `assignId`); бали — з `testResults` по `resultId` кожної копії (по одному документу: правило `ownsHomework` не дозволяє list-запит).
 
 ### `testResults/{autoId}` (розширено)
 Існуюча колекція + поля для домашки — [src/lib/tests.ts](../src/lib/tests.ts)
@@ -138,7 +140,7 @@ homeworkId?, answerImages?, flaggedQuestions?, tutorComments?, tutorNote?
 **Компоненти**
 - [ExamRunner](../src/components/exam/ExamRunner.tsx), [MonthCalendar](../src/components/calendar/MonthCalendar.tsx), [AppSidebar](../src/components/AppSidebar.tsx), [MobileNav](../src/components/MobileNav.tsx)
 
-**Сторінки вчителя** — `src/app/tutor/`: `students`, `homework`, `homework/new`, `homework/[id]`, `calendar`
+**Сторінки вчителя** — `src/app/tutor/`: `students`, `groups/[groupId]`, `homework`, `homework/new`, `homework/[id]`, `calendar`
 **Сторінки учня** — `src/app/dashboard/`: `homework`, `homework/[id]`, `calendar`, `page.tsx` (блок домашки)
 
 ---

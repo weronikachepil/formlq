@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, UserPlus, Users } from "lucide-react";
+import { Pencil, Plus, Table2, UserPlus, Users } from "lucide-react";
 import { InviteStudentsDialog } from "@/components/tutor/InviteStudentsDialog";
 import { GroupDialog } from "@/components/tutor/GroupDialog";
 import { useAuth } from "@/context/AuthContext";
@@ -204,10 +204,16 @@ export default function TutorStudentsPage() {
                   {s.title} ({s.group ? s.group.studentIds.length : s.items.length})
                 </SectionLabel>
                 {s.group && (
-                  <Button size="xs" variant="ghost" className="gap-1 text-muted-foreground" onClick={() => setEditing(s.group!)}>
-                    <Pencil size={12} />
-                    Змінити
-                  </Button>
+                  <>
+                    <Button size="xs" variant="ghost" className="gap-1 text-muted-foreground" onClick={() => setEditing(s.group!)}>
+                      <Pencil size={12} />
+                      Змінити
+                    </Button>
+                    <Button size="xs" variant="ghost" className="gap-1 text-muted-foreground" onClick={() => router.push(`/tutor/groups/${s.group!.id}`)}>
+                      <Table2 size={12} />
+                      Результати
+                    </Button>
+                  </>
                 )}
               </div>
               {s.items.length ? (
