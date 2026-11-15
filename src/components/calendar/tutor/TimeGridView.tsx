@@ -138,7 +138,7 @@ export function TimeGridView({
   return (
     <div ref={scrollRef} className="relative h-full overflow-y-auto overscroll-contain">
       {/* Sticky header: weekday + date, then the deadlines row. */}
-      <div className="sticky top-0 z-40 bg-popover/90 backdrop-blur-md border-b border-border">
+      <div className="sticky top-0 z-40 bg-popover border-b border-border">
         <div className="flex">
           <div className={cn(GUTTER, "shrink-0")} />
           <div className="grid flex-1" style={colTemplate}>

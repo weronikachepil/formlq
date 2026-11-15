@@ -29,7 +29,8 @@ import { lessonsInRange } from "./lesson-utils";
 import { useMediaQuery, useNow } from "./useNow";
 import { makeColorOf } from "./colors";
 import { StudentColorsProvider } from "./student-colors";
-import { DEFAULT_DURATION_MIN, type CalendarStudent, type CalendarView } from "./types";
+import { cn } from "@/lib/utils";
+import { ASIDE_FIT, DEFAULT_DURATION_MIN, GRID_FIT, type CalendarStudent, type CalendarView } from "./types";
 
 const VIEW_KEY = "tutor-calendar-view";
 
@@ -178,7 +179,7 @@ export function TutorCalendarView({
   return (
     <StudentColorsProvider value={colorOf}>
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-5">
-        <aside className="order-2 lg:order-1 lg:w-72 shrink-0">
+        <aside className={cn("order-2 lg:order-1 lg:w-72 shrink-0", ASIDE_FIT)}>
           <CalendarSidebar
             anchor={anchor}
             onPickDate={(d) => setAnchor(startOfDay(d))}
@@ -206,7 +207,7 @@ export function TutorCalendarView({
             <p className="text-sm text-muted-foreground">Додайте учнів, щоб планувати заняття.</p>
           )}
 
-          <div className="rounded-2xl border border-border/50 bg-card overflow-hidden h-[calc(100dvh-14rem)] sm:h-[calc(100dvh-11rem)] min-h-[460px]">
+          <div className={cn("rounded-2xl border border-border/50 bg-card overflow-hidden", GRID_FIT)}>
             {view === "month" ? (
               <MonthGridView
                 anchor={anchor}
