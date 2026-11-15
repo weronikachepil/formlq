@@ -62,18 +62,6 @@ export function GroupDialog({ tutorId, students, group, onClose }: GroupDialogPr
     }
   }
 
-  async function remove() {
-    if (!group) return;
-    setConfirmDelete(false);
-    try {
-      await deleteGroup(group.id);
-      toast.success("Групу видалено");
-      onClose();
-    } catch {
-      toast.error("Не вдалося видалити групу");
-    }
-  }
-
   return (
     <>
       <Dialog open onClose={onClose} size="md" className="p-6" closeOnBackdrop={false}>
@@ -148,14 +136,41 @@ export function GroupDialog({ tutorId, students, group, onClose }: GroupDialogPr
         </form>
       </Dialog>
 
-      <ConfirmDialog
-        open={confirmDelete}
-        title={`Видалити групу «${group?.name ?? ""}»?`}
-        description="Учні залишаться вашими учнями, а видані їм завдання й уроки — без змін."
-        confirmLabel="Видалити"
-        onConfirm={remove}
-        onCancel={() => setConfirmDelete(false)}
-      />
+      {confirmDelete && group && (
+        <DeleteGroupConfirm group={group} onCancel={() => setConfirmDelete(false)} onDeleted={onClose} />
+      )}
     </>
+  );
+}
+
+/** «Видалити групу?» confirmation; deletes on confirm. Mounted only while asking. */
+export function DeleteGroupConfirm({
+  group,
+  onCancel,
+  onDeleted,
+}: {
+  group: StudentGroup;
+  onCancel: () => void;
+  onDeleted: () => void;
+}) {
+  async function remove() {
+    try {
+      await deleteGroup(group.id);
+      toast.success(`Групу «${group.name}» видалено`);
+      onDeleted();
+    } catch {
+      toast.error("Не вдалося видалити групу");
+      onCancel();
+    }
+  }
+  return (
+    <ConfirmDialog
+      open
+      title={`Видалити групу «${group.name}»?`}
+      description="Учні залишаться вашими учнями, а видані їм завдання й уроки — без змін."
+      confirmLabel="Видалити"
+      onConfirm={remove}
+      onCancel={onCancel}
+    />
   );
 }

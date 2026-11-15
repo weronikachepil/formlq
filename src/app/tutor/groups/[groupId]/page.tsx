@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Pencil, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { usePageHeader } from "@/context/HeaderContext";
 import { queryKeys } from "@/lib/queryKeys";
@@ -13,7 +13,7 @@ import { subscribeTutorGroups, type StudentGroup } from "@/lib/groups";
 import { getResult, type TestResult } from "@/lib/tests";
 import { getHomeworkStatusMeta, isHomeworkOverdue } from "@/lib/homework-status";
 import { pluralize, PLURAL } from "@/lib/format";
-import { GroupDialog } from "@/components/tutor/GroupDialog";
+import { DeleteGroupConfirm, GroupDialog } from "@/components/tutor/GroupDialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SpinnerPage } from "@/components/ui/spinner";
@@ -37,6 +37,7 @@ export default function GroupPage() {
   const [homework, setHomework] = useState<Homework[] | null>(null);
   const [results, setResults] = useState<Map<string, TestResult | null>>(() => new Map());
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [now] = useState(() => Date.now());
 
   const { data: students = [] } = useQuery({
@@ -126,6 +127,14 @@ export default function GroupPage() {
           {pluralize(group.studentIds.length, PLURAL.student)} · {pluralize(assignments.length, PLURAL.task)}
         </p>
         <div className="flex flex-wrap gap-2">
+          <Button
+            size="lg"
+            variant="ghost"
+            className="gap-1.5 text-red-600 dark:text-red-400"
+            onClick={() => setDeleting(true)}
+          >
+            <Trash2 size={15} /> Видалити
+          </Button>
           <Button size="lg" variant="outline" className="gap-1.5" onClick={() => setEditing(true)}>
             <Pencil size={15} /> Змінити групу
           </Button>
@@ -192,6 +201,13 @@ export default function GroupPage() {
             .sort((a, b) => a.name.localeCompare(b.name, "uk"))}
           group={group}
           onClose={() => setEditing(false)}
+        />
+      )}
+      {deleting && (
+        <DeleteGroupConfirm
+          group={group}
+          onCancel={() => setDeleting(false)}
+          onDeleted={() => router.push("/tutor/students")}
         />
       )}
     </div>

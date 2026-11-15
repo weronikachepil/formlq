@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Table2, UserPlus, Users } from "lucide-react";
+import { Pencil, Plus, Table2, Trash2, UserPlus, Users } from "lucide-react";
 import { InviteStudentsDialog } from "@/components/tutor/InviteStudentsDialog";
-import { GroupDialog } from "@/components/tutor/GroupDialog";
+import { DeleteGroupConfirm, GroupDialog } from "@/components/tutor/GroupDialog";
 import { useAuth } from "@/context/AuthContext";
 import { usePageHeader } from "@/context/HeaderContext";
 import {
@@ -51,6 +51,7 @@ export default function TutorStudentsPage() {
   const [inviting, setInviting] = useState(false);
   // The group dialog: a group to edit, "new", or closed.
   const [editing, setEditing] = useState<StudentGroup | "new" | null>(null);
+  const [deleting, setDeleting] = useState<StudentGroup | null>(null);
   // Fixed per visit, so "overdue" doesn't flicker while rendering.
   const [now] = useState(() => Date.now());
 
@@ -213,6 +214,15 @@ export default function TutorStudentsPage() {
                       <Table2 size={12} />
                       Результати
                     </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      className="gap-1 text-muted-foreground hover:text-red-600 dark:hover:text-red-400"
+                      onClick={() => setDeleting(s.group!)}
+                    >
+                      <Trash2 size={12} />
+                      Видалити
+                    </Button>
                   </>
                 )}
               </div>
@@ -249,6 +259,9 @@ export default function TutorStudentsPage() {
           group={editing === "new" ? null : editing}
           onClose={() => setEditing(null)}
         />
+      )}
+      {deleting && (
+        <DeleteGroupConfirm group={deleting} onCancel={() => setDeleting(null)} onDeleted={() => setDeleting(null)} />
       )}
     </div>
   );
