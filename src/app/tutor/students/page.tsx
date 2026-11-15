@@ -23,7 +23,6 @@ import { StudentCabinetCard } from "@/components/homework/StudentCabinetCard";
 interface Cabinet {
   studentId: string;
   name: string;
-  email?: string;
   summary: HomeworkSummary;
 }
 
@@ -60,8 +59,7 @@ export default function TutorStudentsPage() {
     }
     const out: Cabinet[] = students.map((s) => ({
       studentId: s.studentId,
-      name: s.studentName || s.studentEmail,
-      email: s.studentEmail,
+      name: s.studentName || "Учень",
       summary: summarizeHomework(byStudent.get(s.studentId) ?? [], now),
     }));
     // Homework of students who are no longer linked still gets a cabinet.
@@ -81,7 +79,7 @@ export default function TutorStudentsPage() {
 
   const q = search.trim().toLowerCase();
   const visible = q
-    ? cabinets.filter((c) => c.name.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
+    ? cabinets.filter((c) => c.name.toLowerCase().includes(q))
     : cabinets;
 
   const loading = !students || !homework;
@@ -128,7 +126,7 @@ export default function TutorStudentsPage() {
           </Button>
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState emoji="🔍" title="Нікого не знайдено" description="Спробуйте інше імʼя або email." />
+        <EmptyState emoji="🔍" title="Нікого не знайдено" description="Спробуйте інше імʼя." />
       ) : (
         <div className="space-y-2">
           <SectionLabel size="2xs">Учні ({visible.length})</SectionLabel>
