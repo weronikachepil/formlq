@@ -28,6 +28,13 @@
 { tutorId, studentId, studentEmail, studentName, createdAt }
 ```
 
+### `groups/{autoId}`
+Група учнів вчителя (клас, «НМТ вечірня»). Склад — список на групі; учень може бути в кількох групах. — [src/lib/groups.ts](../src/lib/groups.ts)
+```
+{ tutorId, name, studentIds: string[], boardId?, createdAt }
+```
+Домашка й уроки для групи **копіюються кожному учню** (окремий `homework` / `lessons` документ з позначкою групи), тому запити й правила учня не змінюються. Учень, доданий у групу пізніше, отримує лише нові завдання й уроки. Видалення групи не чіпає вже виданого.
+
 ### `homework/{autoId}`
 Домашнє завдання. — [src/lib/tutor.ts](../src/lib/tutor.ts)
 ```
@@ -113,6 +120,7 @@ homeworkId?, answerImages?, flaggedQuestions?, tutorComments?, tutorNote?
 - `tutorStudents` — tutor керує своїми; `resource == null` дозволяє читання неіснуючого доку (перевірка дублю перед create).
 - `testResults` — власник читає/оновлює свій (флаги); tutor читає/коментує результати своїх домашок (через `ownsHomework()`).
 - `lessons` — tutor керує своїми, студент читає свої.
+- `groups` — лише tutor-власник (і editor); учням доступ не потрібен.
 
 > **Деплой:** правила діють лише після Publish у Firebase Console (або `firebase deploy --only firestore:rules`). Локальний файл застосунок не читає.
 
@@ -123,6 +131,7 @@ homeworkId?, answerImages?, flaggedQuestions?, tutorComments?, tutorNote?
 **Бібліотеки**
 - [src/lib/tutor.ts](../src/lib/tutor.ts) — звʼязки, домашні (CRUD + subscribe)
 - [src/lib/lessons.ts](../src/lib/lessons.ts) — заняття
+- [src/lib/groups.ts](../src/lib/groups.ts) — групи учнів (CRUD + subscribe); діалог — [GroupDialog](../src/components/tutor/GroupDialog.tsx)
 - [src/lib/tests.ts](../src/lib/tests.ts) — `bankToTestQuestion`, `recalcStreak`, `updateResult`, розширений `TestResult`
 - [src/lib/users.ts](../src/lib/users.ts) — `getUserByEmail`, `updateUserRole`
 
