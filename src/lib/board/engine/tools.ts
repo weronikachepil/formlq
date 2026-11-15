@@ -424,6 +424,9 @@ function eraserTool(b: MathBoard): Tool {
   const erase = (t: Tx, p: Point) => {
     const tol = 10 / b.cam.z;
     for (const o of b.objs() as BoardObject[]) {
+      // Pictures (and PDF pages) are never erased: erasing ink over a task removed the task
+      // itself. They are deleted on purpose instead (select → trash / Delete).
+      if (o.type === "image") continue;
       // big objects are erased only by a click, not by swiping over them
       if (BIG_TYPES.has(o.type) && !click) continue;
       if (b.canModify(o) && def(o.type).hit(o, p, tol)) t.del(o.id);
