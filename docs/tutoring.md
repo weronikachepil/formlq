@@ -63,8 +63,15 @@ homeworkId?, answerImages?, flaggedQuestions?, tutorComments?, tutorNote?
 ### `lessons/{autoId}`
 Заняття календаря. — [src/lib/lessons.ts](../src/lib/lessons.ts)
 ```
-{ tutorId, tutorName, studentId, studentName, title, start: Timestamp, durationMin, note? }
+{
+  tutorId, tutorName, studentId, studentName, title, start: Timestamp, durationMin,
+  note?, meetingUrl?, seriesId?,            // seriesId — спільний для щотижневої серії
+  status?: "planned" | "done" | "canceled" | "missed", price?, paid?,
+  boardId?,                                 // дошка учня (або групи для групового уроку)
+  groupId?, groupName?                      // груповий урок
+}
 ```
+**Груповий урок** — копія на кожного учня групи (`createGroupLessons`): своя ціна й оплата, спільні `groupId` + `start` (одне заняття, `groupMembersOf`); щотижнева групова серія має один `seriesId` на всіх, тож «цей і наступні» охоплює всю групу. У календарі вчителя, «Найближчих уроках» і адмінці копії згортаються в один блок (`collapseGroupLessons`); перенесення, статус і видалення діють на всі копії, оплата — на кожного окремо; статистика рахує урок один раз, а гроші — за кожного учня. Дошка групи — `groups.boardId` (створюється при першому «Відкрити дошку»); власна дошка учня ігнорує його групові уроки.
 
 ---
 

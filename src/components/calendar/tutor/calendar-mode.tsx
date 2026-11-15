@@ -13,7 +13,7 @@ export interface CalendarMode {
   /** No drag / resize / slot-select / create; tutor-only badges hidden. */
   readOnly: boolean;
   /** Key passed to the colour lookup (`useStudentColor`). */
-  colorKey: (item: Pick<Lesson, "studentId" | "tutorId">) => string;
+  colorKey: (item: Pick<Lesson, "studentId" | "tutorId"> & { groupId?: string }) => string;
   /** Main line of a lesson block (and the only one on short blocks). */
   lessonTitle: (l: Lesson) => string;
   /** Secondary line on tall blocks; omitted when undefined. */
@@ -27,12 +27,13 @@ export interface CalendarMode {
 
 export const TUTOR_MODE: CalendarMode = {
   readOnly: false,
-  colorKey: (i) => i.studentId,
-  lessonTitle: (l) => l.studentName ?? l.title,
+  // Group lessons and group homework take the group's colour and name.
+  colorKey: (i) => i.groupId ?? i.studentId,
+  lessonTitle: (l) => (l.groupId ? `👥 ${l.groupName ?? "Група"}` : (l.studentName ?? l.title)),
   lessonSubtitle: (l) => l.title,
-  deadlinePrefix: (hw) => hw.studentName?.split(" ")[0],
-  deadlineOwner: (hw) => hw.studentName ?? "учень",
-  homeworkHref: (hw) => `/tutor/homework/${hw.id}`,
+  deadlinePrefix: (hw) => (hw.groupId ? hw.groupName : hw.studentName?.split(" ")[0]),
+  deadlineOwner: (hw) => (hw.groupId ? `група «${hw.groupName ?? ""}»` : (hw.studentName ?? "учень")),
+  homeworkHref: (hw) => (hw.groupId ? `/tutor/groups/${hw.groupId}` : `/tutor/homework/${hw.id}`),
 };
 
 const CalendarModeContext = createContext<CalendarMode>(TUTOR_MODE);

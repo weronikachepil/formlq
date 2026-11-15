@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { GraduationCap, Trash2, UserPlus } from "lucide-react";
 import { subscribeTutorStudents, addStudentByEmail, removeStudent, TutorStudent } from "@/lib/tutor";
-import { subscribeTutorLessons, Lesson } from "@/lib/lessons";
+import { collapseGroupLessons, subscribeTutorLessons, Lesson } from "@/lib/lessons";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -102,7 +102,7 @@ export function TutorSection({ tutorId }: { tutorId: string }) {
         )}
       </div>
 
-      <LessonsCalendarBlock lessons={lessons} />
+      <LessonsCalendarBlock lessons={collapseGroupLessons(lessons)} />
     </div>
   );
 }

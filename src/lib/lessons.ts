@@ -42,8 +42,18 @@ export interface Lesson {
   /** Price in UAH. */
   price?: number;
   paid?: boolean;
-  /** The student's whiteboard (src/lib/boards.ts): the same one on every lesson with them. */
+  /**
+   * The student's whiteboard (src/lib/boards.ts): the same one on every lesson with them.
+   * Group lessons use the group's board instead.
+   */
   boardId?: string;
+  /**
+   * Group lesson: every member has their own copy (own price, paid, status), and the copies
+   * of one occurrence share `groupId` + `start` (see `groupMembersOf`); a weekly group
+   * series shares one `seriesId` across all members. `groupName` is a snapshot for display.
+   */
+  groupId?: string;
+  groupName?: string;
 }
 
 export const lessonStatus = (l: Pick<Lesson, "status">): LessonStatus => l.status ?? "planned";
@@ -51,6 +61,68 @@ export const lessonEndMs = (l: Pick<Lesson, "start" | "durationMin">) =>
   l.start.toMillis() + l.durationMin * 60000;
 
 export type NewLesson = Omit<Lesson, "id">;
+
+/** Identifies one occurrence of a group lesson (all members' copies share it); null for a one-student lesson. */
+export const groupLessonKey = (l: Pick<Lesson, "groupId" | "start">): string | null =>
+  l.groupId ? `${l.groupId}@${l.start.toMillis()}` : null;
+
+/** The copies of the same group-lesson occurrence (just `[l]` for a one-student lesson). */
+export function groupMembersOf(all: Lesson[], l: Lesson): Lesson[] {
+  const key = groupLessonKey(l);
+  if (!key) return [l];
+  const out = all.filter((x) => groupLessonKey(x) === key);
+  return out.length ? out : [l];
+}
+
+/**
+ * For display: each group-lesson occurrence becomes one entry (its first copy, with the
+ * group's name in `studentName`), so calendars and lists show one block per group lesson.
+ * `groupNames` overrides the snapshot names (groups may have been renamed since).
+ */
+export function collapseGroupLessons(list: Lesson[], groupNames?: Map<string, string>): Lesson[] {
+  const seen = new Set<string>();
+  const out: Lesson[] = [];
+  for (const l of list) {
+    const key = groupLessonKey(l);
+    if (!key) {
+      out.push(l);
+      continue;
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const name = groupNames?.get(l.groupId!) ?? l.groupName ?? "Група";
+    out.push({ ...l, groupName: name, studentName: name });
+  }
+  return out;
+}
+
+/**
+ * Creates a lesson (or a weekly series until `until`) for every member of a group: one
+ * document per member and occurrence; a series shares one `seriesId` across all members.
+ * Returns the number of occurrences (not documents).
+ */
+export async function createGroupLessons(
+  data: Omit<NewLesson, "studentId" | "studentName">,
+  members: { studentId: string; studentName?: string }[],
+  until?: Date,
+): Promise<number> {
+  const col = collection(db, "lessons");
+  const first = data.start.toDate();
+  const n = until ? weeklyOccurrences(first, until, MAX_SERIES_LESSONS) : 1;
+  const seriesId = until ? doc(col).id : undefined;
+  const docs: NewLesson[] = [];
+  for (let i = 0; i < n; i++) {
+    const start = Timestamp.fromDate(addDays(first, i * 7));
+    for (const m of members) docs.push({ ...data, studentId: m.studentId, studentName: m.studentName, start, ...(seriesId ? { seriesId } : {}) });
+  }
+  // A batch holds at most 500 writes.
+  for (let i = 0; i < docs.length; i += 500) {
+    const batch = writeBatch(db);
+    for (const d of docs.slice(i, i + 500)) batch.set(doc(col), d);
+    await batch.commit();
+  }
+  return n;
+}
 
 export async function createLesson(data: NewLesson): Promise<string> {
   const ref = await addDoc(collection(db, "lessons"), data);
@@ -155,17 +227,22 @@ export async function updateLessonsFrom(
   newStart?: Date,
 ): Promise<void> {
   const shift = newStart ? newStart.getTime() - anchor.start.toMillis() : 0;
-  const batch = writeBatch(db);
-  for (const l of lessons) {
-    const next: Partial<Lesson> = { ...patch };
-    if (shift) next.start = Timestamp.fromMillis(l.start.toMillis() + shift);
-    batch.update(doc(db, "lessons", l.id), next);
+  // A batch holds at most 500 writes (a group series can exceed that).
+  for (let i = 0; i < lessons.length; i += 500) {
+    const batch = writeBatch(db);
+    for (const l of lessons.slice(i, i + 500)) {
+      const next: Partial<Lesson> = { ...patch };
+      if (shift) next.start = Timestamp.fromMillis(l.start.toMillis() + shift);
+      batch.update(doc(db, "lessons", l.id), next);
+    }
+    await batch.commit();
   }
-  await batch.commit();
 }
 
 export async function deleteLessons(ids: string[]): Promise<void> {
-  const batch = writeBatch(db);
-  for (const id of ids) batch.delete(doc(db, "lessons", id));
-  await batch.commit();
+  for (let i = 0; i < ids.length; i += 500) {
+    const batch = writeBatch(db);
+    for (const id of ids.slice(i, i + 500)) batch.delete(doc(db, "lessons", id));
+    await batch.commit();
+  }
 }

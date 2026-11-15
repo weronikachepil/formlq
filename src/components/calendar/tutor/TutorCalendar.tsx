@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { queryKeys } from "@/lib/queryKeys";
 import { Lesson, subscribeTutorLessons } from "@/lib/lessons";
 import { Homework, getTutorStudents, subscribeTutorHomework } from "@/lib/tutor";
+import { subscribeTutorGroups, type StudentGroup } from "@/lib/groups";
 import { TutorCalendarView } from "./TutorCalendarView";
 
 /** Signed-in tutor's calendar: live lessons + homework, students list. */
@@ -13,6 +14,7 @@ export function TutorCalendar() {
   const { user } = useAuth();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
+  const [groups, setGroups] = useState<StudentGroup[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -22,6 +24,11 @@ export function TutorCalendar() {
   useEffect(() => {
     if (!user) return;
     return subscribeTutorHomework(user.uid, setHomework);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeTutorGroups(user.uid, setGroups);
   }, [user]);
 
   const { data: links = [] } = useQuery({
@@ -42,6 +49,7 @@ export function TutorCalendar() {
       lessons={lessons}
       homework={homework}
       students={students}
+      groups={groups}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { Lesson, lessonStatus } from "@/lib/lessons";
+import { Lesson, groupLessonKey, lessonStatus } from "@/lib/lessons";
 import { SectionLabel } from "@/components/ui/section-label";
 import { useStudentColor } from "./student-colors";
 
@@ -14,15 +14,23 @@ export interface RangeStats {
   debtors: { studentId: string; studentName: string; amount: number; lessons: number }[];
 }
 
-/** Totals for the lessons of the visible range (cancelled ones don't count). */
+/**
+ * Totals for the lessons of the visible range (cancelled ones don't count). A group lesson
+ * counts once for lessons and hours; its money is per member's copy (each pays separately).
+ */
 export function computeStats(lessons: Lesson[]): RangeStats {
   const s: RangeStats = { count: 0, hours: 0, earned: 0, unpaid: 0, debtors: [] };
   const debt = new Map<string, RangeStats["debtors"][number]>();
+  const counted = new Set<string>();
   for (const l of lessons) {
     const status = lessonStatus(l);
     if (status === "canceled") continue;
-    s.count++;
-    s.hours += l.durationMin / 60;
+    const key = groupLessonKey(l);
+    if (!key || !counted.has(key)) {
+      if (key) counted.add(key);
+      s.count++;
+      s.hours += l.durationMin / 60;
+    }
     if (status !== "done") continue;
     const price = l.price ?? 0;
     s.earned += price;

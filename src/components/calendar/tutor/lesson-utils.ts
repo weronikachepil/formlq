@@ -25,7 +25,8 @@ export function findConflict(
 /** "Цей час уже зайнятий уроком з Олею (14 листопада, 16:00)" */
 export function conflictMessage(c: Lesson): string {
   const d = c.start.toDate();
-  return `Цей час уже зайнятий уроком з ${c.studentName ?? "іншим учнем"} (${formatDayMonth(d)}, ${formatHm(d)})`;
+  const who = c.groupId ? `групи «${c.groupName ?? "група"}»` : `з ${c.studentName ?? "іншим учнем"}`;
+  return `Цей час уже зайнятий уроком ${who} (${formatDayMonth(d)}, ${formatHm(d)})`;
 }
 
 /** Lessons that start inside [fromMs, toMs). */
@@ -36,11 +37,12 @@ export function lessonsInRange(all: Lesson[], fromMs: number, toMs: number): Les
   });
 }
 
-/** Price of the student's most recent priced lesson, to prefill a new one. */
-export function lastPriceFor(all: Lesson[], studentId: string): number | undefined {
+/** Price of the student's (or, with `group`, the group's) most recent priced lesson, to prefill a new one. */
+export function lastPriceFor(all: Lesson[], id: string, group = false): number | undefined {
   let best: Lesson | undefined;
   for (const l of all) {
-    if (l.studentId !== studentId || l.price === undefined) continue;
+    // A student's own price ignores their group lessons, which may be priced differently.
+    if ((group ? l.groupId !== id : l.studentId !== id || !!l.groupId) || l.price === undefined) continue;
     if (!best || l.start.toMillis() > best.start.toMillis()) best = l;
   }
   return best?.price;

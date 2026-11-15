@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Repeat, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Lesson, MAX_SERIES_LESSONS } from "@/lib/lessons";
+import { Lesson, MAX_SERIES_LESSONS, groupMembersOf } from "@/lib/lessons";
+import type { StudentGroup } from "@/lib/groups";
 import { addDays, addMonths, weeklyOccurrences } from "@/lib/calendar";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -19,6 +20,12 @@ export interface LessonDraft {
   id?: string;
   seriesId?: string;
   studentId: string;
+  /** Group lesson (then `studentId` is empty): new ones go to every member. */
+  groupId: string;
+  /** Name shown when the group no longer exists. */
+  groupName?: string;
+  /** Edited group lesson: its members' copies, which must not count as conflicts. */
+  excludeIds?: string[];
   title: string;
   date: string; // yyyy-mm-dd
   time: string; // hh:mm
@@ -57,6 +64,7 @@ export function newLessonDraft(
   until.setDate(start.getDate());
   return {
     studentId,
+    groupId: "",
     title: "Урок",
     date: toDateInput(start),
     time: toTimeInput(start),
@@ -69,12 +77,15 @@ export function newLessonDraft(
   };
 }
 
-export function lessonDraft(l: Lesson): LessonDraft {
+export function lessonDraft(l: Lesson, all: Lesson[]): LessonDraft {
   const start = l.start.toDate();
   return {
     id: l.id,
     seriesId: l.seriesId,
-    studentId: l.studentId,
+    studentId: l.groupId ? "" : l.studentId,
+    groupId: l.groupId ?? "",
+    groupName: l.groupName,
+    excludeIds: l.groupId ? groupMembersOf(all, l).map((x) => x.id) : undefined,
     title: l.title,
     date: toDateInput(start),
     time: toTimeInput(start),
@@ -99,6 +110,7 @@ function Field({ label, className, children }: { label: string; className?: stri
 interface LessonDialogProps {
   draft: LessonDraft | null;
   students: CalendarStudent[];
+  groups: StudentGroup[];
   lessons: Lesson[];
   onClose: () => void;
   onSave: (v: LessonFormValues) => Promise<boolean>;
@@ -124,6 +136,7 @@ export function LessonDialog({ draft, ...rest }: LessonDialogProps) {
 function LessonForm({
   initial,
   students,
+  groups,
   lessons,
   onClose,
   onSave,
@@ -140,7 +153,7 @@ function LessonForm({
   // Anti-overlap: every occurrence the save would create/move (series: weekly).
   let conflict: Lesson | null = null;
   if (start) {
-    const exclude = new Set(d.id ? [d.id] : []);
+    const exclude = new Set(d.excludeIds ?? (d.id ? [d.id] : []));
     for (let i = 0; i < count && !conflict; i++) {
       const s = addDays(start, i * 7).getTime();
       conflict = findConflict(lessons, s, s + d.durationMin * 60000, exclude);
@@ -149,7 +162,9 @@ function LessonForm({
 
   const priceNum = d.price.trim() === "" ? undefined : Number(d.price);
   const priceInvalid = priceNum !== undefined && (!Number.isFinite(priceNum) || priceNum < 0);
-  const canSave = !busy && !!d.studentId && !!start && !conflict && !priceInvalid && (!d.repeat || !isNew || !!until);
+  const group = d.groupId ? groups.find((g) => g.id === d.groupId) : undefined;
+  const groupSize = group ? students.filter((s) => group.studentIds.includes(s.studentId)).length : 0;
+  const canSave = !busy && (!!d.studentId || (!!d.groupId && (!isNew || groupSize > 0))) && !!start && !conflict && !priceInvalid && (!d.repeat || !isNew || !!until);
 
   async function save() {
     if (!canSave || !start) return;
@@ -157,6 +172,7 @@ function LessonForm({
     const ok = await onSave({
       id: d.id,
       studentId: d.studentId,
+      groupId: d.groupId || undefined,
       title: d.title,
       start,
       durationMin: d.durationMin,
@@ -186,27 +202,52 @@ function LessonForm({
       </div>
 
       <div className="space-y-2.5">
-        <Field label="Учень">
+        <Field label={groups.length && (isNew || d.groupId) ? "Учень або група" : "Учень"}>
           <SelectNative
-            value={d.studentId}
+            value={d.groupId ? `g:${d.groupId}` : d.studentId}
+            // An existing group lesson stays with its group (members are separate copies).
+            disabled={!isNew && !!d.groupId}
             onChange={(e) => {
-              const studentId = e.target.value;
-              const patch: Partial<LessonDraft> = { studentId };
-              // New lesson: prefill this student's usual price.
+              const v = e.target.value;
+              const groupId = v.startsWith("g:") ? v.slice(2) : "";
+              const studentId = groupId ? "" : v;
+              const patch: Partial<LessonDraft> = { studentId, groupId };
+              // New lesson: prefill this student's (or group's) usual price.
               if (isNew) {
-                const p = lastPriceFor(lessons, studentId);
+                const p = groupId ? lastPriceFor(lessons, groupId, true) : lastPriceFor(lessons, studentId);
                 patch.price = p !== undefined ? String(p) : "";
               }
               set(patch);
             }}
           >
             <option value="">Оберіть...</option>
-            {students.map((s) => (
-              <option key={s.studentId} value={s.studentId}>
-                {s.studentName}
-              </option>
-            ))}
+            {(isNew || d.groupId) && (groups.length > 0 || !!d.groupId) && (
+              <optgroup label="Групи">
+                {groups.map((g) => (
+                  <option key={g.id} value={`g:${g.id}`}>
+                    👥 {g.name} ({g.studentIds.length})
+                  </option>
+                ))}
+                {d.groupId && !group && <option value={`g:${d.groupId}`}>👥 {d.groupName ?? "Група"}</option>}
+              </optgroup>
+            )}
+            {!d.groupId || isNew ? (
+              <optgroup label="Учні">
+                {students.map((s) => (
+                  <option key={s.studentId} value={s.studentId}>
+                    {s.studentName}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </SelectNative>
+          {group && isNew && (
+            <span className="block text-xs text-muted-foreground px-1 pt-0.5">
+              {groupSize
+                ? `Урок зʼявиться в календарі кожного учня групи (${groupSize}); ціна — за кожного.`
+                : "У групі немає учнів — додайте їх на сторінці «Учні»."}
+            </span>
+          )}
         </Field>
         <Field label="Назва">
           <TextInput value={d.title} onChange={(e) => set({ title: e.target.value })} />
