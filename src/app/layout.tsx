@@ -9,6 +9,7 @@ import { HeaderProvider } from "@/context/HeaderContext";
 import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { SiteIntro } from "@/components/SiteIntro";
+import { VisualViewportVars } from "@/components/VisualViewportVars";
 
 /** Body text (MathBoard design). */
 const manrope = Manrope({
@@ -147,6 +148,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
+        <VisualViewportVars />
         <QueryProvider>
           <ThemeProvider>
             <AuthProvider>
