@@ -140,10 +140,27 @@ export function Inspector() {
             </p>
           )}
           <div className="bd-line wrap">
+            {st.canEdit && !one.rot && !one.lock && (
+              <button
+                className={"bd-chip-btn" + (st.cropEdit === one.id ? " on" : "")}
+                onClick={() => b()?.toggleCrop(one.id)}
+                title="Тягніть ручки рамки, щоб сховати частину зображення; пізніше розширте рамку, щоб показати більше"
+              >
+                {st.cropEdit === one.id ? "Готово" : "Обрізати"}
+              </button>
+            )}
+            {st.canEdit && !one.lock && one.crop && (
+              <button className="bd-chip-btn" onClick={() => b()?.resetCrop(one.id)}>
+                Показати все
+              </button>
+            )}
             <button className="bd-chip-btn" onClick={() => b()?.morePdf(one)}>
               {one.pdf ? "Довставити сторінки" : "Додати сторінки з PDF"}
             </button>
           </div>
+          {st.cropEdit === one.id && (
+            <p className="bd-hint">Тягніть ручки, щоб обрізати; всередині рамки — щоб зсунути зображення. Esc — готово.</p>
+          )}
         </div>
       )}
       {one?.type === "chart" && <ChartProps o={one} />}

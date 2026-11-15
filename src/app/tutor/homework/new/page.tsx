@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Timestamp } from "firebase/firestore";
@@ -10,7 +10,9 @@ import { isEditor } from "@/lib/roles";
 import { usePageHeader } from "@/context/HeaderContext";
 import { queryKeys, STALE } from "@/lib/queryKeys";
 import { pluralize, PLURAL } from "@/lib/format";
-import { getTutorStudents, assignHomework, NewHomework } from "@/lib/tutor";
+import { getTutorStudents, assignHomework, assignHomeworkToGroup, NewHomework } from "@/lib/tutor";
+import { subscribeTutorGroups, type StudentGroup } from "@/lib/groups";
+import toast from "react-hot-toast";
 import {
   getTests,
   getTestFolders,
@@ -48,7 +50,13 @@ export default function NewHomeworkPage() {
   const queryClient = useQueryClient();
   const params = useSearchParams();
 
-  const [studentId, setStudentId] = useState(params.get("student") ?? "");
+  // Who gets it: "s:<studentId>" or "g:<groupId>" (each member gets their own copy).
+  const [recipient, setRecipient] = useState(() => {
+    const g = params.get("group");
+    const s = params.get("student");
+    return g ? `g:${g}` : s ? `s:${s}` : "";
+  });
+  const [groups, setGroups] = useState<StudentGroup[]>([]);
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [due, setDue] = useState(""); // datetime-local string
@@ -77,6 +85,11 @@ export default function NewHomeworkPage() {
   const [bankType, setBankType] = useState<"all" | TestQuestion["type"]>("all");
 
   usePageHeader("Нове домашнє завдання");
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeTutorGroups(user.uid, setGroups);
+  }, [user]);
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: queryKeys.tutorStudents(user?.uid),
@@ -113,6 +126,14 @@ export default function NewHomeworkPage() {
 
   const selectedTest = tests.find((t) => t.id === testId);
 
+  const studentId = recipient.startsWith("s:") ? recipient.slice(2) : "";
+  const group = recipient.startsWith("g:") ? groups.find((g) => g.id === recipient.slice(2)) : undefined;
+  // Only members who are still the tutor's students.
+  const groupMembers = useMemo(
+    () => (group ? students.filter((s) => group.studentIds.includes(s.studentId)) : []),
+    [group, students],
+  );
+
   const filteredBank = useMemo(() => {
     const s = bankSearch.toLowerCase();
     return bank.filter((q) => {
@@ -141,7 +162,7 @@ export default function NewHomeworkPage() {
 
   const canSubmit =
     !!user &&
-    !!studentId &&
+    (!!studentId || groupMembers.length > 0) &&
     title.trim().length > 0 &&
     (source === "test" ? !!testId : customQuestions.length > 0);
 
@@ -149,19 +170,16 @@ export default function NewHomeworkPage() {
     if (!canSubmit || !user) return;
     setSaving(true);
     try {
-      const student = students.find((s) => s.studentId === studentId);
       const base = {
         tutorId: user.uid,
         tutorName: user.displayName ?? undefined,
-        studentId,
-        studentName: student?.studentName,
         title: title.trim(),
         note: note.trim() || undefined,
         pdfUrl: pdfUrl || undefined,
         dueAt: due ? Timestamp.fromDate(new Date(due)) : null,
       };
 
-      let payload: NewHomework;
+      let payload: Omit<NewHomework, "studentId" | "studentName">;
       if (source === "test" && selectedTest) {
         payload = {
           ...base,
@@ -181,9 +199,22 @@ export default function NewHomeworkPage() {
           durationMinutes: 0, // homework is untimed
         };
       }
-      await assignHomework(payload);
+      if (group) {
+        const n = await assignHomeworkToGroup(
+          payload,
+          group,
+          groupMembers.map((m) => ({ studentId: m.studentId, studentName: m.studentName })),
+        );
+        toast.success(`Завдання отримали ${pluralize(n, PLURAL.student)} групи «${group.name}»`);
+        router.push(`/tutor/groups/${group.id}`);
+        return;
+      }
+      const student = students.find((s) => s.studentId === studentId);
+      await assignHomework({ ...payload, studentId, studentName: student?.studentName });
       queryClient.invalidateQueries({ queryKey: queryKeys.studentHomework(studentId) });
       router.push(`/tutor/students/${studentId}`);
+    } catch {
+      toast.error("Не вдалося призначити завдання");
     } finally {
       setSaving(false);
     }
@@ -194,15 +225,27 @@ export default function NewHomeworkPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-5 pb-8">
       {/* Student */}
-      <Field label="Учень">
-        <Select value={studentId} onValueChange={setStudentId}>
-          <SelectItem value="">Оберіть учня...</SelectItem>
+      <Field label={groups.length ? "Учень або група" : "Учень"}>
+        <Select value={recipient} onValueChange={setRecipient}>
+          <SelectItem value="">{groups.length ? "Оберіть учня або групу..." : "Оберіть учня..."}</SelectItem>
+          {groups.map((g) => (
+            <SelectItem key={g.id} value={`g:${g.id}`}>
+              Група «{g.name}» · {pluralize(g.studentIds.length, PLURAL.student)}
+            </SelectItem>
+          ))}
           {students.map((s) => (
-            <SelectItem key={s.studentId} value={s.studentId}>
-              {s.studentName} ({s.studentEmail})
+            <SelectItem key={s.studentId} value={`s:${s.studentId}`}>
+              {s.studentName}
             </SelectItem>
           ))}
         </Select>
+        {group && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {groupMembers.length
+              ? `Кожен учень групи отримає своє завдання: ${groupMembers.map((m) => m.studentName).join(", ")}.`
+              : "У групі немає учнів — додайте їх на сторінці «Учні»."}
+          </p>
+        )}
         {students.length === 0 && (
           <p className="text-xs text-muted-foreground mt-1">
             Немає учнів. Додайте учня на сторінці «Мої учні».

@@ -7,16 +7,19 @@ import {
   Lesson,
   LessonStatus,
   NewLesson,
+  createGroupLessons,
   createLesson,
   createLessonSeries,
   deleteLesson,
   deleteLessons,
+  groupMembersOf,
   seriesFrom,
   setLessonsBoard,
   updateLesson,
   updateLessonsFrom,
 } from "@/lib/lessons";
 import { createBoard, getBoard } from "@/lib/boards";
+import { updateGroup, type StudentGroup } from "@/lib/groups";
 import { conflictMessage, findConflict } from "./lesson-utils";
 import type { CalendarStudent, SeriesScope } from "./types";
 
@@ -30,6 +33,8 @@ type AskScope = (
 export interface LessonFormValues {
   id?: string;
   studentId: string;
+  /** New group lesson: one copy per member of this group (`studentId` is then empty). */
+  groupId?: string;
   title: string;
   start: Date;
   durationMin: number;
@@ -46,6 +51,7 @@ interface Options {
   /** Lessons from the Firestore snapshot. */
   serverLessons: Lesson[];
   students: CalendarStudent[];
+  groups: StudentGroup[];
   askScope: AskScope;
 }
 
@@ -53,7 +59,7 @@ interface Options {
  * Every write the calendar makes. Moves and quick edits are applied optimistically
  * through `overrides` and dropped again once Firestore has the change (or reverted on error).
  */
-export function useLessonActions({ tutorId, tutorName, serverLessons, students, askScope }: Options) {
+export function useLessonActions({ tutorId, tutorName, serverLessons, students, groups, askScope }: Options) {
   const [overrides, setOverrides] = useState<Overrides>({});
   const [boardBusy, setBoardBusy] = useState<string | null>(null);
 
@@ -113,31 +119,41 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
     async (lesson: Lesson, start: Date, durationMin: number) => {
       const shift = start.getTime() - lesson.start.toMillis();
       if (!shift && durationMin === lesson.durationMin) return;
-      const own = conflictFor([lesson], shift, durationMin);
+      // A group lesson moves with all its members' copies.
+      const members = groupMembersOf(lessons, lesson);
+      const own = conflictFor(members, shift, durationMin);
       if (own) {
         toast.error(conflictMessage(own));
         return;
       }
-      const patch: Partial<Lesson> = { start: Timestamp.fromDate(start), durationMin };
+      const shifted = (list: Lesson[]): Overrides =>
+        Object.fromEntries(list.map((l) => [l.id, { start: Timestamp.fromMillis(l.start.toMillis() + shift), durationMin }]));
+      const moveOccurrence = () =>
+        optimistic(
+          shifted(members),
+          () => updateLessonsFrom(members, lesson, { durationMin }, shift ? start : undefined),
+          "Не вдалося перенести урок",
+        );
       if (!lesson.seriesId) {
-        await optimistic({ [lesson.id]: patch }, () => updateLesson(lesson.id, patch), "Не вдалося перенести урок");
+        await moveOccurrence();
         return;
       }
       // Keep the block where it was dropped while the tutor picks the scope.
-      setPatches({ [lesson.id]: patch });
+      setPatches(shifted(members));
+      const ids = members.map((l) => l.id);
       const scope = await askScope(shift ? "Перенести урок?" : "Змінити тривалість?");
       if (!scope) {
-        clearPatches([lesson.id]);
+        clearPatches(ids);
         return;
       }
       if (scope === "one") {
-        await optimistic({ [lesson.id]: patch }, () => updateLesson(lesson.id, patch), "Не вдалося перенести урок");
+        await moveOccurrence();
         return;
       }
       const targets = seriesFrom(lessons, lesson);
       const c = conflictFor(targets, shift, durationMin);
       if (c) {
-        clearPatches([lesson.id]);
+        clearPatches(ids);
         toast.error(conflictMessage(c));
         return;
       }
@@ -154,10 +170,17 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
     [askScope, clearPatches, conflictFor, lessons, optimistic, setPatches],
   );
 
+  /** Status of the whole occurrence (every member's copy of a group lesson). */
   const setStatus = useCallback(
-    (lesson: Lesson, status: LessonStatus) =>
-      optimistic({ [lesson.id]: { status } }, () => updateLesson(lesson.id, { status }), "Не вдалося змінити статус"),
-    [optimistic],
+    (lesson: Lesson, status: LessonStatus) => {
+      const members = groupMembersOf(lessons, lesson);
+      return optimistic(
+        Object.fromEntries(members.map((l) => [l.id, { status }])),
+        () => (members.length === 1 ? updateLesson(lesson.id, { status }) : updateLessonsFrom(members, lesson, { status })),
+        "Не вдалося змінити статус",
+      );
+    },
+    [lessons, optimistic],
   );
 
   const togglePaid = useCallback(
@@ -171,10 +194,10 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
   /** Returns true when something was deleted. Non-series lessons are confirmed by the caller. */
   const removeLesson = useCallback(
     async (lesson: Lesson): Promise<boolean> => {
-      let ids = [lesson.id];
+      let ids = groupMembersOf(lessons, lesson).map((l) => l.id);
       if (lesson.seriesId) {
         const scope = await askScope("Видалити урок?", {
-          description: "Урок зникне з календаря у вас і в учня.",
+          description: lesson.groupId ? "Урок зникне з календаря у вас і в учнів групи." : "Урок зникне з календаря у вас і в учня.",
           destructive: true,
         });
         if (!scope) return false;
@@ -200,7 +223,9 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
     (studentId: string): string | undefined => {
       let latest: Lesson | undefined;
       for (const l of lessons) {
-        if (l.studentId === studentId && l.boardId && (!latest || l.start.toMillis() > latest.start.toMillis())) latest = l;
+        // Group lessons use the group's board, not the student's own.
+        if (l.groupId || l.studentId !== studentId || !l.boardId) continue;
+        if (!latest || l.start.toMillis() > latest.start.toMillis()) latest = l;
       }
       return latest?.boardId;
     },
@@ -219,6 +244,33 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
         price: v.price,
       };
       try {
+        if (!v.id && v.groupId) {
+          const group = groups.find((g) => g.id === v.groupId);
+          const members = group ? students.filter((s) => group.studentIds.includes(s.studentId)) : [];
+          if (!group || !members.length) {
+            toast.error(group ? "У групі немає учнів" : "Групу не знайдено");
+            return false;
+          }
+          const n = await createGroupLessons(
+            {
+              tutorId,
+              tutorName,
+              title: common.title,
+              durationMin: v.durationMin,
+              price: v.price,
+              start: Timestamp.fromDate(v.start),
+              note: v.note.trim() || undefined,
+              meetingUrl: v.meetingUrl.trim() || undefined,
+              groupId: group.id,
+              groupName: group.name,
+              boardId: group.boardId,
+            },
+            members.map((m) => ({ studentId: m.studentId, studentName: m.studentName })),
+            v.repeatUntil,
+          );
+          toast.success(v.repeatUntil ? `Створено занять групи «${group.name}»: ${n}` : `Урок групи «${group.name}» створено`);
+          return true;
+        }
         if (!v.id) {
           const data: NewLesson = {
             ...common,
@@ -240,6 +292,27 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
 
         const lesson = lessons.find((l) => l.id === v.id);
         if (!lesson) return true;
+        if (lesson.groupId) {
+          // Group lesson: the same edit for every member's copy (members can't be swapped here).
+          const groupPatch: Partial<Lesson> = {
+            title: common.title,
+            durationMin: v.durationMin,
+            price: v.price,
+            note: v.note.trim(),
+            meetingUrl: v.meetingUrl.trim(),
+          };
+          const gShift = v.start.getTime() - lesson.start.toMillis();
+          const gScope = lesson.seriesId ? await askScope("Зберегти зміни?") : "one";
+          if (!gScope) return false;
+          const gTargets = gScope === "one" ? groupMembersOf(lessons, lesson) : seriesFrom(lessons, lesson);
+          const gc = conflictFor(gTargets, gShift, v.durationMin);
+          if (gc) {
+            toast.error(conflictMessage(gc));
+            return false;
+          }
+          await updateLessonsFrom(gTargets, lesson, groupPatch, gShift ? v.start : undefined);
+          return true;
+        }
         // Empty strings clear the fields (undefined would be skipped by Firestore).
         const patch: Partial<Lesson> = { ...common, note: v.note.trim(), meetingUrl: v.meetingUrl.trim() };
         // Moved to another student: the lesson now uses that student's board ("" = none yet).
@@ -265,7 +338,7 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
         return false;
       }
     },
-    [askScope, conflictFor, lessons, studentBoardId, students, tutorId, tutorName],
+    [askScope, conflictFor, groups, lessons, studentBoardId, students, tutorId, tutorName],
   );
 
   /** Opens the student's board in a new tab, creating it on first use, and links it to all their lessons. */
@@ -275,17 +348,23 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
       const tab = window.open("about:blank", "_blank");
       setBoardBusy(lesson.id);
       try {
-        const known = studentBoardId(lesson.studentId);
+        // A group lesson opens the group's board (kept on the group), shared by its members.
+        const group = lesson.groupId ? groups.find((g) => g.id === lesson.groupId) : undefined;
+        const known = lesson.groupId ? (group?.boardId ?? lesson.boardId) : studentBoardId(lesson.studentId);
         // The board may have been deleted from the boards list since.
         let boardId = known && (await getBoard(known)) ? known : undefined;
         if (!boardId) {
-          boardId = await createBoard(tutorId, tutorName ?? "", `Уроки — ${lesson.studentName ?? "учень"}`);
+          const who = lesson.groupId ? (group?.name ?? lesson.groupName ?? "група") : (lesson.studentName ?? "учень");
+          boardId = await createBoard(tutorId, tutorName ?? "", `Уроки — ${who}`);
         }
+        if (group && group.boardId !== boardId) await updateGroup(group.id, { boardId });
         if (tab) tab.location.href = `/board/${boardId}`;
         else window.open(`/board/${boardId}`, "_blank");
 
         const id = boardId;
-        const unlinked = lessons.filter((l) => l.studentId === lesson.studentId && l.boardId !== id);
+        const unlinked = lessons.filter((l) =>
+          l.boardId !== id && (lesson.groupId ? l.groupId === lesson.groupId : l.studentId === lesson.studentId && !l.groupId),
+        );
         if (unlinked.length) {
           await optimistic(
             Object.fromEntries(unlinked.map((l) => [l.id, { boardId: id }])),
@@ -300,7 +379,7 @@ export function useLessonActions({ tutorId, tutorName, serverLessons, students, 
         setBoardBusy(null);
       }
     },
-    [lessons, optimistic, studentBoardId, tutorId, tutorName],
+    [groups, lessons, optimistic, studentBoardId, tutorId, tutorName],
   );
 
   return {

@@ -2,7 +2,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import type { Lesson } from "@/lib/lessons";
+import { collapseGroupLessons, groupMembersOf, type Lesson } from "@/lib/lessons";
+import type { StudentGroup } from "@/lib/groups";
 import type { Homework } from "@/lib/tutor";
 import {
   MONTHS,
@@ -33,6 +34,24 @@ import { cn } from "@/lib/utils";
 import { ASIDE_FIT, DEFAULT_DURATION_MIN, GRID_FIT, type CalendarStudent, type CalendarView } from "./types";
 
 const VIEW_KEY = "tutor-calendar-view";
+const NO_GROUPS: StudentGroup[] = [];
+
+/** One deadline per group homework (its members' copies share `assignId`), named after the group. */
+function collapseGroupHomework(list: Homework[], groupNames: Map<string, string>): Homework[] {
+  const seen = new Set<string>();
+  const out: Homework[] = [];
+  for (const h of list) {
+    if (!h.groupId) {
+      out.push(h);
+      continue;
+    }
+    const key = h.assignId ?? h.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ ...h, groupName: groupNames.get(h.groupId) ?? h.groupName });
+  }
+  return out;
+}
 
 function initialView(): CalendarView {
   if (typeof window === "undefined") return "week";
@@ -52,6 +71,7 @@ export interface TutorCalendarViewProps {
   lessons: Lesson[];
   homework: Homework[];
   students: CalendarStudent[];
+  groups?: StudentGroup[];
   /** Preview/testing: start on this view instead of the remembered one. */
   defaultView?: CalendarView;
   /** Preview/testing: start on this date instead of today. */
@@ -65,6 +85,7 @@ export function TutorCalendarView({
   lessons: serverLessons,
   homework,
   students,
+  groups = NO_GROUPS,
   defaultView,
   defaultDate,
 }: TutorCalendarViewProps) {
@@ -83,10 +104,16 @@ export function TutorCalendarView({
     tutorName,
     serverLessons,
     students,
+    groups,
     askScope: scope.ask,
   });
   const lessons = actions.lessons;
-  const colorOf = useMemo(() => makeColorOf(students.map((s) => s.studentId)), [students]);
+  // Groups get their own colours alongside the students'.
+  const colorOf = useMemo(
+    () => makeColorOf([...students.map((s) => s.studentId), ...groups.map((g) => g.id)]),
+    [students, groups],
+  );
+  const groupNames = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
 
   const setView = (v: CalendarView) => {
     setViewState(v);
@@ -128,6 +155,9 @@ export function TutorCalendarView({
     () => lessonsInRange(visibleLessons, from.getTime(), to.getTime()),
     [visibleLessons, from, to],
   );
+  // On the grids a group lesson is one block, and group homework one deadline chip.
+  const displayLessons = useMemo(() => collapseGroupLessons(visibleLessons, groupNames), [visibleLessons, groupNames]);
+  const displayHomework = useMemo(() => collapseGroupHomework(visibleHomework, groupNames), [visibleHomework, groupNames]);
 
   const step = (dir: 1 | -1) => {
     if (view === "day") setAnchor(addDays(anchor, dir));
@@ -166,6 +196,8 @@ export function TutorCalendarView({
   const openLesson = useCallback((l: Lesson, rect: DOMRect) => setOpen({ id: l.id, rect }), []);
   const closePopover = useCallback(() => setOpen(null), []);
   const openedLesson = open ? lessons.find((l) => l.id === open.id) : undefined;
+  const openedMembers = openedLesson?.groupId ? groupMembersOf(lessons, openedLesson) : undefined;
+  const openedGroupName = openedLesson?.groupId ? (groupNames.get(openedLesson.groupId) ?? openedLesson.groupName) : undefined;
 
   const removeOpened = (l: Lesson) => {
     setOpen(null);
@@ -183,7 +215,7 @@ export function TutorCalendarView({
           <CalendarSidebar
             anchor={anchor}
             onPickDate={(d) => setAnchor(startOfDay(d))}
-            allLessons={visibleLessons}
+            allLessons={displayLessons}
             rangeLessons={rangeLessons}
             rangeLabel={rangeLabel}
             students={students}
@@ -211,8 +243,8 @@ export function TutorCalendarView({
             {view === "month" ? (
               <MonthGridView
                 anchor={anchor}
-                lessons={visibleLessons}
-                homework={visibleHomework}
+                lessons={displayLessons}
+                homework={displayHomework}
                 now={now}
                 onOpenLesson={openLesson}
                 onDayClick={openDay}
@@ -221,8 +253,8 @@ export function TutorCalendarView({
             ) : (
               <TimeGridView
                 days={days}
-                lessons={visibleLessons}
-                homework={visibleHomework}
+                lessons={displayLessons}
+                homework={displayHomework}
                 now={now}
                 showSelection={!!draft && !draft.id}
                 onOpenLesson={openLesson}
@@ -237,6 +269,8 @@ export function TutorCalendarView({
         {open && openedLesson && (
           <LessonPopover
             lesson={openedLesson}
+            members={openedMembers}
+            groupName={openedGroupName}
             anchor={open.rect}
             asDialog={isPhone}
             now={now}
@@ -244,10 +278,10 @@ export function TutorCalendarView({
             boardBusy={actions.boardBusy === openedLesson.id}
             onClose={closePopover}
             onStatus={(s) => void actions.setStatus(openedLesson, s)}
-            onTogglePaid={() => void actions.togglePaid(openedLesson)}
+            onTogglePaid={(l) => void actions.togglePaid(l)}
             onEdit={() => {
               setOpen(null);
-              setDraft(lessonDraft(openedLesson));
+              setDraft(lessonDraft(openedLesson, lessons));
             }}
             onDelete={() => removeOpened(openedLesson)}
             onOpenBoard={() => void actions.openBoard(openedLesson)}
@@ -257,6 +291,7 @@ export function TutorCalendarView({
         <LessonDialog
           draft={draft}
           students={students}
+          groups={groups}
           lessons={lessons}
           onClose={() => setDraft(null)}
           onSave={actions.saveLesson}
@@ -265,7 +300,7 @@ export function TutorCalendarView({
         <ConfirmDialog
           open={!!confirmDelete}
           title="Видалити урок?"
-          description="Урок зникне з календаря у вас і в учня."
+          description={confirmDelete?.groupId ? "Урок зникне з календаря у вас і в учнів групи." : "Урок зникне з календаря у вас і в учня."}
           onConfirm={() => {
             const l = confirmDelete;
             setConfirmDelete(null);

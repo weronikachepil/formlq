@@ -28,6 +28,13 @@
 { tutorId, studentId, studentEmail, studentName, createdAt }
 ```
 
+### `groups/{autoId}`
+Група учнів вчителя (клас, «НМТ вечірня»). Склад — список на групі; учень може бути в кількох групах. — [src/lib/groups.ts](../src/lib/groups.ts)
+```
+{ tutorId, name, studentIds: string[], boardId?, createdAt }
+```
+Домашка й уроки для групи **копіюються кожному учню** (окремий `homework` / `lessons` документ з позначкою групи), тому запити й правила учня не змінюються. Учень, доданий у групу пізніше, отримує лише нові завдання й уроки. Видалення групи не чіпає вже виданого.
+
 ### `homework/{autoId}`
 Домашнє завдання. — [src/lib/tutor.ts](../src/lib/tutor.ts)
 ```
@@ -42,8 +49,10 @@
   status: "assigned" | "in_progress" | "completed",
   resultId?,                   // лінк на testResult після здачі
   progress?: { answers, answerImages }  // автозбереження для resume
+  groupId?, groupName?, assignId?       // видано групі: копії всіх учнів мають спільний assignId
 }
 ```
+Домашка групі (`assignHomeworkToGroup`) — одна копія на кожного учня групи одним batch. Сторінка [`/tutor/groups/[groupId]`](../src/app/tutor/groups/[groupId]/page.tsx) будує таблицю «учні × завдання» з копій із цим `groupId` (стовпець = `assignId`); бали — з `testResults` по `resultId` кожної копії (по одному документу: правило `ownsHomework` не дозволяє list-запит).
 
 ### `testResults/{autoId}` (розширено)
 Існуюча колекція + поля для домашки — [src/lib/tests.ts](../src/lib/tests.ts)
@@ -54,8 +63,15 @@ homeworkId?, answerImages?, flaggedQuestions?, tutorComments?, tutorNote?
 ### `lessons/{autoId}`
 Заняття календаря. — [src/lib/lessons.ts](../src/lib/lessons.ts)
 ```
-{ tutorId, tutorName, studentId, studentName, title, start: Timestamp, durationMin, note? }
+{
+  tutorId, tutorName, studentId, studentName, title, start: Timestamp, durationMin,
+  note?, meetingUrl?, seriesId?,            // seriesId — спільний для щотижневої серії
+  status?: "planned" | "done" | "canceled" | "missed", price?, paid?,
+  boardId?,                                 // дошка учня (або групи для групового уроку)
+  groupId?, groupName?                      // груповий урок
+}
 ```
+**Груповий урок** — копія на кожного учня групи (`createGroupLessons`): своя ціна й оплата, спільні `groupId` + `start` (одне заняття, `groupMembersOf`); щотижнева групова серія має один `seriesId` на всіх, тож «цей і наступні» охоплює всю групу. У календарі вчителя, «Найближчих уроках» і адмінці копії згортаються в один блок (`collapseGroupLessons`); перенесення, статус і видалення діють на всі копії, оплата — на кожного окремо; статистика рахує урок один раз, а гроші — за кожного учня. Дошка групи — `groups.boardId` (створюється при першому «Відкрити дошку»); власна дошка учня ігнорує його групові уроки.
 
 ---
 
@@ -113,6 +129,7 @@ homeworkId?, answerImages?, flaggedQuestions?, tutorComments?, tutorNote?
 - `tutorStudents` — tutor керує своїми; `resource == null` дозволяє читання неіснуючого доку (перевірка дублю перед create).
 - `testResults` — власник читає/оновлює свій (флаги); tutor читає/коментує результати своїх домашок (через `ownsHomework()`).
 - `lessons` — tutor керує своїми, студент читає свої.
+- `groups` — лише tutor-власник (і editor); учням доступ не потрібен.
 
 > **Деплой:** правила діють лише після Publish у Firebase Console (або `firebase deploy --only firestore:rules`). Локальний файл застосунок не читає.
 
@@ -123,13 +140,14 @@ homeworkId?, answerImages?, flaggedQuestions?, tutorComments?, tutorNote?
 **Бібліотеки**
 - [src/lib/tutor.ts](../src/lib/tutor.ts) — звʼязки, домашні (CRUD + subscribe)
 - [src/lib/lessons.ts](../src/lib/lessons.ts) — заняття
+- [src/lib/groups.ts](../src/lib/groups.ts) — групи учнів (CRUD + subscribe); діалог — [GroupDialog](../src/components/tutor/GroupDialog.tsx)
 - [src/lib/tests.ts](../src/lib/tests.ts) — `bankToTestQuestion`, `recalcStreak`, `updateResult`, розширений `TestResult`
 - [src/lib/users.ts](../src/lib/users.ts) — `getUserByEmail`, `updateUserRole`
 
 **Компоненти**
 - [ExamRunner](../src/components/exam/ExamRunner.tsx), [MonthCalendar](../src/components/calendar/MonthCalendar.tsx), [AppSidebar](../src/components/AppSidebar.tsx), [MobileNav](../src/components/MobileNav.tsx)
 
-**Сторінки вчителя** — `src/app/tutor/`: `students`, `homework`, `homework/new`, `homework/[id]`, `calendar`
+**Сторінки вчителя** — `src/app/tutor/`: `students`, `groups/[groupId]`, `homework`, `homework/new`, `homework/[id]`, `calendar`
 **Сторінки учня** — `src/app/dashboard/`: `homework`, `homework/[id]`, `calendar`, `page.tsx` (блок домашки)
 
 ---

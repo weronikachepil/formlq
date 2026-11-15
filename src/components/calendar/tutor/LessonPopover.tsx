@@ -36,6 +36,10 @@ const STATUS_ACTIVE: Record<LessonStatus, string> = {
 
 export interface LessonPopoverProps {
   lesson: Lesson;
+  /** Group lesson: every member's copy of this occurrence (payment is per member). */
+  members?: Lesson[];
+  /** Current name of the lesson's group. */
+  groupName?: string;
   anchor: DOMRect;
   /** Phones: show as a dialog instead of a floating card. */
   asDialog: boolean;
@@ -45,7 +49,7 @@ export interface LessonPopoverProps {
   boardBusy: boolean;
   onClose: () => void;
   onStatus: (s: LessonStatus) => void;
-  onTogglePaid: () => void;
+  onTogglePaid: (l: Lesson) => void;
   onEdit: () => void;
   onDelete: () => void;
   onOpenBoard: () => void;
@@ -115,6 +119,8 @@ function FloatingCard(props: LessonPopoverProps) {
 
 function PopoverBody({
   lesson,
+  members,
+  groupName,
   now,
   homework,
   boardBusy,
@@ -126,7 +132,8 @@ function PopoverBody({
   onOpenBoard,
 }: LessonPopoverProps) {
   const studentColor = useStudentColor();
-  const color = studentColor(lesson.studentId);
+  const color = studentColor(lesson.groupId ?? lesson.studentId);
+  const group = lesson.groupId ? (members ?? [lesson]) : null;
   const status = lessonStatus(lesson);
   const start = lesson.start.toDate();
   const end = new Date(start.getTime() + lesson.durationMin * MINUTE_MS);
@@ -175,10 +182,10 @@ function PopoverBody({
 
       <div className="space-y-1.5 text-sm">
         <Link
-          href={`/tutor/students/${lesson.studentId}`}
+          href={group ? `/tutor/groups/${lesson.groupId}` : `/tutor/students/${lesson.studentId}`}
           className="inline-flex items-center gap-1.5 font-semibold hover:underline underline-offset-4"
         >
-          {lesson.studentName ?? "Учень"}
+          {group ? `👥 ${groupName ?? "Група"} · ${group.length} уч.` : (lesson.studentName ?? "Учень")}
           <ChevronRight size={13} className="text-muted-foreground" />
         </Link>
         {lesson.note && (
@@ -209,6 +216,28 @@ function PopoverBody({
         ))}
       </div>
 
+      {group ? (
+        <div className="rounded-[1rem] border border-border/60 py-1.5 px-3 space-y-1">
+          <p className="flex items-baseline justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Оплата
+            <span className="normal-case tracking-normal text-[11px]">
+              {lesson.price !== undefined ? `${lesson.price.toLocaleString("uk")} ₴ з учня` : "ціну не вказано"}
+            </span>
+          </p>
+          <ul className="max-h-48 overflow-y-auto -mr-1.5 pr-1.5">
+            {[...group]
+              .sort((a, b) => (a.studentName ?? "").localeCompare(b.studentName ?? "", "uk"))
+              .map((m) => (
+                <li key={m.id} className="flex items-center justify-between gap-2 py-0.5">
+                  <Link href={`/tutor/students/${m.studentId}`} className="text-sm truncate hover:underline underline-offset-4">
+                    {m.studentName ?? "Учень"}
+                  </Link>
+                  <PaidSwitch paid={!!m.paid} onToggle={() => onTogglePaid(m)} />
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : (
       <div className="flex items-center justify-between gap-3 rounded-[1rem] border border-border/60 py-1.5 pl-3 pr-1.5">
         <p className="flex min-w-0 items-baseline gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ціна</span>
@@ -216,28 +245,11 @@ function PopoverBody({
             {lesson.price !== undefined ? `${lesson.price.toLocaleString("uk")} ₴` : "не вказано"}
           </span>
         </p>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={!!lesson.paid}
-          onClick={onTogglePaid}
-          className={cn(
-            "inline-flex items-center gap-1.5 h-7 pl-1 pr-2.5 rounded-full text-xs font-semibold transition-colors",
-            lesson.paid ? "bg-green-600/15 text-green-700 dark:text-green-300" : "bg-muted text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <span
-            className={cn(
-              "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
-              lesson.paid ? "bg-green-600 text-white" : "bg-glass-strong shadow-pill",
-            )}
-          >
-            ₴
-          </span>
-          {lesson.paid ? "Оплачено" : "Не оплачено"}
-        </button>
+        <PaidSwitch paid={!!lesson.paid} onToggle={() => onTogglePaid(lesson)} />
       </div>
+      )}
 
+      {!group && (
       <div className="rounded-[1rem] border border-border/60 px-3 py-2 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -271,6 +283,7 @@ function PopoverBody({
           <p className="text-xs text-muted-foreground">Домашніх ще не задано</p>
         )}
       </div>
+      )}
 
       <div className="flex gap-2">
         <Button variant="outline" className="flex-1 gap-1.5" onClick={onOpenBoard} disabled={boardBusy}>
@@ -294,5 +307,30 @@ function PopoverBody({
         )}
       </div>
     </div>
+  );
+}
+
+function PaidSwitch({ paid, onToggle }: { paid: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={paid}
+      onClick={onToggle}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 h-7 pl-1 pr-2.5 rounded-full text-xs font-semibold transition-colors",
+        paid ? "bg-green-600/15 text-green-700 dark:text-green-300" : "bg-muted text-muted-foreground hover:text-foreground",
+      )}
+    >
+      <span
+        className={cn(
+          "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-colors",
+          paid ? "bg-green-600 text-white" : "bg-glass-strong shadow-pill",
+        )}
+      >
+        ₴
+      </span>
+      {paid ? "Оплачено" : "Не оплачено"}
+    </button>
   );
 }

@@ -252,6 +252,12 @@ export interface ImageObject extends BaseObject, Rotatable {
   pdf?: string;
   /** 1-based page number within that PDF (not `pg`, which is the board page). */
   pdfPage?: number;
+  /**
+   * Visible part of the source image as fractions [x, y, w, h] of its full size; the
+   * object's box shows only that part. Missing means the whole image. The hidden part
+   * stays in `src`, so the frame can later be widened to reveal more (e.g. a task step by step).
+   */
+  crop?: [number, number, number, number];
 }
 
 export interface ArcObject extends BaseObject {

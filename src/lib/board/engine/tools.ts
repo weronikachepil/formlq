@@ -1,19 +1,19 @@
 // Board tools. Every tool has down / move / up (+ hover, and overlay for the draft).
 // p is a point in board coordinates, e is the pointer event.
 import {
-  boundsIntersect, dist, distToSegment, normAngle, rectFromPoints, round1, simplify, snapTo, unionBounds,
+  boundsIntersect, clamp, dist, distToSegment, normAngle, rectFromPoints, round1, simplify, snapTo, unionBounds,
 } from "./geom";
 import { recognize, type RecognizedShape } from "./recognize";
 import { uiFont } from "./fonts";
 import { fmtLen } from "./measure";
-import { rulerEdges } from "./extra";
+import { cropToFrame, imageFullRect, rulerEdges } from "./extra";
 import { createConstrTools } from "./constr";
 import {
   LABELS, T, parallelogramPoints, quadPoints, rectPoints, regularPoints, rightTriPoints, scaleneTriPoints, trapezoidPoints, triPoints, uid,
 } from "./shapes";
 import type { MathBoard } from "./board";
 import type {
-  AngleObject, ArcObject, BoardObject, Bounds, DrawEnv, DrawStyle, EllipseObject, LineObject, ObjectDraft, ObjectType,
+  AngleObject, ArcObject, BoardObject, Bounds, DrawEnv, DrawStyle, EllipseObject, ImageObject, LineObject, ObjectDraft, ObjectType,
   ObjectTypeDef, Point, PolygonObject, SolidObject, StrokeObject,
 } from "./types";
 
@@ -104,7 +104,7 @@ export function handleAt(b: MathBoard, p: Point): string | null {
   }
   if (b.vertEdit) return null;
   const bd = boundsOfObjs(sel);
-  if (sel.some((o) => def(o.type).rotate)) {
+  if (!b.cropEdit && sel.some((o) => def(o.type).rotate)) {
     const pad = (sel.length === 1 ? sel[0].s || 0 : 0) / 2 + 4 / z;
     if (dist(p, [bd.x + bd.w / 2, bd.y - pad - 30 / z]) <= r) return "rot";
   }
@@ -119,6 +119,9 @@ type SelectDrag =
   | { mode: "rot3d"; o0: SolidObject; start: Point }
   | { mode: "vert"; o0: LineObject | PolygonObject; i: number }
   | { mode: "resize"; h: string; origs: { o: BoardObject; ob: Bounds }[]; b0: Bounds; lock: boolean }
+  // Crop mode (MathBoard.cropEdit): a handle moves a crop edge / a drag slides the picture under the frame.
+  | { mode: "crop"; h: string; o0: ImageObject; full: Bounds; b0: Bounds }
+  | { mode: "cropPan"; o0: ImageObject; full: Bounds; start: Point }
   | { mode: "move"; start: Point; moved: boolean; origs: BoardObject[]; b0: Bounds }
   | { mode: "marquee"; start: Point; cur: Point; base: Set<string> };
 
@@ -130,7 +133,9 @@ function selectTool(b: MathBoard): Tool {
     hover(p) {
       const h = handleAt(b, p);
       if (h) return h === "rot3d" ? "grab" : h === "rot" ? "crosshair" : h[0] === "v" ? "crosshair" : CURSORS[h];
-      return b.pick(p, 6) ? "move" : "default";
+      const o = b.pick(p, 6);
+      if (o && o.id === b.cropEdit) return "grab";
+      return o ? "move" : "default";
     },
     down(p, e) {
       drag = null;
@@ -148,6 +153,8 @@ function selectTool(b: MathBoard): Tool {
           if (o0.type === "solid") drag = { mode: "rot3d", o0, start: p };
         } else if (h[0] === "v") {
           if (o0.type === "line" || o0.type === "polygon") drag = { mode: "vert", o0, i: Number(h.slice(1)) };
+        } else if (o0.type === "image" && b.cropEdit === o0.id) {
+          drag = { mode: "crop", h, o0, full: imageFullRect(o0), b0: { x: o0.x, y: o0.y, w: o0.w, h: o0.h } };
         } else {
           const origs = objs.filter((o) => b.canModify(o)).map((o) => ({ o, ob: def(o.type).bounds(o) }));
           if (!origs.length) { tx = null; return; }
@@ -156,6 +163,11 @@ function selectTool(b: MathBoard): Tool {
         return;
       }
       const hit: BoardObject | null = b.pick(p, 6);
+      if (hit && hit.type === "image" && b.cropEdit === hit.id && b.canModify(hit)) {
+        tx = b.tx();
+        drag = { mode: "cropPan", o0: hit, full: imageFullRect(hit), start: p };
+        return;
+      }
       if (hit) {
         if (hit.type === "comment") b.openComment(hit.id);
         else b.closeComment();
@@ -204,6 +216,24 @@ function selectTool(b: MathBoard): Tool {
         const sp: Point = b.snapPoint(p);
         const nb = resizedBounds(drag.h, drag.b0, sp, drag.lock || e.shiftKey);
         for (const { o, ob } of drag.origs) tx!.set(o.id, def(o.type).fit(o, ob, mapRect(ob, drag.b0, nb)));
+      } else if (drag.mode === "crop") {
+        // The frame's dragged edges follow the pointer, kept inside the whole picture.
+        const { full } = drag;
+        const MIN = 12 / z;
+        const q: Point = [clamp(p[0], full.x, full.x + full.w), clamp(p[1], full.y, full.y + full.h)];
+        const nb = resizedBounds(drag.h, drag.b0, q, false);
+        const x0 = Math.max(full.x, nb.x);
+        const y0 = Math.max(full.y, nb.y);
+        const x1 = Math.min(full.x + full.w, Math.max(x0 + MIN, nb.x + nb.w));
+        const y1 = Math.min(full.y + full.h, Math.max(y0 + MIN, nb.y + nb.h));
+        tx!.set(drag.o0.id, cropToFrame(drag.o0, full, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 }));
+      } else if (drag.mode === "cropPan") {
+        // The picture slides under the fixed frame, never leaving a gap inside it.
+        const { full, o0 } = drag;
+        const dx = clamp(p[0] - drag.start[0], o0.x + o0.w - (full.x + full.w), o0.x - full.x);
+        const dy = clamp(p[1] - drag.start[1], o0.y + o0.h - (full.y + full.h), o0.y - full.y);
+        const moved = { ...full, x: full.x + dx, y: full.y + dy };
+        tx!.set(o0.id, cropToFrame(o0, moved, { x: o0.x, y: o0.y, w: o0.w, h: o0.h }));
       } else if (drag.mode === "rotate") {
         let ang = Math.atan2(p[1] - drag.c[1], p[0] - drag.c[0]) - drag.a0;
         if (e.shiftKey) ang = Math.round(ang / (Math.PI / 12)) * (Math.PI / 12);
@@ -394,6 +424,9 @@ function eraserTool(b: MathBoard): Tool {
   const erase = (t: Tx, p: Point) => {
     const tol = 10 / b.cam.z;
     for (const o of b.objs() as BoardObject[]) {
+      // Pictures (and PDF pages) are never erased: erasing ink over a task removed the task
+      // itself. They are deleted on purpose instead (select → trash / Delete).
+      if (o.type === "image") continue;
       // big objects are erased only by a click, not by swiping over them
       if (BIG_TYPES.has(o.type) && !click) continue;
       if (b.canModify(o) && def(o.type).hit(o, p, tol)) t.del(o.id);

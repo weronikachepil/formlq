@@ -122,7 +122,13 @@ export async function renderObjects(
     } else if (o.type === "image") {
       try {
         const img = await loadImage(o.src);
-        await drawBoxed(ctx, o, async () => ctx.drawImage(img, o.x, o.y, o.w, o.h));
+        await drawBoxed(ctx, o, async () => {
+          if (!o.crop) { ctx.drawImage(img, o.x, o.y, o.w, o.h); return; }
+          const [cx, cy, cw, ch] = o.crop;
+          const nw = img.naturalWidth;
+          const nh = img.naturalHeight;
+          ctx.drawImage(img, cx * nw, cy * nh, cw * nw, ch * nh, o.x, o.y, o.w, o.h);
+        });
       } catch { /* skip a broken image */ }
     } else {
       def(o).draw(ctx, o, env);

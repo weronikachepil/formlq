@@ -176,6 +176,19 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentName"]);
     }
 
+    // Tutor's student groups. Homework and lessons for a group are copied to each member,
+    // so students need no access here; a tutor sees and edits only their own groups.
+    match /groups/{groupId} {
+      allow read: if isAuth() && (resource.data.tutorId == request.auth.uid || isEditor());
+      allow create: if isTutor() && request.resource.data.tutorId == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() > 0
+        && request.resource.data.studentIds is list;
+      allow update: if isAuth() && resource.data.tutorId == request.auth.uid
+        && request.resource.data.tutorId == resource.data.tutorId
+        && request.resource.data.studentIds is list;
+      allow delete: if isAuth() && (resource.data.tutorId == request.auth.uid || isEditor());
+    }
+
     // Lessons (calendar)
     match /lessons/{lessonId} {
       allow read: if isAuth() && (

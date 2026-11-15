@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Lesson, lessonStatus, subscribeTutorLessons } from "@/lib/lessons";
+import { Lesson, collapseGroupLessons, lessonStatus, subscribeTutorLessons } from "@/lib/lessons";
 import { Homework, TutorStudent, subscribeTutorHomework, subscribeTutorStudents } from "@/lib/tutor";
 import { formatDueCountdown, isHomeworkOverdue, summarizeHomework } from "@/lib/homework-status";
 import { addDays, startOfDay, startOfWeek } from "@/lib/calendar";
@@ -218,7 +218,9 @@ export function TutorOverview({
 export function TutorLessonsWidget({ tutorId }: { tutorId: string }) {
   const [lessons, setLessons] = useState<Lesson[] | null>(null);
   useEffect(() => subscribeTutorLessons(tutorId, setLessons), [tutorId]);
-  return <UpcomingLessonsCard lessons={lessons} viewer="tutor" />;
+  // A group lesson is one entry, not one per member.
+  const shown = useMemo(() => (lessons ? collapseGroupLessons(lessons) : null), [lessons]);
+  return <UpcomingLessonsCard lessons={shown} viewer="tutor" />;
 }
 
 function QuickAction({ href, Icon, label }: { href: string; Icon: LucideIcon; label: string }) {

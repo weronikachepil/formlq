@@ -9,7 +9,7 @@ import { clamp, inBounds, snapTo, unionBounds } from "./geom";
 import { drawTrace, graphToUnits, graphValues, makeGraph } from "./graph";
 import { makeSolid, solidPickEdge, solidSecPoints } from "./solid";
 import { fileToImage, isPdf, pdfCount, pdfToImages } from "./images";
-import { snapToRuler, projectOnLine, clearImageCache } from "./extra";
+import { snapToRuler, projectOnLine, clearImageCache, cropToFrame, drawImageObject, imageFullRect } from "./extra";
 import { exportPNG, exportPDF } from "./export";
 import { buildTemplate } from "./templates";
 import { makeTrig, trigAngleAt } from "./trig";
@@ -230,6 +230,8 @@ export interface BoardState {
   pages: PageSummary[];
   follow: boolean;
   vertEdit: string | null;
+  /** Image being cropped: its handles move the crop edges instead of scaling it. */
+  cropEdit: string | null;
   editing: EditingKind | null;
   nlEdit: string | null;
   srcEdit: string | null;
@@ -381,6 +383,8 @@ export class MathBoard {
   secPick: string | null = null;
   secDrag: { idx: number; tx: BoardTx; id: string } | null = null;
   vertEdit: string | null = null;
+  /** Image in crop mode (see `toggleCrop`). */
+  cropEdit: string | null = null;
   hover: Point | null = null;
   space = false;
   active: BoardTool | null = null;
@@ -492,6 +496,7 @@ export class MathBoard {
       for (const id of [...this.sel]) if (!this.store.has(id)) this.sel.delete(id);
       if (this.inter && !this.store.has(this.inter)) this.inter = null;
       if (this.vertEdit && !this.store.has(this.vertEdit)) this.vertEdit = null;
+      if (this.cropEdit && !this.store.has(this.cropEdit)) this.cropEdit = null;
       if (this.secPick && !this.store.has(this.secPick)) this.secPick = null;
       if (this.page !== "p1" && !this.store.has(this.page)) this.page = "p1";
       this.domDirty = true;
@@ -1263,6 +1268,7 @@ export class MathBoard {
     this.sel.clear();
     this.inter = null;
     this.vertEdit = null;
+    this.cropEdit = null;
     this.secPick = null;
     const saved = this.pageCams[id];
     if (saved && !fromView) this.cam = { ...saved };
@@ -1599,6 +1605,7 @@ export class MathBoard {
   setSel(ids: Iterable<string>): void {
     this.sel = new Set(ids);
     if (this.secPick && !this.sel.has(this.secPick)) this.secPick = null;
+    if (this.cropEdit && !this.sel.has(this.cropEdit)) this.cropEdit = null;
     this.requestRender();
     this.emit();
   }
@@ -1917,6 +1924,39 @@ export class MathBoard {
     this.updateCursor();
     this.requestRender();
     this.emit();
+  }
+
+  // ---------- cropping images ----------
+  /**
+   * Crop mode for an image: the selection handles move the crop edges while the picture
+   * stays in place, and the hidden part is shown faded around the frame. Widening the
+   * frame later reveals more of the image (a task shown step by step). Not for rotated images.
+   */
+  toggleCrop(id: string): void {
+    const o = this.store.get(id);
+    if (this.cropEdit === id || o?.type !== "image" || o.rot || !this.canModify(o)) { this.exitCrop(); return; }
+    this.cropEdit = id;
+    this.vertEdit = null;
+    if (!this.sel.has(id) || this.sel.size !== 1) this.setSel([id]);
+    this.requestRender();
+    this.emit();
+  }
+
+  exitCrop(): void {
+    if (!this.cropEdit) return;
+    this.cropEdit = null;
+    this.requestRender();
+    this.emit();
+  }
+
+  /** Shows the whole image again (the frame grows to the full picture). */
+  resetCrop(id: string): void {
+    const o = this.store.get(id);
+    if (o?.type !== "image" || !o.crop || !this.canModify(o)) return;
+    const full = imageFullRect(o);
+    const t = this.tx();
+    t.set(o.id, cropToFrame(o, full, full));
+    t.done();
   }
 
   exitInteractive(): void {
@@ -2362,6 +2402,7 @@ export class MathBoard {
     this.inter = null;
     this.secPick = null;
     this.vertEdit = null;
+    this.cropEdit = null;
     if (name !== "select") this.sel.clear();
     this.updateCursor();
     this.requestRender();
@@ -2556,6 +2597,13 @@ export class MathBoard {
     if (o.type === "text") { this.setSel([o.id]); this.editText({ id: o.id }); return true; }
     if ((o.type === "chart" || o.type === "ptree") && this.canEdit) { this.setSel([o.id]); this.editSrc(o.id); return true; }
     if (o.type === "numline" && this.canEdit) { this.setSel([o.id]); this.editNumline(o.id); return true; }
+    // Enters crop mode. Already in it: not a double click, so two quick drags that slide
+    // the picture under the frame both reach the select tool.
+    if (o.type === "image" && this.canModify(o) && !o.rot) {
+      if (this.cropEdit === o.id) return false;
+      this.toggleCrop(o.id);
+      return true;
+    }
     if (defOf(o).interactive) { this.enterInteractive(o.id); return true; }
     if (o.type === "polygon") { this.setSel([o.id]); this.vertEdit = this.vertEdit === o.id ? null : o.id; this.requestRender(); this.emit(); return true; }
     return false;
@@ -2628,6 +2676,7 @@ export class MathBoard {
     if (e.key === "Escape") {
       if (this.secPick) this.stopSecPick();
       else if (this.inter) this.exitInteractive();
+      else if (this.cropEdit) this.exitCrop();
       else if (this.vertEdit) { this.vertEdit = null; this.requestRender(); }
       else if (this.sel.size) this.setSel([]);
       else if (this.tool !== "select") this.setTool("select");
@@ -2891,6 +2940,23 @@ export class MathBoard {
       const bd = unionBounds(sel.map((o) => defOf(o).bounds(o)));
       if (!bd) { ctx.restore(); return; }
       const pad = (single?.s || 0) / 2 + 4 / z;
+      if (single?.type === "image" && this.cropEdit === single.id) {
+        // Crop mode: the hidden part of the picture, faded, around the visible frame.
+        const full = imageFullRect(single);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(full.x, full.y, full.w, full.h);
+        ctx.rect(single.x, single.y, single.w, single.h);
+        ctx.clip("evenodd");
+        ctx.globalAlpha = 0.3;
+        drawImageObject(ctx, single, { zoom: z, repaint: () => this.requestRender() }, true);
+        ctx.restore();
+        ctx.save();
+        ctx.setLineDash([5 / z, 4 / z]);
+        ctx.lineWidth = 1 / z;
+        ctx.strokeRect(full.x, full.y, full.w, full.h);
+        ctx.restore();
+      }
       ctx.strokeRect(bd.x - pad, bd.y - pad, bd.w + pad * 2, bd.h + pad * 2);
       if (single && this.vertEdit === single.id) {
         if (this.canEdit && single.type === "polygon") single.pts.forEach((q) => dot(q[0], q[1]));
@@ -2901,7 +2967,7 @@ export class MathBoard {
         ];
         for (const q of hp) handle(q[0], q[1]);
       }
-      if (this.canEdit && !this.inter && !this.secPick && !this.editing && !this.vertEdit && sel.some((o) => defOf(o).rotate)) {
+      if (this.canEdit && !this.inter && !this.secPick && !this.editing && !this.vertEdit && !this.cropEdit && sel.some((o) => defOf(o).rotate)) {
         const hx = bd.x + bd.w / 2;
         const hy = bd.y - pad - 30 / z;
         ctx.save();
@@ -2988,6 +3054,7 @@ export class MathBoard {
       pages: this.pages(),
       follow: this.follow,
       vertEdit: this.vertEdit,
+      cropEdit: this.cropEdit,
       editing: this.editing?.kind || null,
       nlEdit: this.nlEdit || null,
       srcEdit: this.srcEdit || null,

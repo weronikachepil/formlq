@@ -13,6 +13,7 @@ import {
   where,
   documentId,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { docsOf } from "@/lib/firestore-helpers";
 import { db } from "@/lib/firebase";
@@ -186,6 +187,13 @@ export interface Homework {
   dueAt?: Timestamp | null;
   status: HomeworkStatus;
   resultId?: string;
+  /**
+   * Given to a whole group: every member gets their own copy; the copies share `assignId`
+   * (one column of the group's results table). Absent on homework for one student.
+   */
+  groupId?: string;
+  groupName?: string;
+  assignId?: string;
   // Saved while the student is mid-attempt — lets them resume later.
   progress?: {
     answers: Record<string, string>;
@@ -205,6 +213,38 @@ export async function assignHomework(data: NewHomework): Promise<string> {
     assignedAt: serverTimestamp(),
   });
   return ref.id;
+}
+
+/**
+ * Gives the same homework to every member of a group in one batch: one copy per student
+ * (so students' queries and rules are unchanged), linked by a shared `assignId`.
+ * Returns the number of copies written.
+ */
+export async function assignHomeworkToGroup(
+  data: Omit<NewHomework, "studentId" | "studentName" | "groupId" | "groupName" | "assignId">,
+  group: { id: string; name: string },
+  members: { studentId: string; studentName?: string }[],
+): Promise<number> {
+  const col = collection(db, "homework");
+  const assignId = doc(col).id;
+  // Firestore batches hold at most 500 writes.
+  for (let i = 0; i < members.length; i += 500) {
+    const batch = writeBatch(db);
+    for (const m of members.slice(i, i + 500)) {
+      batch.set(doc(col), {
+        ...data,
+        studentId: m.studentId,
+        studentName: m.studentName,
+        groupId: group.id,
+        groupName: group.name,
+        assignId,
+        status: "assigned" as HomeworkStatus,
+        assignedAt: serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+  return members.length;
 }
 
 export async function getHomework(id: string): Promise<Homework | null> {
