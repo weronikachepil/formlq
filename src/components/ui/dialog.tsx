@@ -52,10 +52,12 @@ export function Dialog({
   return (
     <div
       // Above the sticky app header/sidebar (z-50), below the reference drawer (z-95+).
-      className="fixed inset-0 z-80 flex items-center justify-center p-4"
+      // Sized to the visible area (VisualViewportVars), so the on-screen keyboard doesn't
+      // cover the dialog; `-safe` keeps a dialog taller than that scrollable from its top.
+      className="fixed inset-x-0 top-(--vv-top,0px) h-(--vv-h,100dvh) z-80 flex items-center-safe justify-center p-4 overflow-y-auto overscroll-contain"
       onClick={closeOnBackdrop ? onClose : undefined}
     >
-      <div className="absolute inset-0 bg-(--backdrop) backdrop-blur-md animate-in fade-in-0 duration-150" />
+      <div className="fixed inset-0 bg-(--backdrop) backdrop-blur-md animate-in fade-in-0 duration-150" />
       <div
         role="dialog"
         aria-modal="true"

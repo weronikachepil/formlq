@@ -6,12 +6,11 @@ import { cn } from "@/lib/utils";
 interface StudentCabinetCardProps {
   studentId: string;
   name: string;
-  email?: string;
   summary: HomeworkSummary;
 }
 
 /** A tutor's entry into one student's cabinet: who, how they are doing, what's next. */
-export function StudentCabinetCard({ studentId, name, email, summary }: StudentCabinetCardProps) {
+export function StudentCabinetCard({ studentId, name, summary }: StudentCabinetCardProps) {
   const { total, active, overdue, done, nextDueMs } = summary;
   const pct = total ? Math.round((done / total) * 100) : 0;
 
@@ -27,10 +26,7 @@ export function StudentCabinetCard({ studentId, name, email, summary }: StudentC
         <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shrink-0">
           {name[0]?.toUpperCase() ?? "?"}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">{name}</p>
-          {email && <p className="text-xs text-muted-foreground truncate">{email}</p>}
-        </div>
+        <p className="flex-1 min-w-0 text-sm font-semibold truncate">{name}</p>
         <ChevronRight
           size={16}
           className="text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0"

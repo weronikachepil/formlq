@@ -28,7 +28,7 @@ import { makeColorOf } from "../tutor/colors";
 import { StudentColorsProvider } from "../tutor/student-colors";
 import { CalendarModeProvider } from "../tutor/calendar-mode";
 import { useNow } from "../tutor/useNow";
-import type { CalendarView } from "../tutor/types";
+import { ASIDE_FIT, GRID_FIT, type CalendarView } from "../tutor/types";
 import { makeStudentMode, tutorsOf } from "./student-mode";
 import { UpcomingLessons, upcomingLessons } from "./UpcomingLessons";
 
@@ -127,7 +127,7 @@ export function StudentCalendarView({ lessons, homework, defaultView, defaultDat
     <CalendarModeProvider value={mode}>
       <StudentColorsProvider value={colorOf}>
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-5">
-          <aside className="order-2 lg:order-1 lg:w-72 shrink-0 space-y-4">
+          <aside className={cn("order-2 lg:order-1 lg:w-72 shrink-0 space-y-4", ASIDE_FIT)}>
             <MiniCalendar
               // Follow the main calendar when it moves to another month.
               key={`${anchor.getFullYear()}-${anchor.getMonth()}`}
@@ -205,7 +205,7 @@ export function StudentCalendarView({ lessons, homework, defaultView, defaultDat
               onNext={() => step(1)}
             />
 
-            <div className="rounded-2xl border border-border/50 bg-card overflow-hidden h-[calc(100dvh-14rem)] sm:h-[calc(100dvh-11rem)] min-h-[460px]">
+            <div className={cn("rounded-2xl border border-border/50 bg-card overflow-hidden", GRID_FIT)}>
               {view === "month" ? (
                 <MonthGridView
                   anchor={anchor}

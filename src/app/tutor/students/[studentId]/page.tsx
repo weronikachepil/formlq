@@ -56,7 +56,7 @@ export default function TutorStudentCabinetPage() {
   const link = students.find((s) => s.studentId === studentId);
   const name = link?.studentName || homework?.[0]?.studentName || "Учень";
 
-  usePageHeader(name, link?.studentEmail ?? "Кабінет учня");
+  usePageHeader(name, "Кабінет учня");
 
   useEffect(() => {
     if (!user) return;
@@ -127,14 +127,7 @@ export default function TutorStudentCabinetPage() {
           <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold shrink-0">
             {name[0]?.toUpperCase() ?? "?"}
           </div>
-          <div className="min-w-0">
-            <p className="font-semibold truncate">{name}</p>
-            {link?.studentEmail && (
-              <p className="text-xs text-muted-foreground truncate">
-                {link.studentEmail}
-              </p>
-            )}
-          </div>
+          <p className="min-w-0 font-semibold truncate">{name}</p>
         </div>
         <div className="flex gap-4 text-center">
           <Counter value={summary.active} label="активні" />
