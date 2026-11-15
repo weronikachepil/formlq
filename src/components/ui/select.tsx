@@ -82,11 +82,11 @@ function Select({ value, onValueChange, children, className, disabled }: SelectP
         {open && (
           <div
             className={cn(
-              "absolute left-0 top-[calc(100%+6px)] z-50 min-w-full rounded-3xl border border-glass-edge bg-popover p-1.5 shadow-glass-lg backdrop-blur-xl",
+              "absolute left-0 top-[calc(100%+6px)] z-50 min-w-full overflow-hidden rounded-2xl border border-glass-edge bg-popover p-1.5 shadow-glass-lg",
               "animate-in fade-in-0 zoom-in-95 duration-100",
             )}
           >
-            <div className="max-h-60 overflow-y-auto overscroll-contain">
+            <div className="max-h-64 overflow-y-auto overscroll-contain space-y-0.5">
               {children}
             </div>
           </div>
@@ -113,7 +113,7 @@ function SelectItem({ value, children, disabled, className }: SelectItemProps) {
       disabled={disabled}
       onClick={() => { onValueChange(value); close(); }}
       className={cn(
-        "flex w-full items-center gap-2 rounded-full pl-7 pr-3 py-1.5 text-sm text-left relative",
+        "flex w-full items-center gap-2 rounded-xl pl-8 pr-3 py-2 text-sm text-left relative",
         "cursor-pointer transition-colors outline-none",
         "hover:bg-muted",
         selected && "font-semibold text-foreground",
@@ -122,7 +122,7 @@ function SelectItem({ value, children, disabled, className }: SelectItemProps) {
       )}
     >
       {selected && (
-        <span className="absolute left-2 flex items-center justify-center">
+        <span className="absolute left-2.5 flex items-center justify-center">
           <Check size={12} className="text-foreground" />
         </span>
       )}
