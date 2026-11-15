@@ -95,12 +95,10 @@ export function GroupDialog({ tutorId, students, group, onClose }: GroupDialogPr
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <SectionLabel>Учні ({picked.size})</SectionLabel>
-              {students.length > 8 && (
-                <SearchInput value={search} onChange={setSearch} placeholder="Пошук…" size="sm" wrapperClassName="w-44" />
-              )}
-            </div>
+            <SectionLabel>Учні ({picked.size})</SectionLabel>
+            {students.length > 0 && (
+              <SearchInput value={search} onChange={setSearch} placeholder="Пошук учня…" size="sm" />
+            )}
             {students.length === 0 ? (
               <p className="text-sm text-muted-foreground">Спершу запросіть учнів, а потім додайте їх у групу.</p>
             ) : (

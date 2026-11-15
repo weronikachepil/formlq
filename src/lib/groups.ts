@@ -56,7 +56,13 @@ export async function deleteGroup(id: string): Promise<void> {
 
 /** The tutor's groups, sorted by name. */
 export function subscribeTutorGroups(tutorId: string, cb: (groups: StudentGroup[]) => void): () => void {
-  return onSnapshot(query(groupsCol, where("tutorId", "==", tutorId)), (snap) => {
-    cb(docsOf<StudentGroup>(snap).sort((a, b) => a.name.localeCompare(b.name, "uk")));
-  });
+  return onSnapshot(
+    query(groupsCol, where("tutorId", "==", tutorId)),
+    (snap) => cb(docsOf<StudentGroup>(snap).sort((a, b) => a.name.localeCompare(b.name, "uk"))),
+    // E.g. the `groups` rules are not published yet: pages work on without groups.
+    (err) => {
+      console.warn("[groups] cannot read groups:", err.code);
+      cb([]);
+    },
+  );
 }
