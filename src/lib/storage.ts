@@ -40,3 +40,19 @@ export async function deleteQuestionImage(_url: string): Promise<void> {
   // Deletion requires server-side signed request — skip for now.
   // Old image will be overwritten on next upload or cleaned via Cloudinary dashboard.
 }
+
+/** Upload a bug-report screenshot to Cloudinary. Returns its URL. */
+export async function uploadBugScreenshot(file: File): Promise<string> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_preset", UPLOAD_PRESET);
+  form.append("folder", "formlq/bugs");
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    { method: "POST", body: form },
+  );
+  if (!res.ok) throw new Error("Cloudinary upload failed");
+  const data = await res.json();
+  return data.secure_url as string;
+}
