@@ -29,6 +29,7 @@ import { Select, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { SpinnerPage } from "@/components/ui/spinner";
 import { TestPicker } from "@/components/TestPicker";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { IconButton } from "@/components/ui/icon-button";
 import { SearchInput } from "@/components/ui/search-input";
 import { TextInput } from "@/components/ui/text-field";
@@ -185,6 +186,9 @@ export default function NewHomeworkPage() {
           ...base,
           source: "test",
           testId: selectedTest.id,
+          // A copy of the questions: students never read the test itself (see Homework.questions).
+          questions: selectedTest.questions,
+          subtitle: selectedTest.subtitle ?? "",
           scoreTable: selectedTest.scoreTable,
           scaleType: selectedTest.scaleType ?? "nmt",
           durationMinutes: selectedTest.durationMinutes ?? 150,
@@ -263,7 +267,7 @@ export default function NewHomeworkPage() {
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Дедлайн (необовʼязково)">
-          <TextInput type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
+          <DateTimePicker value={due} onChange={setDue} placeholder="Без дедлайну" />
         </Field>
         <Field label="Коментар для учня (необовʼязково)">
           <TextInput

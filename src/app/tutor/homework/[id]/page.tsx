@@ -7,14 +7,14 @@ import { usePageHeader } from "@/context/HeaderContext";
 import { isEditor } from "@/lib/roles";
 import { IconButton } from "@/components/ui/icon-button";
 import { getResult, updateResult, TestResult } from "@/lib/tests";
-import { getHomework, deleteHomework, Homework } from "@/lib/tutor";
-import { formatDate } from "@/lib/format";
+import { getHomework, deleteHomework, setHomeworkDue, Homework } from "@/lib/tutor";
+import { DueEditor } from "@/components/homework/DueEditor";
 import { ResultsView } from "@/components/exam/ResultsView";
 import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useReferenceDrawer } from "@/context/ReferenceDrawerContext";
-import { Trash2, CalendarClock, FileText } from "lucide-react";
+import { Trash2, FileText } from "lucide-react";
 
 export default function TutorHomeworkReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -93,11 +93,15 @@ export default function TutorHomeworkReviewPage() {
             <Trash2 size={15} />
           </IconButton>
         </div>
-        {homework.dueAt && (
-          <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
-            <CalendarClock size={12} /> Дедлайн: {formatDate(homework.dueAt)}
-          </p>
-        )}
+        <DueEditor
+          dueAt={homework.dueAt ?? null}
+          groupName={homework.assignId ? homework.groupName : undefined}
+          onSave={async (dueAt, wholeGroup) => {
+            const n = await setHomeworkDue(homework, dueAt, wholeGroup);
+            setHomework({ ...homework, dueAt });
+            return n;
+          }}
+        />
         {homework.note && (
           <p className="text-xs text-muted-foreground border-l-2 border-border pl-2">
             {homework.note}

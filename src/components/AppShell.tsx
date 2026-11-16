@@ -13,6 +13,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { BugReportDialog } from "@/components/bugs/BugReportDialog";
+import { useHomeworkBackfill } from "@/hooks/useHomeworkBackfill";
 import { IconButton } from "@/components/ui/icon-button";
 import { SpinnerScreen } from "@/components/ui/spinner";
 import { cn, withNext } from "@/lib/utils";
@@ -59,6 +60,8 @@ export function AppShell({
   const { requestAction, requestNav } = useExamGuard();
   const [scrolled, setScrolled] = useState(false);
   const [reporting, setReporting] = useState(false);
+  // Teachers/editors: one-time copy of test questions into old homework.
+  useHomeworkBackfill();
 
   const allowed = allow({ user, userProfile });
 

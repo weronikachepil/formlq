@@ -19,7 +19,7 @@ import { docsOf } from "@/lib/firestore-helpers";
 import { db } from "@/lib/firebase";
 import { getUserByEmail, getUserById } from "@/lib/users";
 import { canTutor } from "@/lib/roles";
-import type { TestQuestion, ScoreRow, ScaleType } from "@/lib/tests";
+import { getTest, type TestQuestion, type ScoreRow, type ScaleType } from "@/lib/tests";
 
 // --- Tutor ↔ Student link ---------------------------------------------------
 
@@ -179,7 +179,14 @@ export interface Homework {
   pdfUrl?: string; // optional конспект (PDF) shown to the student like reference materials
   source: HomeworkSource;
   testId?: string; // source === "test"
-  questions?: TestQuestion[]; // source === "custom" — snapshot from bank/tests
+  /**
+   * The questions the student solves: picked from the bank (source "custom"), or a copy of
+   * the test taken when it was assigned (source "test"), so students never need to read the
+   * test itself (drafts stay private to their authors). Old "test" homework may lack it.
+   */
+  questions?: TestQuestion[];
+  /** The test's description, copied with its questions (source "test"). */
+  subtitle?: string;
   scoreTable: ScoreRow[];
   scaleType: ScaleType;
   durationMinutes: number;
@@ -258,6 +265,60 @@ export async function updateHomework(
   patch: Partial<Homework>,
 ): Promise<void> {
   await updateDoc(doc(db, "homework", id), patch);
+}
+
+/**
+ * Changes the deadline (`null` removes it). With `wholeGroup`, every copy of a group
+ * homework (same `assignId`) gets it. Returns the number of homework updated.
+ */
+export async function setHomeworkDue(
+  hw: Pick<Homework, "id" | "tutorId" | "assignId">,
+  dueAt: Timestamp | null,
+  wholeGroup = false,
+): Promise<number> {
+  if (!wholeGroup || !hw.assignId) {
+    await updateDoc(doc(db, "homework", hw.id), { dueAt });
+    return 1;
+  }
+  // tutorId in the query too: the homework rules let tutors read only their own.
+  const snap = await getDocs(
+    query(collection(db, "homework"), where("tutorId", "==", hw.tutorId), where("assignId", "==", hw.assignId)),
+  );
+  for (let i = 0; i < snap.docs.length; i += 500) {
+    const batch = writeBatch(db);
+    for (const d of snap.docs.slice(i, i + 500)) batch.update(d.ref, { dueAt });
+    await batch.commit();
+  }
+  return snap.size;
+}
+
+/**
+ * Homework given from a test before questions were copied into it: copies them now (once),
+ * so students keep access after the rules stopped letting them read unpublished tests.
+ * `tutorId` = that tutor's homework; `null` (editors) = everyone's. Returns how many were updated.
+ */
+export async function backfillHomeworkQuestions(tutorId: string | null): Promise<number> {
+  const col = collection(db, "homework");
+  const snap = await getDocs(
+    tutorId ? query(col, where("tutorId", "==", tutorId), where("source", "==", "test")) : query(col, where("source", "==", "test")),
+  );
+  const todo = docsOf<Homework>(snap).filter((h) => h.testId && !h.questions?.length);
+  if (!todo.length) return 0;
+  const tests = new Map<string, Awaited<ReturnType<typeof getTest>>>();
+  for (const id of new Set(todo.map((h) => h.testId!))) tests.set(id, await getTest(id).catch(() => null));
+  let n = 0;
+  let batch = writeBatch(db);
+  for (const h of todo) {
+    const t = tests.get(h.testId!);
+    if (!t?.questions?.length) continue;
+    batch.update(doc(col, h.id), { questions: t.questions, subtitle: t.subtitle ?? "" });
+    if (++n % 500 === 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+    }
+  }
+  if (n % 500) await batch.commit();
+  return n;
 }
 
 export async function deleteHomework(id: string): Promise<void> {

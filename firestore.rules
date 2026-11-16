@@ -79,9 +79,10 @@ service cloud.firestore {
             || (nonEmpty("subtitle") && nonEmpty("authorName")));
     }
 
-    // Tests. Editors: everything. Teachers: only their own (createdBy), plus a test
-    // someone shared by link; they may publish theirs to the catalog (see teacherTestOk).
-    // Students: any test by id (catalog, homework, links).
+    // Tests. Editors: everything. Everyone else: their own tests (createdBy), published
+    // (catalog) tests, and tests shared by link. Unpublished tests stay private to their
+    // authors and editors: homework carries a copy of the questions instead.
+    // Teachers may publish theirs to the catalog (see teacherTestOk).
     // A test with link access "anyone" may be fetched without an account (QR / public link),
     // published or not; publicAccess is the legacy form of the same. Listing requires sign-in.
     match /tests/{testId} {
@@ -91,12 +92,13 @@ service cloud.firestore {
           isEditor()
           || resource.data.get("createdBy", "") == request.auth.uid
           || resource.data.get("linkAccess", "off") == "students"
-          || !isTeacher()
+          || resource.data.get("published", false) == true
         ));
       // Queries must be filtered to match: published == true (catalog) or createdBy == me.
+      // Teachers read the catalog too: they put published tests on their boards.
       allow list: if isEditor()
         || (isAuth() && resource.data.createdBy == request.auth.uid)
-        || (isAuth() && resource.data.published == true && !isTeacher());
+        || (isAuth() && resource.data.published == true);
       allow create: if isEditor() || (isTeacher() && teacherTestOk());
       allow update: if isEditor()
         || (isTeacher() && resource.data.get("createdBy", "") == request.auth.uid && teacherTestOk());
