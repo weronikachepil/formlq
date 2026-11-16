@@ -9,7 +9,7 @@ import { fmtLen } from "./measure";
 import { cropToFrame, imageFullRect, rulerEdges } from "./extra";
 import { createConstrTools } from "./constr";
 import {
-  LABELS, T, isDot, parallelogramPoints, quadPoints, rectPoints, regularPoints, rightTriPoints, scaleneTriPoints, trapezoidPoints, triPoints, uid,
+  LABELS, T, drawHighlight, parallelogramPoints, quadPoints, rectPoints, regularPoints, rightTriPoints, scaleneTriPoints, trapezoidPoints, triPoints, uid,
 } from "./shapes";
 import type { MathBoard } from "./board";
 import type {
@@ -133,7 +133,7 @@ function selectTool(b: MathBoard): Tool {
     hover(p) {
       const h = handleAt(b, p);
       if (h) return h === "rot3d" ? "grab" : h === "rot" ? "crosshair" : h[0] === "v" ? "crosshair" : CURSORS[h];
-      const o = b.pick(p, 6);
+      const o = b.pickForMove(p);
       if (o && o.id === b.cropEdit) return "grab";
       return o ? "move" : "default";
     },
@@ -162,7 +162,7 @@ function selectTool(b: MathBoard): Tool {
         }
         return;
       }
-      const hit: BoardObject | null = b.pick(p, 6);
+      const hit: BoardObject | null = b.pickForMove(p);
       if (hit && hit.type === "image" && b.cropEdit === hit.id && b.canModify(hit)) {
         tx = b.tx();
         drag = { mode: "cropPan", o0: hit, full: imageFullRect(hit), start: p };
@@ -302,6 +302,10 @@ interface Lock {
 }
 
 // ---------- pen and highlighter ----------
+const DRAFT_KEY = {}; // the highlighter draft's raster
+/** Shape recognition: how long (ms) and how still (screen px) the pen must be held. */
+const HOLD_MS = 800;
+const HOLD_SLOP = 2;
 function penTool(b: MathBoard, highlighter: boolean): Tool {
   let pts: Point[] | null = null;
   let lock: Lock | null = null; // snapped to a ruler edge
@@ -322,7 +326,7 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
       if (!pts) return;
       const r = recognize(pts, b.cam.z, b.style);
       if (r) { shape = r; b.requestOverlay(); }
-    }, 520);
+    }, HOLD_MS);
   };
   return {
     cursor: "crosshair",
@@ -350,7 +354,7 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
         b.requestOverlay();
         return;
       }
-      // A wide highlighter takes sparser points (see `sparse` in shapes.ts).
+      // A wide highlighter needs fewer points.
       const min = highlighter ? Math.max(0.7 / b.cam.z, size() * 0.3) : 0.7 / b.cam.z;
       const evs = e.getCoalescedEvents?.() || [];
       const list: Point[] = evs.length ? evs.map((ev) => b.world(ev)) : [p];
@@ -358,7 +362,10 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
         const l = pts[pts.length - 1];
         if (Math.hypot(q[0] - l[0], q[1] - l[1]) >= min) pts.push([round1(q[0]), round1(q[1])]);
       }
-      if (!hold || Math.hypot(p[0] - hold[0], p[1] - hold[1]) > 5 / b.cam.z) arm(p);
+      // Any real movement restarts the wait: a shape is recognised only when the pen is held still.
+      // Once recognised, lifting the pen may drift a little without losing the shape.
+      const slop = shape ? 10 : HOLD_SLOP;
+      if (!hold || Math.hypot(p[0] - hold[0], p[1] - hold[1]) > slop / b.cam.z) arm(p);
       b.requestOverlay();
     },
     up() {
@@ -383,6 +390,10 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
         drawDraft(ctx, shape, { zoom: b.cam.z });
         return;
       }
+      if (pts && pts.length && highlighter) {
+        drawHighlight(ctx, pts, color(), size(), DRAFT_KEY, true);
+        return;
+      }
       if (pts && pts.length) {
         const mid = (a: Point, c: Point): Point => [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
         if (!path) { path = new Path2D(); path.moveTo(pts[0][0], pts[0][1]); built = 1; }
@@ -398,8 +409,7 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
         ctx.strokeStyle = color();
         ctx.lineWidth = size();
         ctx.lineJoin = "round";
-        ctx.lineCap = highlighter && !isDot({ pts }) ? "butt" : "round";
-        if (highlighter) { ctx.globalAlpha = 0.55; ctx.globalCompositeOperation = "multiply"; }
+        ctx.lineCap = "round";
         ctx.stroke(path);
         ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(last[0], last[1]); ctx.stroke();
         ctx.restore();

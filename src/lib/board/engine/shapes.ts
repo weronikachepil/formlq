@@ -83,33 +83,81 @@ const MIN_SIDE = 4;
 // Angles move / rotate without 0.1 px rounding, otherwise short rays drift (90° -> 90.1°).
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 
-/**
- * Drops points closer than `gap` to the previous one (the last point stays). Wide strokes
- * through dense, jittery stylus points get light notches in Safari's stroker; a highlighter
- * is wide and translucent, so it shows them.
- */
-export function sparse(pts: Point[], gap: number): Point[] {
-  if (pts.length < 3 || gap <= 0) return pts;
-  const out: Point[] = [pts[0]];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const l = out[out.length - 1];
-    if (Math.hypot(pts[i][0] - l[0], pts[i][1] - l[1]) >= gap) out.push(pts[i]);
+// ---------- highlighter ----------
+// A wide translucent stroke can't be stroked directly: Safari's stroker leaves light notches
+// along a wobbly line, and any overlap would show darker. So the highlighter is painted
+// opaque on its own canvas — its line plus discs along it, which leave no gaps — and that
+// canvas is laid over the board translucent, multiplied like ink.
+interface HlRaster { key: object; s: number; c: HTMLCanvasElement; x: number; y: number }
+const hlCache = new Map<object, HlRaster>();
+const HL_CACHE = 80;
+const HL_MAX_PX = 4_000_000;
+
+function paintHighlight(cx: CanvasRenderingContext2D, pts: Point[], size: number): void {
+  const r = size / 2;
+  cx.lineWidth = size;
+  cx.lineJoin = "round";
+  cx.lineCap = "round";
+  cx.beginPath();
+  cx.moveTo(pts[0][0], pts[0][1]);
+  for (const p of pts) cx.lineTo(p[0], p[1]);
+  cx.stroke();
+  // Discs at most a quarter of the width apart cover the band even where the stroke fails.
+  cx.beginPath();
+  const step = Math.max(0.5, size / 4);
+  const disc = (x: number, y: number) => { cx.moveTo(x + r, y); cx.arc(x, y, r, 0, Math.PI * 2); };
+  disc(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+    const n = Math.ceil(Math.hypot(bx - ax, by - ay) / step);
+    for (let k = 1; k <= n; k++) disc(ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n);
   }
-  out.push(pts[pts.length - 1]);
-  return out;
+  cx.fill();
 }
 
-/** A stroke that is just a tap: all its points within a pixel of each other. */
-export function isDot(o: Pick<StrokeObject, "pts">): boolean {
-  const b = boundsOfPoints(o.pts);
-  return b.w < 1 && b.h < 1;
+/** Draws a highlighter line; `key` caches its raster (an object, or a fixed key for the live draft). */
+export function drawHighlight(ctx: CanvasRenderingContext2D, pts: Point[], color: string, size: number, key: object, live = false): void {
+  if (!pts.length) return;
+  const t = ctx.getTransform();
+  const want = Math.hypot(t.a, t.b) || 1;
+  const b = boundsOfPoints(pts);
+  const pad = size / 2 + 2;
+  const w = b.w + pad * 2, h = b.h + pad * 2;
+  // Raster scale in √2 steps, so zooming doesn't repaint every frame; capped in size.
+  let s = Math.pow(2, Math.ceil(Math.log2(want) * 2) / 2);
+  if (w * h * s * s > HL_MAX_PX) s = Math.sqrt(HL_MAX_PX / (w * h));
+  let e = hlCache.get(key);
+  if (live || !e || e.s !== s) {
+    const c = e?.c ?? document.createElement("canvas");
+    c.width = Math.max(1, Math.ceil(w * s));
+    c.height = Math.max(1, Math.ceil(h * s));
+    const cx = c.getContext("2d");
+    if (!cx) return;
+    cx.setTransform(s, 0, 0, s, -(b.x - pad) * s, -(b.y - pad) * s);
+    cx.fillStyle = color;
+    cx.strokeStyle = color;
+    paintHighlight(cx, pts, size);
+    e = { key, s, c, x: b.x - pad, y: b.y - pad };
+  }
+  hlCache.delete(key);
+  hlCache.set(key, e);
+  for (const [k, old] of hlCache) {
+    if (hlCache.size <= HL_CACHE) break;
+    old.c.width = old.c.height = 0; // Safari frees canvas memory only this way
+    hlCache.delete(k);
+  }
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.globalCompositeOperation = "multiply";
+  ctx.drawImage(e.c, e.x, e.y, e.c.width / e.s, e.c.height / e.s);
+  ctx.restore();
 }
 
 function strokePath(o: StrokeObject): Path2D {
   let p = pathCache.get(o);
   if (p) return p;
   p = new Path2D();
-  const pts = o.hl ? sparse(o.pts, o.s * 0.3) : o.pts;
+  const pts = o.pts;
   p.moveTo(pts[0][0], pts[0][1]);
   if (pts.length === 2) p.lineTo(pts[1][0], pts[1][1]);
   else {
@@ -152,13 +200,12 @@ function drawLabels(ctx: CanvasRenderingContext2D, o: PolygonObject) {
 const STROKE_TYPE: ObjectTypeDef<StrokeObject> = {
   bounds: ptsBounds,
   draw(ctx, o) {
+    if (o.hl) { drawHighlight(ctx, o.pts, o.c, o.s, o); return; }
     ctx.save();
     ctx.strokeStyle = o.c;
     ctx.lineWidth = o.s;
     ctx.lineJoin = "round";
-    // A highlighter has flat ends, but a dot (a tap) has no length: it gets round ones to show.
-    ctx.lineCap = o.hl && !isDot(o) ? "butt" : "round";
-    if (o.hl) { ctx.globalAlpha = 0.55; ctx.globalCompositeOperation = "multiply"; }
+    ctx.lineCap = "round";
     ctx.stroke(strokePath(o));
     ctx.restore();
   },

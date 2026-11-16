@@ -349,6 +349,12 @@ interface Handlers {
 type Timer = ReturnType<typeof setTimeout>;
 
 const NET_EVERY_MS = 40;
+/** Hard stylus press that moves an object while drawing: force (0–1), within this time and distance (screen px). */
+const PRESS_GRAB = 0.7;
+const PRESS_GRAB_MS = 500;
+const PRESS_GRAB_SLOP = 10;
+/** Tools where a press means something else (selecting, panning, typing, placing). */
+const NO_PRESS_GRAB = new Set(["select", "hand", "laser", "eraser", "text", "formula", "comment", "stamp", "compass"]);
 const HEAVY_CHARS = 60_000;
 
 /** The object without its long strings (image data): what a drag preview needs. */
@@ -435,6 +441,10 @@ export class MathBoard {
   laserHeld = false;
   lastLaser = 0;
   penEraser = false;
+  /** A stylus press on an object that may turn into moving it, if pressed hard soon enough. */
+  pressGrab: { t: number; x: number; y: number; p: Point } | null = null;
+  /** Moving an object grabbed by a hard stylus press (the select tool runs the drag). */
+  pressMoving = false;
   viewTimer?: Timer;
   lastView = "";
   private _objsV = -1;
@@ -1694,6 +1704,22 @@ export class MathBoard {
     return null;
   }
 
+  /**
+   * What a press grabs to move: an object under the point, or else a closed flat shape
+   * (polygon, circle) the point is inside — unfilled ones are otherwise hit only on the outline.
+   */
+  pickForMove(p: Point, tolPx = 6): BoardObject | null {
+    const hit = this.pick(p, tolPx);
+    if (hit) return hit;
+    const all = this.objs();
+    for (let i = all.length - 1; i >= 0; i--) {
+      const o = all[i];
+      if ((o.type !== "polygon" && o.type !== "ellipse") || o.f || !this.canTouch(o)) continue;
+      if (defOf(o).hit({ ...o, f: "#000" }, p, 0)) return o;
+    }
+    return null;
+  }
+
   deleteSelection(): void {
     if (!this.canEdit || !this.sel.size) return;
     const t = this.tx();
@@ -2479,6 +2505,9 @@ export class MathBoard {
 
   cancelTool(): void {
     if (this.active) { this.active.cancel?.(); this.active = null; }
+    if (this.pressMoving) this.setSel([]);
+    this.pressGrab = null;
+    this.pressMoving = false;
     this.panning = null;
   }
 
@@ -2542,6 +2571,27 @@ export class MathBoard {
     if (this.tool === "laser") { this.laserHeld = true; this.lastLaser = performance.now(); this.laserPoint(p, true); }
     this.active = this.tools[this.tool];
     this.active.down(p, e);
+    // Drawing over an object with the stylus: a hard press moves it instead.
+    this.pressGrab = null;
+    if (e.pointerType === "pen" && this.canEdit && !NO_PRESS_GRAB.has(this.tool)) {
+      const o = this.pickForMove(p);
+      if (o && this.canModify(o)) {
+        this.pressGrab = { t: now, x: e.clientX, y: e.clientY, p };
+        if (e.pressure >= PRESS_GRAB) this.startPressGrab(e);
+      }
+    }
+  }
+
+  /** Drops the stroke just begun and moves the object under the stylus instead. */
+  startPressGrab(e: PointerEvent): void {
+    const g = this.pressGrab;
+    this.pressGrab = null;
+    if (!g) return;
+    this.active?.cancel?.();
+    this.active = this.tools.select;
+    this.pressMoving = true;
+    this.active.down(g.p, e);
+    this.requestRender();
   }
 
   onPointerMove(e: PointerEvent): void {
@@ -2565,6 +2615,11 @@ export class MathBoard {
     }
     if (this.secDrag) { this.secMove(p); return; }
     if (this.interDrag) { this.interMove(e); return; }
+    if (this.pressGrab && this.active) {
+      const g = this.pressGrab;
+      if (performance.now() - g.t > PRESS_GRAB_MS || Math.hypot(e.clientX - g.x, e.clientY - g.y) > PRESS_GRAB_SLOP) this.pressGrab = null;
+      else if (e.pressure >= PRESS_GRAB) this.startPressGrab(e);
+    }
     if (this.active) { this.active.move(p, e); return; }
 
     const t = this.tools[this.tool];
@@ -2588,10 +2643,14 @@ export class MathBoard {
       const a = this.active;
       this.active = null;
       this.penEraser = false;
+      this.pressGrab = null;
+      const pressed = this.pressMoving;
+      this.pressMoving = false;
       // The system may cancel a stylus stroke midway (e.g. iPadOS gestures): keep what was
       // drawn rather than lose it. Other cancelled gestures are undone.
       if (e.type === "pointercancel" && !(e.pointerType === "pen" && (this.tool === "pen" || this.tool === "highlighter") && a === this.tools[this.tool])) a.cancel?.();
       else a.up(this.world(e), e);
+      if (pressed) this.setSel([]);
     }
   }
 
