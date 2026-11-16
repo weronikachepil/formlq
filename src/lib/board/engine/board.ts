@@ -343,9 +343,28 @@ interface Handlers {
   paste: (e: ClipboardEvent) => void;
   dragover: (e: DragEvent) => void;
   drop: (e: DragEvent) => void;
+  touch: (e: TouchEvent) => void;
 }
 
 type Timer = ReturnType<typeof setTimeout>;
+
+const NET_EVERY_MS = 40;
+const HEAVY_CHARS = 60_000;
+
+/** The object without its long strings (image data): what a drag preview needs. */
+function withoutHeavy(o: BoardObject): BoardObject {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(o)) if (!(typeof v === "string" && v.length > 4000)) out[k] = v;
+  return out as unknown as BoardObject;
+}
+
+/** Total length of an object's long top-level strings (data URLs): a cheap size estimate. */
+function heavySize(o: BoardObject | null): number {
+  if (!o) return 0;
+  let n = 0;
+  for (const v of Object.values(o)) if (typeof v === "string" && v.length > 4000) n += v.length;
+  return n;
+}
 
 type DistributiveOmit<O, K extends PropertyKey> = O extends unknown ? Omit<O, K> : never;
 
@@ -394,6 +413,8 @@ export class MathBoard {
   liveTimer?: Timer;
   netBuf = new Map<string, BoardObject | null>();
   netTimer?: Timer;
+  movesSent = false;
+  heavyTimer?: Timer;
   clip: BoardObject[] = [];
   pasteN = 0;
   lastDown: { t: number; x: number; y: number } | null = null;
@@ -510,6 +531,15 @@ export class MathBoard {
       onStatus: (s: SyncStatus) => { this.status = s; this.emit(); },
       onInit: (m: InitMessage) => this.onInit(m),
       onRemoteOps: (ops: Op[]) => { this.store.apply(ops); },
+      // A peer's drag preview: their light fields over our copy (which keeps the image data).
+      onMoves: (ops: Op[]) => {
+        const out: Op[] = [];
+        for (const [id, patch] of ops) {
+          const cur = this.store.get(id);
+          if (cur && patch && cur.type === patch.type && !this.netBuf.has(id)) out.push([id, { ...cur, ...patch, id } as BoardObject]);
+        }
+        if (out.length) this.store.apply(out);
+      },
       onPView: (m: PViewMessage) => this.onPView(m),
       onGoto: (pg: string) => this.onGoto(pg),
       onGotoAck: (n: number) => this.onGotoAck(n),
@@ -553,6 +583,12 @@ export class MathBoard {
       paste: (e) => this.onPaste(e),
       dragover: (e) => { if (this.canEdit) e.preventDefault(); },
       drop: (e) => this.onDrop(e),
+      // iPadOS: unless touches are cancelled, Scribble and text selection take over Apple
+      // Pencil strokes (the stroke gets a pointercancel midway and the selection menu shows).
+      // Pointer events still arrive; the board's own HTML controls keep their taps.
+      touch: (e) => {
+        if (e.cancelable && !closestOf(e.target, "[data-ui], " + EDITABLE)) e.preventDefault();
+      },
     };
     r.addEventListener("pointerdown", this.h.down);
     r.addEventListener("pointermove", this.h.move);
@@ -567,6 +603,8 @@ export class MathBoard {
     window.addEventListener("paste", this.h.paste);
     r.addEventListener("dragover", this.h.dragover);
     r.addEventListener("drop", this.h.drop);
+    r.addEventListener("touchstart", this.h.touch, { passive: false });
+    r.addEventListener("touchmove", this.h.touch, { passive: false });
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(r);
   }
@@ -586,7 +624,10 @@ export class MathBoard {
     window.removeEventListener("paste", this.h.paste);
     r.removeEventListener("dragover", this.h.dragover);
     r.removeEventListener("drop", this.h.drop);
+    r.removeEventListener("touchstart", this.h.touch);
+    r.removeEventListener("touchmove", this.h.touch);
     clearTimeout(this.viewTimer);
+    clearTimeout(this.heavyTimer);
     clearImageCache();
     this.ro.disconnect();
     this.unsubStore();
@@ -1435,20 +1476,47 @@ export class MathBoard {
   commit(changes: Op[]): void {
     this.store.apply(changes);
     for (const [id, o] of changes) this.netBuf.set(id, o);
-    if (!this.netTimer) this.netTimer = setTimeout(() => this.flushNet(), 40);
+    if (!this.netTimer) this.netTimer = setTimeout(() => this.flushNet(false), NET_EVERY_MS);
   }
 
-  flushNet(): void {
+  /**
+   * Sends buffered changes. Mid-gesture (`final` false) heavy objects — pictures carry their
+   * data URL, up to megabytes — are not rewritten on every step, which stalls a tablet:
+   * peers get just their light fields over the live channel, and the whole object is
+   * written once the gesture ends (`final`).
+   */
+  flushNet(final = true): void {
     clearTimeout(this.netTimer);
     this.netTimer = undefined;
-    if (!this.netBuf.size) return;
-    const ops: Op[] = [...this.netBuf];
-    this.netBuf.clear();
+    if (!this.netBuf.size) {
+      if (final && this.movesSent) { this.movesSent = false; this.sync?.sendMoves?.(null); }
+      return;
+    }
+    const ops: Op[] = [];
+    const light: Op[] = [];
+    for (const op of this.netBuf) {
+      if (!final && heavySize(op[1]) > HEAVY_CHARS) light.push([op[0], withoutHeavy(op[1]!)]);
+      else ops.push(op);
+    }
+    for (const [id] of ops) this.netBuf.delete(id);
+    clearTimeout(this.heavyTimer);
+    if (light.length && this.sync?.sendMoves) {
+      this.sync.sendMoves(light);
+      this.movesSent = true;
+      // Held still (or the gesture never ends cleanly): write it whole anyway.
+      this.heavyTimer = setTimeout(() => this.flushNet(), 1500);
+    } else if (light.length) {
+      // A transport without the live channel: send them whole after all.
+      for (const [id] of light) { ops.push([id, this.netBuf.get(id)!]); this.netBuf.delete(id); }
+    }
+    if (final && this.movesSent) { this.movesSent = false; this.sync?.sendMoves?.(null); }
+    if (!ops.length) return;
     // Batches are limited by count and by size (quiz cards may contain images).
     let chunk: Op[] = [];
     let size = 0;
     for (const op of ops) {
-      const len = JSON.stringify(op).length;
+      const big = heavySize(op[1]);
+      const len = big > HEAVY_CHARS ? big + 2000 : JSON.stringify(op).length;
       if (chunk.length && (chunk.length >= 300 || size + len > 2_500_000)) { this.sync?.send(chunk); chunk = []; size = 0; }
       chunk.push(op);
       size += len;
@@ -2520,7 +2588,9 @@ export class MathBoard {
       const a = this.active;
       this.active = null;
       this.penEraser = false;
-      if (e.type === "pointercancel") a.cancel?.();
+      // The system may cancel a stylus stroke midway (e.g. iPadOS gestures): keep what was
+      // drawn rather than lose it. Other cancelled gestures are undone.
+      if (e.type === "pointercancel" && !(e.pointerType === "pen" && (this.tool === "pen" || this.tool === "highlighter") && a === this.tools[this.tool])) a.cancel?.();
       else a.up(this.world(e), e);
     }
   }
@@ -3082,19 +3152,18 @@ function drawLaser(ctx: CanvasRenderingContext2D, pts: LaserPoint[], color: stri
   while (pts.length && now - pts[0].t > LIFE) pts.shift();
   if (!pts.length) return false;
   ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  ctx.fillStyle = color;
+  // One filled outline per continuous run, so the trail is a smooth line that tapers to
+  // its tail, with no darker dots where pieces would overlap.
+  let run: LaserPoint[] = [pts[0]];
+  const flush = () => {
+    if (run.length > 1) fillLaserRun(ctx, smoothLaser(run), z, now, LIFE);
+  };
   for (let i = 1; i < pts.length; i++) {
-    const age = (now - pts[i].t) / LIFE;
-    if (pts[i].t - pts[i - 1].t > 250) continue;
-    ctx.globalAlpha = Math.max(0, 1 - age);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = (7 * (1 - age * 0.6)) / z;
-    ctx.beginPath();
-    ctx.moveTo(pts[i - 1].x, pts[i - 1].y);
-    ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.stroke();
+    if (pts[i].t - pts[i - 1].t > 250) { flush(); run = []; }
+    run.push(pts[i]);
   }
+  flush();
   const last = pts[pts.length - 1];
   const age = (now - last.t) / LIFE;
   ctx.globalAlpha = Math.max(0, 1 - age);
@@ -3107,6 +3176,50 @@ function drawLaser(ctx: CanvasRenderingContext2D, pts: LaserPoint[], color: stri
   ctx.fill();
   ctx.restore();
   return true;
+}
+
+/** Catmull–Rom through the sampled points (they come every ~25 ms, so the raw line is angular). */
+function smoothLaser(pts: LaserPoint[]): LaserPoint[] {
+  if (pts.length < 3) return pts;
+  const out: LaserPoint[] = [];
+  const STEPS = 6;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    for (let s = 0; s < STEPS; s++) {
+      const t = s / STEPS, t2 = t * t, t3 = t2 * t;
+      const f = (a: number, b: number, c: number, d: number) =>
+        0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (3 * b - a - 3 * c + d) * t3);
+      out.push({ x: f(p0.x, p1.x, p2.x, p3.x), y: f(p0.y, p1.y, p2.y, p3.y), t: p1.t + (p2.t - p1.t) * t });
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+/** Fills the run as one outline whose width shrinks with each point's age; the head is rounded. */
+function fillLaserRun(ctx: CanvasRenderingContext2D, pts: LaserPoint[], z: number, now: number, life: number): void {
+  const half = (p: LaserPoint) => (3.5 / z) * Math.max(0, 1 - (now - p.t) / life);
+  const left: Point[] = [], right: Point[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let nx = -(b.y - a.y), ny = b.x - a.x;
+    const l = Math.hypot(nx, ny);
+    if (l) { nx /= l; ny /= l; } else { nx = 0; ny = 0; }
+    const w = half(pts[i]);
+    left.push([pts[i].x + nx * w, pts[i].y + ny * w]);
+    right.push([pts[i].x - nx * w, pts[i].y - ny * w]);
+  }
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.moveTo(left[0][0], left[0][1]);
+  for (const q of left) ctx.lineTo(q[0], q[1]);
+  for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
+  ctx.closePath();
+  ctx.fill();
+  const h = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.arc(h.x, h.y, half(h), 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawCursor(ctx: CanvasRenderingContext2D, p: Peer, z: number): void {

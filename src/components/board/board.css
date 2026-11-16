@@ -2668,3 +2668,16 @@ html.dark .mathboard .status-pill.closed {
 html.dark .mathboard .status-pill.draft {
   color: #ffc078;
 }
+
+/* iPad + Apple Pencil: no system text selection or its «Скопіювати…» menu on the board page.
+   :where() keeps specificity at zero, so editors that allow selecting text still win. */
+:where(.mathboard) {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+:where(.mathboard) :where(input, textarea, math-field, [contenteditable="true"]) {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
