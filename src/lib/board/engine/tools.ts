@@ -9,7 +9,7 @@ import { fmtLen } from "./measure";
 import { cropToFrame, imageFullRect, rulerEdges } from "./extra";
 import { createConstrTools } from "./constr";
 import {
-  LABELS, T, parallelogramPoints, quadPoints, rectPoints, regularPoints, rightTriPoints, scaleneTriPoints, trapezoidPoints, triPoints, uid,
+  LABELS, T, isDot, parallelogramPoints, quadPoints, rectPoints, regularPoints, rightTriPoints, scaleneTriPoints, trapezoidPoints, triPoints, uid,
 } from "./shapes";
 import type { MathBoard } from "./board";
 import type {
@@ -350,7 +350,8 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
         b.requestOverlay();
         return;
       }
-      const min = 0.7 / b.cam.z;
+      // A wide highlighter takes sparser points (see `sparse` in shapes.ts).
+      const min = highlighter ? Math.max(0.7 / b.cam.z, size() * 0.3) : 0.7 / b.cam.z;
       const evs = e.getCoalescedEvents?.() || [];
       const list: Point[] = evs.length ? evs.map((ev) => b.world(ev)) : [p];
       for (const q of list) {
@@ -397,7 +398,7 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
         ctx.strokeStyle = color();
         ctx.lineWidth = size();
         ctx.lineJoin = "round";
-        ctx.lineCap = highlighter ? "butt" : "round";
+        ctx.lineCap = highlighter && !isDot({ pts }) ? "butt" : "round";
         if (highlighter) { ctx.globalAlpha = 0.55; ctx.globalCompositeOperation = "multiply"; }
         ctx.stroke(path);
         ctx.beginPath(); ctx.moveTo(from[0], from[1]); ctx.lineTo(last[0], last[1]); ctx.stroke();

@@ -12,6 +12,8 @@ export function Toolbar({ mc }: { mc: MenuControl }) {
   const { menu, toggle, setTool } = mc;
   const tool = st.tool;
   const shapeActive = SHAPE_TOOLS.has(tool);
+  // One highlighted button at a time: while a menu is open, only its button is.
+  const on = (...names: string[]) => !menu && names.includes(tool);
 
   if (!st.canEdit) {
     return (
@@ -25,21 +27,21 @@ export function Toolbar({ mc }: { mc: MenuControl }) {
   return (
     <>
       <div className="bd-tools">
-        <ToolBtn name="select" title="Виділення (V)" active={tool === "select"} onClick={() => setTool("select")} />
-        <ToolBtn name="hand" title="Рука (H / пробіл)" active={tool === "hand"} onClick={() => setTool("hand")} />
+        <ToolBtn name="select" title="Виділення (V)" active={on("select")} onClick={() => setTool("select")} />
+        <ToolBtn name="hand" title="Рука (H / пробіл)" active={on("hand")} onClick={() => setTool("hand")} />
         <i className="sep" />
-        <ToolBtn name="pen" title="Ручка (P)" active={tool === "pen"} onClick={() => setTool("pen")} />
-        <ToolBtn name="highlighter" title="Маркер (M)" active={tool === "highlighter"} onClick={() => setTool("highlighter")} />
-        <ToolBtn name="eraser" title="Гумка (E)" active={tool === "eraser"} onClick={() => setTool("eraser")} />
+        <ToolBtn name="pen" title="Ручка (P)" active={on("pen")} onClick={() => setTool("pen")} />
+        <ToolBtn name="highlighter" title="Маркер (M)" active={on("highlighter")} onClick={() => setTool("highlighter")} />
+        <ToolBtn name="eraser" title="Гумка (E)" active={on("eraser")} onClick={() => setTool("eraser")} />
         <i className="sep" />
         <ToolBtn
           name={shapeActive ? tool : "shapes"}
           title="Фігури"
-          active={shapeActive || menu === "shapes"}
+          active={menu === "shapes" || (!menu && shapeActive)}
           onClick={() => toggle("shapes")}
         />
-        <ToolBtn name="text" title="Текст (T)" active={tool === "text"} onClick={() => setTool("text")} />
-        <ToolBtn name="formula" title="Формула (F)" active={tool === "formula"} onClick={() => setTool("formula")} />
+        <ToolBtn name="text" title="Текст (T)" active={on("text")} onClick={() => setTool("text")} />
+        <ToolBtn name="formula" title="Формула (F)" active={on("formula")} onClick={() => setTool("formula")} />
         <i className="sep" />
         <ToolBtn name="graph" title="Графіки та координатна площина" active={menu === "graph"} onClick={() => toggle("graph")} />
         <ToolBtn name="solid" title="Об'ємні фігури" active={menu === "solid"} onClick={() => toggle("solid")} />
@@ -56,7 +58,7 @@ export function Toolbar({ mc }: { mc: MenuControl }) {
         <ToolBtn
           name={tool === "compass" ? "compass" : "ruler"}
           title="Лінійка, транспортир, циркуль"
-          active={menu === "instr" || tool === "compass"}
+          active={menu === "instr" || on("compass")}
           onClick={() => toggle("instr")}
         />
         <ToolBtn name="arith" title="Дія в стовпчик, моделі дробу" active={menu === "arith"} onClick={() => toggle("arith")} />
@@ -66,11 +68,11 @@ export function Toolbar({ mc }: { mc: MenuControl }) {
           active={menu === "tmpl"}
           onClick={() => toggle("tmpl")}
         />
-        <ToolBtn name="laser" title="Лазерна указка (B)" active={tool === "laser"} onClick={() => setTool("laser")} />
+        <ToolBtn name="laser" title="Лазерна указка (B)" active={on("laser")} onClick={() => setTool("laser")} />
         <ToolBtn
           name="lesson"
           title="Урок: коментарі, таймер, голосування, завдання"
-          active={menu === "lesson" || tool === "comment" || tool === "stamp"}
+          active={menu === "lesson" || on("comment", "stamp")}
           onClick={() => toggle("lesson")}
         />
       </div>

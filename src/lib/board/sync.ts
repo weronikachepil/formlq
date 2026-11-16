@@ -107,6 +107,7 @@ class FirebaseBoardSync implements BoardTransport {
 
   private timeOffset = 0;
   private lastGoto: string | null = null;
+  private lastMoves = new Map<string, string>();
   private lastTouch = 0;
   private host: BoardHost | null = null;
   /** Owner: unsaved-in-a-version changes and the automatic version timer. */
@@ -508,17 +509,38 @@ class FirebaseBoardSync implements BoardTransport {
   }
 
   private onPointer(s: DataSnapshot, laser: boolean): void {
-    const v = s.val() as { x?: number; y?: number; d?: number } | null;
+    const v = s.val() as { x?: number; y?: number; d?: number; mv?: string } | null;
     if (!this.loaded || !s.key || s.key === this.cid || !v) return;
+    if (!laser) this.onMoves(s.key, v.mv);
     if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) return;
     const m = { cid: s.key, x: v.x as number, y: v.y as number };
     if (laser) this.cb.onLaser({ ...m, d: v.d ? 1 : 0 });
     else this.cb.onCursor(m);
   }
 
+  /** Applies a peer's drag preview: only from the owner, or from anyone while students may draw. */
+  private onMoves(cid: string, mv: string | undefined): void {
+    if (!mv || this.lastMoves.get(cid) === mv) return;
+    this.lastMoves.set(cid, mv);
+    if (!this.peers.get(cid)?.owner && !this.meta?.edit) return;
+    let ops: Op[];
+    try {
+      ops = JSON.parse(mv) as Op[];
+    } catch {
+      return;
+    }
+    if (Array.isArray(ops)) this.cb.onMoves?.(ops.filter((op) => Array.isArray(op) && typeof op[0] === "string" && op[1]));
+  }
+
+  // `update`, not `set`: the cursor and the drag preview share the node without clobbering each other.
   sendCursor(x: number, y: number): void {
     if (!this.loaded) return;
-    set(this.r(`live/cur/${this.cid}`), { x: Math.round(x), y: Math.round(y) }).catch(() => {});
+    update(this.r(`live/cur/${this.cid}`), { x: Math.round(x), y: Math.round(y) }).catch(() => {});
+  }
+
+  sendMoves(ops: Op[] | null): void {
+    if (!this.loaded) return;
+    update(this.r(`live/cur/${this.cid}`), { mv: ops ? JSON.stringify(ops) : null }).catch(() => {});
   }
 
   sendLaser(x: number, y: number, down: boolean): void {

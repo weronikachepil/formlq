@@ -56,6 +56,8 @@ export interface SyncCallbacks {
   onLeave: (cid: string) => void;
   onCursor: (m: CursorMessage) => void;
   onLaser: (m: LaserMessage) => void;
+  /** A peer is dragging these objects: their light fields (no image data), shown until the real change lands. */
+  onMoves?: (ops: Op[]) => void;
   onPerm: (canEdit: boolean, protect: boolean) => void;
   onView: (v: ViewRect) => void;
   onPView: (m: PViewMessage) => void;
@@ -70,6 +72,8 @@ export interface BoardTransport {
   send(ops: Op[]): void;
   sendCursor(x: number, y: number): void;
   sendLaser(x: number, y: number, down: boolean): void;
+  /** Mid-drag preview of heavy objects (see MathBoard.flushNet); `null` ends it. */
+  sendMoves?(ops: Op[] | null): void;
   /** Owner: broadcast the current view for "follow me". */
   sendView(v: ViewRect): void;
   /** Student: report the current view to the owner. */

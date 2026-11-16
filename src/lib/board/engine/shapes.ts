@@ -83,11 +83,33 @@ const MIN_SIDE = 4;
 // Angles move / rotate without 0.1 px rounding, otherwise short rays drift (90° -> 90.1°).
 const r3 = (v: number) => Math.round(v * 1000) / 1000;
 
+/**
+ * Drops points closer than `gap` to the previous one (the last point stays). Wide strokes
+ * through dense, jittery stylus points get light notches in Safari's stroker; a highlighter
+ * is wide and translucent, so it shows them.
+ */
+export function sparse(pts: Point[], gap: number): Point[] {
+  if (pts.length < 3 || gap <= 0) return pts;
+  const out: Point[] = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const l = out[out.length - 1];
+    if (Math.hypot(pts[i][0] - l[0], pts[i][1] - l[1]) >= gap) out.push(pts[i]);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+/** A stroke that is just a tap: all its points within a pixel of each other. */
+export function isDot(o: Pick<StrokeObject, "pts">): boolean {
+  const b = boundsOfPoints(o.pts);
+  return b.w < 1 && b.h < 1;
+}
+
 function strokePath(o: StrokeObject): Path2D {
   let p = pathCache.get(o);
   if (p) return p;
   p = new Path2D();
-  const pts = o.pts;
+  const pts = o.hl ? sparse(o.pts, o.s * 0.3) : o.pts;
   p.moveTo(pts[0][0], pts[0][1]);
   if (pts.length === 2) p.lineTo(pts[1][0], pts[1][1]);
   else {
@@ -134,7 +156,8 @@ const STROKE_TYPE: ObjectTypeDef<StrokeObject> = {
     ctx.strokeStyle = o.c;
     ctx.lineWidth = o.s;
     ctx.lineJoin = "round";
-    ctx.lineCap = o.hl ? "butt" : "round";
+    // A highlighter has flat ends, but a dot (a tap) has no length: it gets round ones to show.
+    ctx.lineCap = o.hl && !isDot(o) ? "butt" : "round";
     if (o.hl) { ctx.globalAlpha = 0.55; ctx.globalCompositeOperation = "multiply"; }
     ctx.stroke(strokePath(o));
     ctx.restore();
