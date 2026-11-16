@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   CalendarDays,
   Presentation,
+  Bug,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,7 @@ export const ADMIN_NAV: NavLink[] = [
   { icon: Lightbulb, href: "/admin/tips", label: "Поради" },
   { icon: Users, href: "/admin/users", label: "Користувачі" },
   { icon: ClipboardCheck, href: "/admin/questions", label: "Завдання" },
+  { icon: Bug, href: "/admin/bugs", label: "Помилки" },
 ];
 
 /** The common section for this role: staff don't see student-only items. */

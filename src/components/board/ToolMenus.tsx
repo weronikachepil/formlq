@@ -96,6 +96,12 @@ export function ToolMenus({ mc }: { mc: MenuControl }) {
                 onClick={run(() => openDialog({ kind: "assign" }))}
               />
               <MenuItem
+                icon="lesson"
+                title="Тест із готових"
+                desc="Додати тест із «Мої тести»"
+                onClick={run(() => openDialog({ kind: "testLibrary" }))}
+              />
+              <MenuItem
                 icon="task"
                 title="Імпорт тесту"
                 desc="Створити тест із тексту"

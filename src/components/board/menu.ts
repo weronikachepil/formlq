@@ -7,6 +7,7 @@ export type MenuId = "shapes" | "graph" | "solid" | "instr" | "arith" | "tmpl" |
 export type DialogRequest =
   | { kind: "assign" }
   | { kind: "testImport" }
+  | { kind: "testLibrary" }
   | { kind: "numline" }
   | { kind: "source"; src: SourceKind }
   | { kind: "exercises" }

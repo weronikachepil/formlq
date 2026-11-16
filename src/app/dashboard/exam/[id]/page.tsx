@@ -37,7 +37,8 @@ export default function ExamPage() {
   useEffect(() => {
     // Wait for the profile (role) too, so drafts are gated correctly.
     if (authLoading || !user) return;
-    getTest(id).then((t) => {
+    // Not readable (an unpublished test without link access) counts as missing.
+    getTest(id).catch(() => null).then((t) => {
       // The catalog lists published tests; anything else needs link access (or an editor).
       if (!t || (effectiveLinkAccess(t) === "off" && !canSeeDrafts)) {
         router.replace("/dashboard");

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X, LogOut, UserRound } from "lucide-react";
+import { Bug, Menu, X, LogOut, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useExamGuard } from "@/context/ExamGuardContext";
@@ -10,7 +10,8 @@ import { canTutor, isEditor } from "@/lib/roles";
 import { NAV, ADMIN_NAV, isNavActive, navFor, tutorNavFor } from "@/components/AppSidebar";
 import { useHasTutor } from "@/hooks/useHasTutor";
 
-export function MobileNav() {
+/** `onReportBug` opens the bug-report dialog (owned by the app shell). */
+export function MobileNav({ onReportBug }: { onReportBug: () => void }) {
   const [open, setOpen] = useState(false);
   const path = usePathname();
   const { userProfile, logOut } = useAuth();
@@ -110,6 +111,16 @@ export function MobileNav() {
           >
             <UserRound size={16} />
             Профіль
+          </button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              onReportBug();
+            }}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-full text-sm w-full text-left text-foreground/80 hover:text-foreground hover:bg-glass-strong transition-all"
+          >
+            <Bug size={16} />
+            Повідомити про помилку
           </button>
           <button
             onClick={handleLogout}

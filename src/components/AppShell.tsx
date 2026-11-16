@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import type { User } from "firebase/auth";
-import { LogOut, UserRound } from "lucide-react";
+import { Bug, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useHeader } from "@/context/HeaderContext";
 import { useExamGuard } from "@/context/ExamGuardContext";
@@ -12,6 +12,8 @@ import { ReferenceDrawerProvider } from "@/context/ReferenceDrawerContext";
 import { AppSidebar } from "@/components/AppSidebar";
 import { MobileNav } from "@/components/MobileNav";
 import { ThemeSelector } from "@/components/ThemeSelector";
+import { BugReportDialog } from "@/components/bugs/BugReportDialog";
+import { useHomeworkBackfill } from "@/hooks/useHomeworkBackfill";
 import { IconButton } from "@/components/ui/icon-button";
 import { SpinnerScreen } from "@/components/ui/spinner";
 import { cn, withNext } from "@/lib/utils";
@@ -57,6 +59,9 @@ export function AppShell({
   const { title, subtitle } = useHeader();
   const { requestAction, requestNav } = useExamGuard();
   const [scrolled, setScrolled] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  // Teachers/editors: one-time copy of test questions into old homework.
+  useHomeworkBackfill();
 
   const allowed = allow({ user, userProfile });
 
@@ -102,7 +107,7 @@ export function AppShell({
               : "border-b border-transparent",
           )}
         >
-          <MobileNav />
+          <MobileNav onReportBug={() => setReporting(true)} />
           {/* Handwritten MathBoard-style logo with the gold spark. */}
           <span className="mb-logo text-[1.85rem] hidden md:inline-block shrink-0 mr-3 -mt-1 select-none">
             formlq
@@ -125,6 +130,20 @@ export function AppShell({
           <div className="flex items-center gap-2">
             <ThemeSelector className="w-10 h-10" />
             <div className="hidden md:contents">
+              <div className="relative group">
+                <IconButton
+                  label="Повідомити про помилку"
+                  title=""
+                  size="md"
+                  onClick={() => setReporting(true)}
+                  className="w-10 h-10 bg-glass text-foreground shadow-pill hover:bg-glass-strong"
+                >
+                  <Bug size={16} />
+                </IconButton>
+                <div className="pointer-events-none absolute right-0 top-[calc(100%+8px)] z-50 flex items-center px-3 py-1.5 rounded-full bg-primary text-primary-foreground shadow-pill-dark text-xs font-semibold whitespace-nowrap opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150">
+                  Повідомити про помилку
+                </div>
+              </div>
               <div className="relative group">
                 <IconButton
                   label="Профіль"
@@ -163,6 +182,7 @@ export function AppShell({
           <ReferenceDrawer />
           <main className="ml-0 md:ml-18 flex-1 p-4 md:p-6">{children}</main>
         </div>
+        {reporting && <BugReportDialog onClose={() => setReporting(false)} />}
       </div>
     </ReferenceDrawerProvider>
   );

@@ -54,13 +54,24 @@ export default function HomeworkRunnerPage() {
 
       // Referenced test and (if completed) the saved result are independent → fetch together.
       const [test, res] = await Promise.all([
-        hw.source === "test" && hw.testId ? getTest(hw.testId) : null,
+        // Homework carries a copy of the test's questions; only old homework reads the test.
+        hw.source === "test" && hw.testId && !hw.questions?.length ? getTest(hw.testId).catch(() => null) : null,
         hw.status === "completed" && hw.resultId ? getResult(hw.resultId) : null,
       ]);
 
       // Build the runner config from a referenced test or the custom snapshot.
       let cfg: RunnerConfig;
-      if (hw.source === "test" && hw.testId) {
+      if (hw.source === "test" && hw.testId && hw.questions?.length) {
+        cfg = {
+          id: hw.id,
+          title: hw.title,
+          subtitle: hw.subtitle,
+          questions: hw.questions,
+          scoreTable: hw.scoreTable ?? [],
+          scaleType: hw.scaleType ?? "nmt",
+          durationMinutes: hw.durationMinutes ?? 150,
+        };
+      } else if (hw.source === "test" && hw.testId) {
         if (!test) {
           router.replace("/dashboard/homework");
           return;

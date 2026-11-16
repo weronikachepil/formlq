@@ -11,6 +11,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Select, SelectItem, SelectLabel } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-field";
+import { DatePicker, TimePicker } from "@/components/ui/date-time-picker";
 import { conflictMessage, findConflict, lastPriceFor } from "./lesson-utils";
 import type { LessonFormValues } from "./useLessonActions";
 import type { CalendarStudent } from "./types";
@@ -258,10 +259,10 @@ function LessonForm({
         </Field>
         <div className="grid grid-cols-[1.4fr_1fr] gap-2">
           <Field label="Дата">
-            <TextInput type="date" value={d.date} onChange={(e) => set({ date: e.target.value })} className="px-3" />
+            <DatePicker value={d.date} onChange={(date) => set({ date })} />
           </Field>
           <Field label="Час">
-            <TextInput type="time" step={900} value={d.time} onChange={(e) => set({ time: e.target.value })} className="px-3" />
+            <TimePicker value={d.time} onChange={(time) => set({ time })} />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -302,14 +303,7 @@ function LessonForm({
             {d.repeat && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">до</span>
-                <TextInput
-                  type="date"
-                  size="sm"
-                  min={d.date}
-                  value={d.until}
-                  onChange={(e) => set({ until: e.target.value })}
-                  className="w-auto flex-1"
-                />
+                <DatePicker size="sm" min={d.date} value={d.until} onChange={(until) => set({ until })} className="flex-1" />
               </div>
             )}
             {d.repeat && until && (

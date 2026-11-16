@@ -1103,6 +1103,76 @@
   border-color: var(--mb-accent);
   background: #fff;
 }
+.mathboard .lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: min(380px, 50vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 10px;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--mb-field);
+}
+.mathboard .bd .modal button.lib-item:not(.bd-chip-btn):not(.bd-ibtn) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  text-align: left;
+  font-weight: 400;
+}
+.mathboard .bd .modal button.lib-item:not(.bd-chip-btn):not(.bd-ibtn):hover {
+  background: var(--mb-accent-soft);
+}
+.mathboard .bd .modal button.lib-item:not(.bd-chip-btn):not(.bd-ibtn).on {
+  background: var(--mb-accent-soft);
+  outline: 2px solid var(--mb-accent);
+  outline-offset: -2px;
+}
+.mathboard .lib-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--mb-field);
+  width: fit-content;
+}
+.mathboard .bd .modal .lib-tabs button:not(.bd-chip-btn):not(.bd-ibtn) {
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  padding: 7px 16px;
+  font-size: 13px;
+}
+.mathboard .bd .modal .lib-tabs button:not(.bd-chip-btn):not(.bd-ibtn):hover {
+  background: var(--mb-accent-soft);
+}
+.mathboard .bd .modal .lib-tabs button:not(.bd-chip-btn):not(.bd-ibtn).on {
+  background: var(--mb-accent);
+  color: #fff;
+}
+.mathboard .lib-item .lib-desc {
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mathboard .lib-item b {
+  font-weight: 600;
+}
+.mathboard .lib-item span {
+  font-size: 12px;
+  opacity: 0.65;
+}
 .mathboard .parse-box {
   background: var(--mb-field);
   border-radius: 14px;

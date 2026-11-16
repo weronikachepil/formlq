@@ -11,6 +11,7 @@ import { NumlineDialog } from "./dialogs/NumlineDialog";
 import { QuizResultsDialog } from "./dialogs/QuizResultsDialog";
 import { AssignDialog, ExerciseDialog, PdfDialog, SourceDialog } from "./dialogs/SimpleDialogs";
 import { TestImportDialog } from "./dialogs/TestImportDialog";
+import { TestLibraryDialog } from "./dialogs/TestLibraryDialog";
 import { boardFonts } from "./fonts";
 import { Inspector } from "./inspector/Inspector";
 import type { DialogRequest, MenuControl, MenuId } from "./menu";
@@ -168,6 +169,7 @@ export function BoardCanvas({ boardId, user, isOwner, createSync }: BoardCanvasP
               />
             )}
             {dialog?.kind === "testImport" && <TestImportDialog onClose={closeDialog} />}
+            {dialog?.kind === "testLibrary" && <TestLibraryDialog onClose={closeDialog} />}
             {dialog?.kind === "results" && <QuizResultsDialog onClose={closeDialog} />}
 
             <BottomBar />
