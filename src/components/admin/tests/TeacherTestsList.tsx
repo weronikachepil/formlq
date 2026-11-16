@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { EyeOff, FileText, Trash2, UserRound } from "lucide-react";
@@ -17,7 +18,7 @@ import { SectionLabel } from "@/components/ui/section-label";
 
 /**
  * Moderation of teachers' tests: editors can't edit them (they're the teacher's),
- * but can take one off the catalog or delete it.
+ * but can open one read-only, take it off the catalog or delete it.
  */
 export function TeacherTestsList() {
   const queryClient = useQueryClient();
@@ -77,8 +78,8 @@ export function TeacherTestsList() {
             t.published ? "bg-green-500" : "bg-muted-foreground/30",
           )}
         />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">
+        <Link href={`/admin/tests/teachers/${t.id}`} className="flex-1 min-w-0 -my-3 py-3" title="Переглянути тест">
+          <p className="font-semibold text-sm truncate group-hover:underline underline-offset-2">
             <Highlight text={t.title || "Без назви"} query={search} />
           </p>
           {t.subtitle && (
@@ -95,7 +96,7 @@ export function TeacherTestsList() {
               <FileText size={11} /> {t.questions?.length ?? 0}
             </span>
           </p>
-        </div>
+        </Link>
         <div className="flex items-center gap-1 shrink-0">
           {t.published && (
             <IconButton

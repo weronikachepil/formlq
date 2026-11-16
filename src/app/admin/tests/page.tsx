@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { TestsManager } from "@/components/admin/tests/TestsManager";
 import { TeacherTestsList } from "@/components/admin/tests/TeacherTestsList";
 import { SegmentedControl } from "@/components/admin/test-editor/primitives";
@@ -8,7 +9,9 @@ import { SegmentedControl } from "@/components/admin/test-editor/primitives";
 type Tab = "platform" | "teachers";
 
 export default function AdminTestsPage() {
-  const [tab, setTab] = useState<Tab>("platform");
+  // `?tab=teachers` comes back from a teacher's test page.
+  const initial = useSearchParams().get("tab") === "teachers" ? "teachers" : "platform";
+  const [tab, setTab] = useState<Tab>(initial);
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <SegmentedControl
