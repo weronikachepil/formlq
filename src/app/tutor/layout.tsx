@@ -2,6 +2,7 @@
 
 import { AppShell, SectionGreeting } from "@/components/AppShell";
 import { canTutor } from "@/lib/roles";
+import { TelegramPromo } from "@/components/tutor/TelegramPromo";
 
 export default function TutorLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export default function TutorLayout({ children }: { children: React.ReactNode })
       greeting={(name) => <SectionGreeting label="Кабінет вчителя" name={name} />}
     >
       {children}
+      <TelegramPromo />
     </AppShell>
   );
 }
