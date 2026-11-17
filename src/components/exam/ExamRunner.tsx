@@ -77,6 +77,8 @@ interface ExamRunnerProps {
   allowAnswerImages?: boolean;
   /** Show duck 🦆 flag toggles on the results screen (homework). */
   allowFlags?: boolean;
+  /** With allowAnswerImages: a photo on every question, not only open ones. */
+  photoOnAll?: boolean;
   /** Upload a photo, returns its URL. Required when allowAnswerImages. */
   uploadImage?: (questionId: string, file: File) => Promise<string>;
   /** Persist the attempt. Returns the saved result id. */
@@ -108,6 +110,8 @@ interface ExamRunnerProps {
   resultsLabel?: string;
   introEmoji?: string;
   startLabel?: string;
+  /** Epoch ms after which the attempt is submitted automatically (a time-boxed assignment). */
+  deadline?: number;
 }
 
 type Progress = {
@@ -123,6 +127,7 @@ export function ExamRunner({
   backHref = "/dashboard",
   introNote,
   allowAnswerImages = false,
+  photoOnAll = false,
   allowFlags = false,
   uploadImage,
   onSubmit,
@@ -140,6 +145,7 @@ export function ExamRunner({
   resultsLabel = "На головну",
   introEmoji = "📝",
   startLabel = "Почати →",
+  deadline,
 }: ExamRunnerProps) {
   const { setGuarded } = useExamGuard();
   const { open: drawerOpen, openDrawer } = useReferenceDrawer();
@@ -158,7 +164,9 @@ export function ExamRunner({
     [config.scoreTable],
   );
   const maxRaw = maxRawScore(questions);
-  const examDuration = (config.durationMinutes ?? 150) * 60;
+  // With a deadline, the countdown is capped by it; fixed when the attempt starts.
+  const [capSeconds, setCapSeconds] = useState<number | null>(null);
+  const examDuration = Math.min((config.durationMinutes ?? 150) * 60, capSeconds ?? Infinity);
   const isNmt = (config.scaleType ?? "nmt") === "nmt";
 
   const reviewing = !!initialResult;
@@ -454,12 +462,16 @@ export function ExamRunner({
         isNmt={isNmt}
         untimed={untimed}
         allowAnswerImages={allowAnswerImages}
+        photoOnAll={photoOnAll}
         introNote={introNote}
         introEmoji={introEmoji}
         startLabel={startLabel}
         backHref={backHref}
         history={history}
-        onStart={() => setPhase("exam")}
+        onStart={() => {
+          if (deadline) setCapSeconds(Math.max(1, Math.floor((deadline - Date.now()) / 1000)));
+          setPhase("exam");
+        }}
       />
     );
   }
@@ -615,6 +627,7 @@ export function ExamRunner({
           answer={answers[question.id]}
           onAnswer={setAnswer}
           allowAnswerImages={allowAnswerImages}
+          photoOnAll={photoOnAll}
           answerImage={answerImages[question.id]}
           uploading={uploadingId === question.id}
           onUploadImage={handleUpload}

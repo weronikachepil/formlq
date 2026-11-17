@@ -15,6 +15,7 @@ interface ExamIntroProps {
   isNmt: boolean;
   untimed: boolean;
   allowAnswerImages: boolean;
+  photoOnAll?: boolean;
   introNote?: string;
   introEmoji: string;
   startLabel: string;
@@ -32,6 +33,7 @@ export function ExamIntro({
   isNmt,
   untimed,
   allowAnswerImages,
+  photoOnAll = false,
   introNote,
   introEmoji,
   startLabel,
@@ -98,7 +100,7 @@ export function ExamIntro({
             <p>• Відповідь можна змінити до завершення</p>
             {!untimed && <p>• Таймер запускається після «Почати»</p>}
             {allowAnswerImages && (
-              <p>• До відкритих питань можна прикріпити фото розвʼязку</p>
+              <p>• {photoOnAll ? "До кожного питання" : "До відкритих питань"} можна прикріпити фото розвʼязку</p>
             )}
             {isNmt ? (
               <p>• Результат конвертується у бали НМТ (100–200)</p>

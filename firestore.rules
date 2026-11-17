@@ -105,6 +105,50 @@ service cloud.firestore {
       allow delete: if isEditor() || (isTeacher() && resource.data.get("createdBy", "") == request.auth.uid);
     }
 
+    // A test given by link for a time window (src/lib/assignments.ts). The public doc
+    // (title, times) is readable by anyone with the link; the questions only while it is
+    // open; attempts are submitted without an account while it is open (+3 min for the
+    // timer's auto-submit) and read only by the teacher.
+    function assignment(aid) {
+      return get(/databases/$(database)/documents/testAssignments/$(aid)).data;
+    }
+    function ownsAssignment(aid) {
+      return isAuth() && (assignment(aid).ownerId == request.auth.uid || isEditor());
+    }
+    function assignmentOpen(aid, graceMin) {
+      return request.time >= assignment(aid).opensAt
+        && request.time <= assignment(aid).closesAt + duration.value(graceMin, "m");
+    }
+    match /testAssignments/{aid} {
+      allow get: if true;
+      allow list: if isEditor() || (isAuth() && resource.data.ownerId == request.auth.uid);
+      allow create: if isTutor() && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.closesAt > request.resource.data.opensAt;
+      allow update: if isAuth() && (resource.data.ownerId == request.auth.uid || isEditor())
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.closesAt > request.resource.data.opensAt;
+      allow delete: if isAuth() && (resource.data.ownerId == request.auth.uid || isEditor());
+
+      match /content/{docId} {
+        allow read: if ownsAssignment(aid) || assignmentOpen(aid, 0);
+        // Written together with the assignment (batch), so the parent may not exist yet.
+        allow create: if isTutor()
+          && getAfter(/databases/$(database)/documents/testAssignments/$(aid)).data.ownerId == request.auth.uid;
+        allow delete: if ownsAssignment(aid);
+      }
+
+      match /attempts/{attemptId} {
+        allow read, delete: if ownsAssignment(aid);
+        allow create: if assignmentOpen(aid, 3)
+          && request.resource.data.firstName is string
+          && request.resource.data.firstName.size() > 0 && request.resource.data.firstName.size() <= 40
+          && request.resource.data.lastName is string
+          && request.resource.data.lastName.size() > 0 && request.resource.data.lastName.size() <= 40
+          && request.resource.data.rawScore is number
+          && (!("uid" in request.resource.data) || (isAuth() && request.resource.data.uid == request.auth.uid));
+      }
+    }
+
     // Test folders. Platform folders (no ownerId) — editors; a teacher's own folders carry ownerId.
     match /testFolders/{folderId} {
       allow get: if isEditor() || (isAuth() && resource.data.get("ownerId", "") == request.auth.uid);

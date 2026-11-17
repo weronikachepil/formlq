@@ -1103,6 +1103,20 @@
   border-color: var(--mb-accent);
   background: #fff;
 }
+/* Only the list scrolls: the tabs, search and buttons stay in view on short screens. */
+.mathboard .modal.lib-modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mathboard .modal.lib-modal > * {
+  flex: none;
+}
+.mathboard .modal.lib-modal > .lib-list {
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: none;
+}
 .mathboard .lib-list {
   display: flex;
   flex-direction: column;
@@ -1165,6 +1179,47 @@
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.mathboard .lib-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mathboard .bd .modal button.lib-folder:not(.bd-chip-btn):not(.bd-ibtn) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  box-shadow: none;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 700;
+}
+.mathboard .bd .modal button.lib-folder:not(.bd-chip-btn):not(.bd-ibtn):hover {
+  background: var(--mb-accent-soft);
+}
+.mathboard .lib-caret {
+  width: 12px;
+  opacity: 0.6;
+}
+.mathboard .lib-folder-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mathboard .lib-count {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.55;
+}
+.mathboard .lib-group .lib-item {
+  padding-left: 32px !important;
 }
 .mathboard .lib-item b {
   font-weight: 600;
