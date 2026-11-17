@@ -20,8 +20,9 @@ interface QuestionViewProps {
   index: number;
   answer: string | undefined;
   onAnswer: (questionId: string, answer: string) => void;
-  /** Photo upload on open questions (homework). */
+  /** Photo of the written solution: on open questions (homework), or on every question with `photoOnAll`. */
   allowAnswerImages?: boolean;
+  photoOnAll?: boolean;
   answerImage?: string;
   uploading?: boolean;
   onUploadImage?: (questionId: string, file: File) => void;
@@ -35,6 +36,7 @@ export function QuestionView({
   answer,
   onAnswer,
   allowAnswerImages = false,
+  photoOnAll = false,
   answerImage,
   uploading = false,
   onUploadImage,
@@ -133,15 +135,16 @@ export function QuestionView({
             placeholder="Ваша відповідь..."
             className="w-full px-4 py-3 rounded-xl border border-border/50 bg-background focus:outline-none focus:border-primary text-sm transition-colors"
           />
-          {allowAnswerImages && (
-            <AnswerPhoto
-              url={answerImage}
-              uploading={uploading}
-              onSelect={(file) => onUploadImage?.(question.id, file)}
-              onRemove={() => onRemoveImage?.(question.id)}
-            />
-          )}
         </div>
+      )}
+
+      {allowAnswerImages && (photoOnAll || question.type === "open") && (
+        <AnswerPhoto
+          url={answerImage}
+          uploading={uploading}
+          onSelect={(file) => onUploadImage?.(question.id, file)}
+          onRemove={() => onRemoveImage?.(question.id)}
+        />
       )}
     </div>
   );

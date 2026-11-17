@@ -12,6 +12,7 @@ import {
   CalendarDays,
   Presentation,
   Bug,
+  Timer,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export const TUTOR_NAV: NavLink[] = [
   // Students and their homework are one section: cabinets per student.
   { icon: Users, href: "/tutor/students", label: "Учні", also: ["/tutor/homework", "/tutor/groups"] },
   { icon: FileText, href: "/tutor/tests", label: "Мої тести", teacherOnly: true },
+  { icon: Timer, href: "/tutor/assignments", label: "Тестування" },
   { icon: CalendarDays, href: "/tutor/calendar", label: "Календар" },
   { icon: Presentation, href: "/tutor/boards", label: "Дошки" },
 ];
