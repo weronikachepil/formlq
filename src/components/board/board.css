@@ -1103,6 +1103,20 @@
   border-color: var(--mb-accent);
   background: #fff;
 }
+/* Only the list scrolls: the tabs, search and buttons stay in view on short screens. */
+.mathboard .modal.lib-modal {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mathboard .modal.lib-modal > * {
+  flex: none;
+}
+.mathboard .modal.lib-modal > .lib-list {
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: none;
+}
 .mathboard .lib-list {
   display: flex;
   flex-direction: column;

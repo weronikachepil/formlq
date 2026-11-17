@@ -102,7 +102,7 @@ export function TestLibraryDialog({ onClose }: { onClose: () => void }) {
       .join(" · ");
 
   return (
-    <Modal onClose={onClose} style={{ width: "min(620px,100%)" }}>
+    <Modal onClose={onClose} className="lib-modal" style={{ width: "min(620px,100%)" }}>
       <h2>Тест із готових</h2>
       <p className="sub" style={{ margin: "4px 0 12px" }}>
         Тест зʼявиться окремим аркушем — учні побачать його після «Запустити тест».
