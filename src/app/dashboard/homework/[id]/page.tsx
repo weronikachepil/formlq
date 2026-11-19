@@ -6,17 +6,20 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  getTest,
   saveTestResult,
   getResult,
   updateResult,
+  countMistakes,
   TestResult,
 } from "@/lib/tests";
+import { homeworkRunnerConfig } from "@/lib/homework-runner";
+import { pluralize, PLURAL } from "@/lib/format";
 import { getHomework, updateHomework, Homework } from "@/lib/tutor";
 import { uploadQuestionImage } from "@/lib/storage";
 import { useReferenceDrawer } from "@/context/ReferenceDrawerContext";
 import { formatDate } from "@/lib/format";
-import { CalendarClock, FileText } from "lucide-react";
+import Link from "next/link";
+import { CalendarClock, FileText, RotateCcw } from "lucide-react";
 import { SpinnerScreen } from "@/components/ui/spinner";
 import {
   ExamRunner,
@@ -37,6 +40,7 @@ export default function HomeworkRunnerPage() {
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [mistakes, setMistakes] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -52,49 +56,21 @@ export default function HomeworkRunnerPage() {
       }
       setHomework(hw);
 
-      // Referenced test and (if completed) the saved result are independent → fetch together.
-      const [test, res] = await Promise.all([
-        // Homework carries a copy of the test's questions; only old homework reads the test.
-        hw.source === "test" && hw.testId && !hw.questions?.length ? getTest(hw.testId).catch(() => null) : null,
+      // The questions and (if completed) the saved attempts are independent → fetch together.
+      const [cfg, res, mistakesRes] = await Promise.all([
+        homeworkRunnerConfig(hw),
         hw.status === "completed" && hw.resultId ? getResult(hw.resultId) : null,
+        hw.status === "completed" && hw.mistakesResultId
+          ? getResult(hw.mistakesResultId).catch(() => null)
+          : null,
       ]);
-
-      // Build the runner config from a referenced test or the custom snapshot.
-      let cfg: RunnerConfig;
-      if (hw.source === "test" && hw.testId && hw.questions?.length) {
-        cfg = {
-          id: hw.id,
-          title: hw.title,
-          subtitle: hw.subtitle,
-          questions: hw.questions,
-          scoreTable: hw.scoreTable ?? [],
-          scaleType: hw.scaleType ?? "nmt",
-          durationMinutes: hw.durationMinutes ?? 150,
-        };
-      } else if (hw.source === "test" && hw.testId) {
-        if (!test) {
-          router.replace("/dashboard/homework");
-          return;
-        }
-        cfg = {
-          id: hw.id,
-          title: hw.title,
-          subtitle: test.subtitle,
-          questions: test.questions ?? [],
-          scoreTable: test.scoreTable ?? [],
-          scaleType: test.scaleType ?? "nmt",
-          durationMinutes: test.durationMinutes ?? 150,
-        };
-      } else {
-        cfg = {
-          id: hw.id,
-          title: hw.title,
-          questions: hw.questions ?? [],
-          scoreTable: hw.scoreTable ?? [],
-          scaleType: hw.scaleType ?? "custom",
-          durationMinutes: hw.durationMinutes ?? 30,
-        };
+      if (!cfg) {
+        router.replace("/dashboard/homework");
+        return;
       }
+      // Mistakes still to fix: of the latest «Робота над помилками» attempt, else of the result.
+      const base = mistakesRes ?? res;
+      setMistakes(base ? countMistakes(base) : 0);
       setConfig(cfg);
 
       // Completed → review mode.
@@ -175,6 +151,21 @@ export default function HomeworkRunnerPage() {
         >
           <FileText size={13} /> Переглянути конспект
         </button>
+      )}
+      {completedResult && mistakes > 0 && (
+        <Link
+          href={`/dashboard/homework/${homework.id}/mistakes`}
+          className="mt-1 flex items-center gap-2 rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm hover:bg-amber-500/15 transition-colors"
+        >
+          <RotateCcw size={15} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <span className="flex-1 min-w-0">
+            <span className="font-semibold">Робота над помилками</span>
+            <span className="text-muted-foreground"> · {pluralize(mistakes, PLURAL.mistake)}</span>
+          </span>
+          <span className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-300">
+            Виправити →
+          </span>
+        </Link>
       )}
     </div>
   );

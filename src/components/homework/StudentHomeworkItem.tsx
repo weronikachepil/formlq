@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarClock, CheckCircle2, FileText, GraduationCap } from "lucide-react";
+import { ArrowRight, CalendarClock, CheckCircle2, FileText, GraduationCap, RotateCcw } from "lucide-react";
 import type { Homework } from "@/lib/tutor";
 import { formatDueCountdown } from "@/lib/homework-status";
 import { isExamFailed, maxScaledScore, type TestResult } from "@/lib/tests";
@@ -14,7 +14,7 @@ interface StudentHomeworkItemProps {
   /** Show the tutor's name (student has several tutors). */
   showTutor?: boolean;
   overdue?: boolean;
-  /** Mistakes in the attempt — shown in the «Робота над помилками» list. */
+  /** Mistakes still to fix — the «Робота над помилками» row: leads to the re-solve run. */
   mistakes?: number;
 }
 
@@ -62,7 +62,7 @@ export function StudentHomeworkItem({ hw, now, result, showTutor, overdue, mista
 
   return (
     <Link
-      href={`/dashboard/homework/${hw.id}`}
+      href={mistakes ? `/dashboard/homework/${hw.id}/mistakes` : `/dashboard/homework/${hw.id}`}
       className={cn(
         "group w-full rounded-2xl border bg-card px-4 py-3 flex items-center gap-3 transition-all",
         overdue
@@ -107,7 +107,11 @@ export function StudentHomeworkItem({ hw, now, result, showTutor, overdue, mista
         </p>
       </div>
 
-      {done ? (
+      {mistakes ? (
+        <span className="shrink-0 inline-flex items-center gap-1 h-8 px-3.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 transition-all group-hover:gap-1.5">
+          <RotateCcw size={13} /> Виправити
+        </span>
+      ) : done ? (
         result ? (
           <ScoreChip result={result} />
         ) : (

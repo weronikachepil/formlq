@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type { Homework } from "@/lib/tutor";
-import { countMistakes, type TestResult } from "@/lib/tests";
+import type { TestResult } from "@/lib/tests";
+import { remainingMistakes } from "@/lib/homework-runner";
 import { groupHomework, isHomeworkOverdue, summarizeHomework } from "@/lib/homework-status";
 import { dayKey, sameDay } from "@/lib/calendar";
 import { plural, pluralize, PLURAL } from "@/lib/format";
@@ -40,10 +41,7 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
   const multiTutor = useMemo(() => new Set(homework.map((h) => h.tutorId)).size > 1, [homework]);
   const summary = useMemo(() => summarizeHomework(homework, now), [homework, now]);
   const resultOf = (hw: Homework) => (hw.resultId ? results.get(hw.resultId) : undefined);
-  const mistakesOf = (hw: Homework) => {
-    const r = resultOf(hw);
-    return r ? countMistakes(r) : 0;
-  };
+  const mistakesOf = (hw: Homework) => remainingMistakes(hw, results);
 
   // A picked calendar day narrows the list to homework due that day (any state).
   const groups = useMemo(() => {

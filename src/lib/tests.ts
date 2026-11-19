@@ -301,6 +301,8 @@ export interface TestResult {
   tutorComments?: Record<string, string>; // questionId → tutor's note
   tutorNote?: string; // overall tutor note on the attempt
   reviewedAt?: Timestamp | null; // set when tutor has reviewed
+  /** «Робота над помилками»: the homework result whose mistakes this attempt re-solves. */
+  mistakesOf?: string;
 }
 
 export async function saveTestResult(
@@ -336,9 +338,13 @@ export async function getUserResults(userId: string): Promise<TestResult[]> {
   });
 }
 
-/** Questions answered wrong, partly or skipped in a saved attempt. */
+/** Ids of questions answered wrong, partly or skipped in a saved attempt. */
+export function mistakeIds(r: Pick<TestResult, "questions">): string[] {
+  return (r.questions ?? []).filter((q) => !q.isCorrect).map((q) => q.id);
+}
+
 export function countMistakes(r: Pick<TestResult, "questions">): number {
-  return (r.questions ?? []).filter((q) => !q.isCorrect).length;
+  return mistakeIds(r).length;
 }
 
 /** Open-answer comparison key: trimmed, "." and "," treated as the same decimal separator. */
