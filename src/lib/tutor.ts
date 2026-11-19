@@ -195,6 +195,11 @@ export interface Homework {
   status: HomeworkStatus;
   resultId?: string;
   /**
+   * Latest «Робота над помилками» attempt: only the questions still wrong, re-solved.
+   * The homework's score stays the one of `resultId`.
+   */
+  mistakesResultId?: string;
+  /**
    * Given to a whole group: every member gets their own copy; the copies share `assignId`
    * (one column of the group's results table). Absent on homework for one student.
    */
@@ -210,7 +215,7 @@ export interface Homework {
 
 export type NewHomework = Omit<
   Homework,
-  "id" | "assignedAt" | "status" | "resultId"
+  "id" | "assignedAt" | "status" | "resultId" | "mistakesResultId"
 >;
 
 export async function assignHomework(data: NewHomework): Promise<string> {

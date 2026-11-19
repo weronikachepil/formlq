@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePageHeader } from "@/context/HeaderContext";
 import { queryKeys, STALE } from "@/lib/queryKeys";
 import { countMistakes, getResult, type TestResult } from "@/lib/tests";
+import { remainingMistakes } from "@/lib/homework-runner";
 import { pluralize, PLURAL } from "@/lib/format";
 import {
   getTutorStudents,
@@ -72,8 +73,9 @@ export default function TutorStudentCabinetPage() {
   const resultIds = useMemo(
     () =>
       (homework ?? [])
-        .filter((h) => h.status === "completed" && h.resultId)
-        .map((h) => h.resultId!)
+        .filter((h) => h.status === "completed")
+        .flatMap((h) => [h.resultId, h.mistakesResultId])
+        .filter((rid): rid is string => !!rid)
         .sort(),
     [homework],
   );
@@ -117,9 +119,15 @@ export default function TutorStudentCabinetPage() {
     }
     return map;
   }, [homework, now]);
-  const mistakesOf = (hw: Homework) => {
-    const r = hw.resultId ? results?.get(hw.resultId) : undefined;
-    return r ? countMistakes(r) : 0;
+  const mistakesOf = (hw: Homework) => remainingMistakes(hw, results);
+  /** «5 помилок», or «було 5 → лишилось 2» once the student has worked on them. */
+  const mistakesLine = (hw: Homework) => {
+    const left = mistakesOf(hw);
+    const first = hw.resultId ? results?.get(hw.resultId) : undefined;
+    const was = first ? countMistakes(first) : left;
+    return hw.mistakesResultId && was !== left
+      ? `було ${was} → лишилось ${pluralize(left, PLURAL.mistake)}`
+      : pluralize(left, PLURAL.mistake);
   };
   const assign = () => router.push(`/tutor/homework/new?student=${studentId}`);
 
@@ -281,7 +289,7 @@ export default function TutorStudentCabinetPage() {
                     subtitle={
                       s.key === "mistakes" ? (
                         <span className="text-red-600 dark:text-red-400 font-medium">
-                          {pluralize(mistakesOf(hw), PLURAL.mistake)}
+                          {mistakesLine(hw)}
                         </span>
                       ) : undefined
                     }
