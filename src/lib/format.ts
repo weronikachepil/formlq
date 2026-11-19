@@ -116,4 +116,5 @@ export const PLURAL = {
   task: ["завдання", "завдання", "завдань"],
   point: ["бал", "бали", "балів"],
   student: ["учень", "учні", "учнів"],
+  mistake: ["помилка", "помилки", "помилок"],
 } as const satisfies Record<string, [string, string, string]>;

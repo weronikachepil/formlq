@@ -21,6 +21,8 @@ export const queryKeys = {
   user: (uid: string | undefined) => ["user", uid] as const,
   allTutors: ["all-tutors"] as const,
   results: (uid: string | undefined) => ["results", uid] as const,
+  /** Results of specific homework, read one by one (a tutor's view of a student). */
+  homeworkResults: (ids: string[]) => ["homework-results", ...ids] as const,
   studentHomework: (uid: string | undefined) => ["student-homework", uid] as const,
   studentTutors: (uid: string | undefined) => ["student-tutors", uid] as const,
   tutorStudents: (uid: string | undefined) => ["tutor-students", uid] as const,

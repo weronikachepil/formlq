@@ -3,7 +3,7 @@ import { ArrowRight, CalendarClock, CheckCircle2, FileText, GraduationCap } from
 import type { Homework } from "@/lib/tutor";
 import { formatDueCountdown } from "@/lib/homework-status";
 import { isExamFailed, maxScaledScore, type TestResult } from "@/lib/tests";
-import { formatDate, scoreColor, scoreColorPct } from "@/lib/format";
+import { formatDate, pluralize, PLURAL, scoreColor, scoreColorPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface StudentHomeworkItemProps {
@@ -14,6 +14,8 @@ interface StudentHomeworkItemProps {
   /** Show the tutor's name (student has several tutors). */
   showTutor?: boolean;
   overdue?: boolean;
+  /** Mistakes in the attempt — shown in the «Робота над помилками» list. */
+  mistakes?: number;
 }
 
 /** Score chip for a completed attempt: "172 НМТ" / "9 / 12". */
@@ -45,7 +47,7 @@ function ScoreChip({ result }: { result: TestResult }) {
 }
 
 /** Homework row in the student's cabinet: countdown, tutor, конспект badge, CTA or score. */
-export function StudentHomeworkItem({ hw, now, result, showTutor, overdue }: StudentHomeworkItemProps) {
+export function StudentHomeworkItem({ hw, now, result, showTutor, overdue, mistakes }: StudentHomeworkItemProps) {
   const done = hw.status === "completed";
   const due = hw.dueAt?.toMillis();
   const when = done
@@ -91,6 +93,11 @@ export function StudentHomeworkItem({ hw, now, result, showTutor, overdue }: Stu
             {done ? <CheckCircle2 size={11} /> : <CalendarClock size={11} />}
             {when}
           </span>
+          {!!mistakes && (
+            <span className="font-medium text-red-600 dark:text-red-400">
+              {pluralize(mistakes, PLURAL.mistake)}
+            </span>
+          )}
           {showTutor && hw.tutorName && (
             <span className="inline-flex items-center gap-1 min-w-0">
               <GraduationCap size={12} className="shrink-0" />
