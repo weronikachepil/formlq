@@ -336,6 +336,11 @@ export async function getUserResults(userId: string): Promise<TestResult[]> {
   });
 }
 
+/** Questions answered wrong, partly or skipped in a saved attempt. */
+export function countMistakes(r: Pick<TestResult, "questions">): number {
+  return (r.questions ?? []).filter((q) => !q.isCorrect).length;
+}
+
 /** Open-answer comparison key: trimmed, "." and "," treated as the same decimal separator. */
 export function normalizeOpenAnswer(s: string): string {
   return s.trim().replace(/\./g, ",");

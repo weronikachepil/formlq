@@ -7,7 +7,9 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ClipboardPlus, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { usePageHeader } from "@/context/HeaderContext";
-import { queryKeys } from "@/lib/queryKeys";
+import { queryKeys, STALE } from "@/lib/queryKeys";
+import { countMistakes, getResult, type TestResult } from "@/lib/tests";
+import { pluralize, PLURAL } from "@/lib/format";
 import {
   getTutorStudents,
   subscribeTutorStudentHomework,
@@ -25,16 +27,18 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/section-label";
 import { HomeworkListItem } from "@/components/homework/HomeworkListItem";
+import { ResultsProgress } from "@/components/homework/ResultsProgress";
 import {
   MiniCalendar,
   type MiniCalendarTone,
 } from "@/components/calendar/MiniCalendar";
 
-type Filter = "open" | "done" | "all";
+type Filter = "open" | "done" | "mistakes" | "all";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "open", label: "Активні" },
   { id: "done", label: "Виконані" },
+  { id: "mistakes", label: "Робота над помилками" },
   { id: "all", label: "Усі" },
 ];
 
@@ -62,6 +66,28 @@ export default function TutorStudentCabinetPage() {
     if (!user) return;
     return subscribeTutorStudentHomework(user.uid, studentId, setHomework);
   }, [user, studentId]);
+
+  // Scores of completed homework, read one by one: a tutor may read only the
+  // results of their own homework, so a query over the student's results is denied.
+  const resultIds = useMemo(
+    () =>
+      (homework ?? [])
+        .filter((h) => h.status === "completed" && h.resultId)
+        .map((h) => h.resultId!)
+        .sort(),
+    [homework],
+  );
+  const { data: results } = useQuery({
+    queryKey: queryKeys.homeworkResults(resultIds),
+    queryFn: async () => {
+      const list = await Promise.all(resultIds.map((id) => getResult(id).catch(() => null)));
+      return new Map(
+        list.filter((r): r is TestResult => !!r).map((r) => [r.id, r]),
+      );
+    },
+    enabled: resultIds.length > 0,
+    staleTime: STALE.medium,
+  });
 
   const summary = useMemo(
     () => summarizeHomework(homework ?? [], now),
@@ -91,6 +117,10 @@ export default function TutorStudentCabinetPage() {
     }
     return map;
   }, [homework, now]);
+  const mistakesOf = (hw: Homework) => {
+    const r = hw.resultId ? results?.get(hw.resultId) : undefined;
+    return r ? countMistakes(r) : 0;
+  };
   const assign = () => router.push(`/tutor/homework/new?student=${studentId}`);
 
   const sections: {
@@ -100,7 +130,13 @@ export default function TutorStudentCabinetPage() {
     overdue?: boolean;
   }[] = [];
   const effective: Filter = day ? "all" : filter;
-  if (effective !== "done") {
+  if (effective === "mistakes") {
+    sections.push({
+      key: "mistakes",
+      label: "Робота над помилками",
+      items: groups.done.filter((hw) => mistakesOf(hw) > 0),
+    });
+  } else if (effective !== "done") {
     sections.push({
       key: "overdue",
       label: "Прострочені",
@@ -109,7 +145,7 @@ export default function TutorStudentCabinetPage() {
     });
     sections.push({ key: "active", label: "Активні", items: groups.active });
   }
-  if (effective !== "open")
+  if (effective === "done" || effective === "all")
     sections.push({ key: "done", label: "Виконані", items: groups.done });
   const shown = sections.filter((s) => s.items.length);
 
@@ -140,6 +176,14 @@ export default function TutorStudentCabinetPage() {
         </div>
       </div>
 
+      {homework && results && (
+        <ResultsProgress
+          homework={homework}
+          results={results}
+          hrefOf={tutorHomeworkHref}
+        />
+      )}
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_17rem] items-start">
         <div className="space-y-5 min-w-0">
           <div className="flex items-center justify-between gap-2">
@@ -157,7 +201,7 @@ export default function TutorStudentCabinetPage() {
                 <X size={13} />
               </button>
             ) : (
-              <div className="inline-flex rounded-full bg-muted p-1">
+              <div className="inline-flex flex-wrap rounded-full bg-muted p-1">
                 {FILTERS.map((f) => (
                   <button
                     key={f.id}
@@ -197,14 +241,22 @@ export default function TutorStudentCabinetPage() {
               />
             ) : (
               <EmptyState
-                emoji={filter === "open" ? "🎉" : "📭"}
+                emoji={
+                  filter === "open" ? "🎉" : filter === "mistakes" ? "💪" : "📭"
+                }
                 title={
-                  filter === "open" ? "Усе виконано" : "Виконаних ще немає"
+                  filter === "open"
+                    ? "Усе виконано"
+                    : filter === "mistakes"
+                      ? "Помилок немає"
+                      : "Виконаних ще немає"
                 }
                 description={
                   filter === "open"
                     ? "Активних завдань немає — можна задати нове."
-                    : undefined
+                    : filter === "mistakes"
+                      ? "Тут зʼявляться виконані тести, у яких є помилки."
+                      : undefined
                 }
               />
             )
@@ -226,6 +278,13 @@ export default function TutorStudentCabinetPage() {
                     href={`/tutor/homework/${hw.id}`}
                     audience="tutor"
                     overdue={s.overdue}
+                    subtitle={
+                      s.key === "mistakes" ? (
+                        <span className="text-red-600 dark:text-red-400 font-medium">
+                          {pluralize(mistakesOf(hw), PLURAL.mistake)}
+                        </span>
+                      ) : undefined
+                    }
                   />
                 ))}
               </div>
@@ -249,6 +308,8 @@ export default function TutorStudentCabinetPage() {
     </div>
   );
 }
+
+const tutorHomeworkHref = (hw: Homework) => `/tutor/homework/${hw.id}`;
 
 function Counter({
   value,

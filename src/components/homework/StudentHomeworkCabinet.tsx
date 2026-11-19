@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import type { Homework } from "@/lib/tutor";
-import type { TestResult } from "@/lib/tests";
+import { countMistakes, type TestResult } from "@/lib/tests";
 import { groupHomework, isHomeworkOverdue, summarizeHomework } from "@/lib/homework-status";
 import { dayKey, sameDay } from "@/lib/calendar";
 import { plural, pluralize, PLURAL } from "@/lib/format";
@@ -12,12 +12,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SectionLabel } from "@/components/ui/section-label";
 import { MiniCalendar, type MiniCalendarTone } from "@/components/calendar/MiniCalendar";
 import { StudentHomeworkItem } from "./StudentHomeworkItem";
+import { ResultsProgress } from "./ResultsProgress";
 
-type Filter = "open" | "done" | "all";
+const studentHomeworkHref = (hw: Homework) => `/dashboard/homework/${hw.id}`;
+
+type Filter = "open" | "done" | "mistakes" | "all";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "open", label: "До виконання" },
   { id: "done", label: "Виконані" },
+  { id: "mistakes", label: "Робота над помилками" },
   { id: "all", label: "Усі" },
 ];
 
@@ -36,6 +40,10 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
   const multiTutor = useMemo(() => new Set(homework.map((h) => h.tutorId)).size > 1, [homework]);
   const summary = useMemo(() => summarizeHomework(homework, now), [homework, now]);
   const resultOf = (hw: Homework) => (hw.resultId ? results.get(hw.resultId) : undefined);
+  const mistakesOf = (hw: Homework) => {
+    const r = resultOf(hw);
+    return r ? countMistakes(r) : 0;
+  };
 
   // A picked calendar day narrows the list to homework due that day (any state).
   const groups = useMemo(() => {
@@ -65,11 +73,17 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
 
   const sections: { key: string; label: string; items: Homework[]; overdue?: boolean }[] = [];
   const effective: Filter = day ? "all" : filter;
-  if (effective !== "done") {
+  if (effective === "mistakes") {
+    sections.push({
+      key: "mistakes",
+      label: "Робота над помилками",
+      items: groups.done.filter((hw) => mistakesOf(hw) > 0),
+    });
+  } else if (effective !== "done") {
     sections.push({ key: "overdue", label: "Прострочені", items: groups.overdue, overdue: true });
     sections.push({ key: "active", label: "До виконання", items: groups.active });
   }
-  if (effective !== "open") sections.push({ key: "done", label: "Виконані", items: groups.done });
+  if (effective === "done" || effective === "all") sections.push({ key: "done", label: "Виконані", items: groups.done });
   const shown = sections.filter((s) => s.items.length);
 
   const pending = summary.active + summary.overdue;
@@ -119,6 +133,8 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
         </div>
       </div>
 
+      <ResultsProgress homework={homework} results={results} hrefOf={studentHomeworkHref} />
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_17rem] items-start">
         <div className="space-y-5 min-w-0">
           {day ? (
@@ -131,7 +147,7 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
               <X size={13} />
             </button>
           ) : (
-            <div className="inline-flex rounded-full bg-muted p-1">
+            <div className="inline-flex flex-wrap rounded-full bg-muted p-1">
               {FILTERS.map((f) => (
                 <button
                   key={f.id}
@@ -158,9 +174,21 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
               />
             ) : (
               <EmptyState
-                emoji={filter === "open" ? "🎉" : "📭"}
-                title={filter === "open" ? "Усе виконано" : "Виконаних ще немає"}
-                description={filter === "open" ? "Нових завдань поки немає — гарна робота!" : undefined}
+                emoji={filter === "open" ? "🎉" : filter === "mistakes" ? "💪" : "📭"}
+                title={
+                  filter === "open"
+                    ? "Усе виконано"
+                    : filter === "mistakes"
+                      ? "Помилок немає"
+                      : "Виконаних ще немає"
+                }
+                description={
+                  filter === "open"
+                    ? "Нових завдань поки немає — гарна робота!"
+                    : filter === "mistakes"
+                      ? "Тут зʼявляться виконані тести, у яких є помилки."
+                      : undefined
+                }
               />
             )
           ) : (
@@ -177,6 +205,7 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
                     result={resultOf(hw)}
                     showTutor={multiTutor}
                     overdue={s.overdue}
+                    mistakes={s.key === "mistakes" ? mistakesOf(hw) : undefined}
                   />
                 ))}
               </div>
