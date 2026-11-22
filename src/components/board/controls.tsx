@@ -4,6 +4,10 @@
 import { useState, type ReactNode } from "react";
 import { Icon } from "./icons";
 
+/**
+ * Menu row: icon + title only. `desc` is a desktop tooltip — menus stay short (Krug: halve the
+ * words); how to use a tool is told when it is picked (see ToolMenus `howTo`).
+ */
 export function MenuItem({
   icon,
   title,
@@ -20,19 +24,37 @@ export function MenuItem({
   onClick: () => void;
 }) {
   return (
-    <button className={"bd-item" + (active ? " on" : "")} title={tip} onClick={onClick}>
+    <button className={"bd-item" + (active ? " on" : "")} title={tip ?? desc} onClick={onClick}>
       <span className="bd-item-ic">{typeof icon === "string" ? <Icon name={icon} size={20} /> : icon}</span>
       <span className="bd-item-tx">
         <b>{title}</b>
-        {desc && <small>{desc}</small>}
       </span>
     </button>
   );
 }
 
-export function ToolBtn({ name, title, active, onClick }: { name: string; title: string; active: boolean; onClick: () => void }) {
+/** Tool button; `open` (defined) marks one that opens a drop-down and says whether it is open. */
+export function ToolBtn({
+  name,
+  title,
+  active,
+  open,
+  onClick,
+}: {
+  name: string;
+  title: string;
+  active: boolean;
+  open?: boolean;
+  onClick: () => void;
+}) {
   return (
-    <button className={"bd-btn" + (active ? " on" : "")} title={title} onClick={onClick}>
+    <button
+      className={"bd-btn" + (active ? " on" : "")}
+      title={title}
+      aria-label={title}
+      {...(open === undefined ? { "aria-pressed": active } : { "aria-haspopup": "menu" as const, "aria-expanded": open })}
+      onClick={onClick}
+    >
       <Icon name={name} />
     </button>
   );
@@ -42,17 +64,32 @@ export function IconBtn({
   name,
   title,
   active,
+  toggle,
+  menu,
   disabled,
   onClick,
 }: {
   name: string;
   title: string;
   active?: boolean;
+  /** An on/off switch: exposes `active` as aria-pressed. */
+  toggle?: boolean;
+  /** Opens a drop-down: exposes `active` as aria-expanded. */
+  menu?: boolean;
   disabled?: boolean;
   onClick: () => void;
 }) {
   return (
-    <button className={"bd-ibtn" + (active ? " on" : "")} title={title} disabled={disabled} onClick={onClick}>
+    <button
+      className={"bd-ibtn" + (active ? " on" : "")}
+      title={title}
+      aria-label={title}
+      aria-pressed={toggle ? !!active : undefined}
+      aria-haspopup={menu ? "menu" : undefined}
+      aria-expanded={menu ? !!active : undefined}
+      disabled={disabled}
+      onClick={onClick}
+    >
       <Icon name={name} size={19} />
     </button>
   );
@@ -80,6 +117,7 @@ export function Chip({
     <button
       className={"bd-chip-btn" + (on ? " on" : "") + (className ? " " + className : "")}
       title={title}
+      aria-pressed={on === undefined ? undefined : on}
       disabled={disabled}
       style={style}
       onClick={onClick}
@@ -166,5 +204,38 @@ export function DraftField({
         if (e.key === "Enter") e.currentTarget.blur();
       }}
     />
+  );
+}
+
+/** The open tab of a tabbed menu, remembered per menu (falls back quietly without storage). */
+export function useMenuTab<T extends string>(key: string, tabs: [T, string][], def: T): [T, (t: T) => void] {
+  const [tab, setTab] = useState<T>(() => {
+    try {
+      const t = localStorage.getItem(key) as T | null;
+      return t && tabs.some(([id]) => id === t) ? t : def;
+    } catch {
+      return def;
+    }
+  });
+  const pick = (t: T) => {
+    setTab(t);
+    try {
+      localStorage.setItem(key, t);
+    } catch {}
+  };
+  // a remembered tab may be hidden now (e.g. «Тест» for a student)
+  return [tabs.some(([id]) => id === tab) ? tab : def, pick];
+}
+
+export function MenuTabs<T extends string>({ label, tabs, tab, onPick }: { label: string; tabs: [T, string][]; tab: T; onPick: (t: T) => void }) {
+  if (tabs.length < 2) return null;
+  return (
+    <div className="bd-tabs" role="tablist" aria-label={label}>
+      {tabs.map(([id, name]) => (
+        <button key={id} role="tab" aria-selected={tab === id} className={"bd-tab" + (tab === id ? " on" : "")} onClick={() => onPick(id)}>
+          {name}
+        </button>
+      ))}
+    </div>
   );
 }

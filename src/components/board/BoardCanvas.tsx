@@ -50,10 +50,13 @@ export function BoardCanvas({ boardId, user, isOwner, createSync }: BoardCanvasP
 
   useInstantTips(hostRef);
 
+  // In dev, an edit of the engine hot-swaps this module with a new MathBoard class: listing it
+  // as a dependency rebuilds the board, instead of the old instance living on under new buttons.
+  const Engine = MathBoard;
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    const b = new MathBoard(stage, {
+    const b = new Engine(stage, {
       createSync: createSync ?? createBoardSync(boardId, { uid, name, color }),
       userName: name,
       color,
@@ -72,10 +75,22 @@ export function BoardCanvas({ boardId, user, isOwner, createSync }: BoardCanvasP
       b.destroy();
       clearTimeout(noticeTimer.current);
     };
-  }, [boardId, uid, name, color, isOwner, createSync]);
+  }, [boardId, uid, name, color, isOwner, createSync, Engine]);
 
   const tool = st?.tool ?? "";
   const menu = menuState && menuState.tool === tool ? menuState.id : null;
+
+  // Esc closes an open tool menu first (before the board's own Esc clears the selection / tool).
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      e.stopImmediatePropagation();
+      setMenuState(null);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [menu]);
 
   const mc = useMemo<MenuControl>(
     () => ({

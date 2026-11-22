@@ -547,7 +547,7 @@ function buildMarks(o: SolidObject, F: Frame, model: PolyModel | null, faceVis: 
     if (m.h) out.push({ a: O1, b: O, vis: false, label: nm(o, "h", "h"), dots: [{ p: O, label: nm(o, "O", "O") }, { p: O1, label: nm(o, "O1", "O₁") }] });
     if (m.r) {
       const A = rimPoint(F, top, 1);
-      out.push({ a: O1, b: A, vis: dy > 0, label: nm(o, "r", "r"), dots: [{ p: O1, label: dy > 0 || !m.h ? nm(o, "O1", "O₁") : "" }] });
+      out.push({ a: O1, b: A, vis: dy > 0, label: nm(o, "r", "r"), dots: [{ p: O1, label: m.h || o.labs ? "" : nm(o, "O1", "O₁") }] }); // else already named by h / the axis
     }
   } else if (k === "cone") {
     const top = o.hr ? o.hr / 2 : 0.9;
@@ -555,7 +555,7 @@ function buildMarks(o: SolidObject, F: Frame, model: PolyModel | null, faceVis: 
     const A = rimPoint(F, -top, 1);
     if (m.h) out.push({ a: S, b: O, vis: false, label: nm(o, "h", "h"), dots: [{ p: O, label: nm(o, "O", "O") }], foot: { O, M: A, S, right: !!m.r } });
     if (m.l) out.push({ a: S, b: A, vis: true, label: nm(o, "l", "l") });
-    if (m.r) out.push({ a: O, b: A, vis: dy < 0, label: nm(o, "r", "r"), dots: [{ p: O, label: m.h ? "" : nm(o, "O", "O") }] });
+    if (m.r) out.push({ a: O, b: A, vis: dy < 0, label: nm(o, "r", "r"), dots: [{ p: O, label: m.h || o.labs ? "" : nm(o, "O", "O") }] }); // else already named by h / the axis
   } else if (k === "sphere") {
     if (m.r) {
       const A = rimPoint(F, 0, 1);

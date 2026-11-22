@@ -1,7 +1,7 @@
 import type { SourceKind } from "./constants";
 
 /** Drop-down menus of the toolbar and the top-right bar (one open at a time). */
-export type MenuId = "shapes" | "graph" | "solid" | "instr" | "arith" | "tmpl" | "lesson" | "export" | "peers";
+export type MenuId = "insert" | "shapes" | "instr" | "lesson" | "export" | "peers";
 
 /** Board dialogs opened from the UI (engine-driven dialogs come from the state instead). */
 export type DialogRequest =

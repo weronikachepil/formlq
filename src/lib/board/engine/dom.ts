@@ -4,7 +4,9 @@ import type { MathfieldElement } from "mathlive";
 import { graphParams } from "./graph";
 import { buildQuizHtml } from "./quiz";
 import type { MathBoard } from "./board";
-import type { BoardObject, Camera, FormulaObject, GraphObject, Op, QuizObject } from "./types";
+import type { BoardObject, Camera, FormulaObject, GraphObject, Op, QuizObject, TextObject } from "./types";
+import { hasMath, mathTextCss, mathTextHtml } from "./katexText";
+import { fontCss } from "./shapes";
 
 type MathliveModule = typeof import("mathlive");
 
@@ -114,6 +116,9 @@ export class DomLayer {
         seen.add(o.id);
       } else if (o.type === "quiz") {
         if (this.ready) { this.syncQuiz(o); seen.add(o.id); }
+      } else if (o.type === "text" && hasMath(o.text)) {
+        this.syncMathText(o);
+        seen.add(o.id);
       }
     }
     for (const [id, n] of this.nodes) {
@@ -224,6 +229,25 @@ export class DomLayer {
     }
   }
 
+  // ---------- text with KaTeX maths ----------
+  syncMathText(o: TextObject): void {
+    let n = this.nodes.get(o.id);
+    if (!n) {
+      const el = document.createElement("div");
+      el.className = "mb-mtext";
+      this.el.append(el);
+      n = { el, obj: null };
+      this.nodes.set(o.id, n);
+    }
+    // the text being edited is shown by its textarea
+    n.el.style.display = this.board.editing?.id === o.id ? "none" : "";
+    if (n.obj === o) return;
+    n.obj = o;
+    n.el.style.cssText = `left:${o.x}px;top:${o.y}px;transform-origin:50% 50%;${o.rot ? `transform:rotate(${o.rot}rad);` : ""}`
+      + mathTextCss(fontCss(o, o.fs), o.c || "#1d1b2e") + (n.el.style.display ? "display:none;" : "");
+    n.el.innerHTML = mathTextHtml(o.text);
+  }
+
   // ---------- formula ----------
   syncFormula(o: FormulaObject): void {
     let n = this.nodes.get(o.id);
@@ -279,6 +303,8 @@ export class DomLayer {
   blurFormula(id: string): void {
     const n = this.nodes.get(id);
     if (!n?.mf) return;
+    // drop the caret / selection: a read-only field keeps showing it as a highlighted group
+    try { n.mf.executeCommand?.("moveToMathfieldEnd"); } catch {}
     n.mf.readOnly = true;
     n.mf.setAttribute("read-only", "");
     n.mf.mathVirtualKeyboardPolicy = "manual";

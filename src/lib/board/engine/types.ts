@@ -117,6 +117,8 @@ export interface StrokeObject extends BaseObject {
   s: number;
   /** Highlighter stroke (translucent, multiply blend). */
   hl?: boolean;
+  /** Stylus pressure per point, 0…1 (pen with pressure): the line is wider where pressed harder. */
+  w?: number[];
 }
 
 export interface LineObject extends BaseObject {
@@ -533,6 +535,12 @@ export interface PageObject extends BaseObject {
   perStudent?: boolean;
   /** Template page id this personal copy was made from. */
   from?: string;
+  /**
+   * Paper mode (as a notebook page): a sheet of fixed width whose top-left corner is here; `n`
+   * A4 sheets added with «+ Сторінка», and more grow on their own as content reaches the bottom.
+   * null / absent — the endless board.
+   */
+  paper?: { x: number; y: number; n?: number } | null;
 }
 
 /** Page summary as returned by MathBoard.pages(). */
@@ -545,6 +553,8 @@ export interface PageSummary {
   closed?: boolean;
   perStudent?: boolean;
   from?: string;
+  /** Paper mode is on for this page. */
+  paper?: boolean;
 }
 
 // ====================== classroom ======================
@@ -864,6 +874,16 @@ export interface LaserPoint {
   t: number;
 }
 
+/**
+ * One laser stroke, as in note apps: it stays whole while the pen is down and fades out
+ * as a whole once it is lifted.
+ */
+export interface LaserStroke {
+  pts: LaserPoint[];
+  /** performance.now() when the pen was lifted; null while it is still down. */
+  end: number | null;
+}
+
 /** Remote participant, as stored in MathBoard.peers (keyed by connection id). */
 export interface Peer {
   name: string;
@@ -878,7 +898,7 @@ export interface Peer {
   y: number;
   /** performance.now() of the last cursor update; 0 = never. */
   t: number;
-  laser?: LaserPoint[];
+  laser?: LaserStroke[];
 }
 
 export type GridMode = "squares" | "dots" | "none";
@@ -892,6 +912,14 @@ export interface BoardPrefs {
   keep: boolean;
   /** Recognise hand-drawn shapes. */
   recognize: boolean;
+  /** Only the stylus draws; a finger pans the board. Switched on by the first stylus touch. */
+  stylusOnly: boolean;
+  /** Eraser radius on screen, px. */
+  eraser: number;
+  /** The pen follows stylus pressure (wider when pressed harder). */
+  pressure: boolean;
+  /** The eraser removes only the part of a stroke it passes over (else whole strokes). */
+  eraseParts: boolean;
 }
 
 /** MathBoard.style: current drawing style for new objects. */

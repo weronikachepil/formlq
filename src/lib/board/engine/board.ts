@@ -34,6 +34,7 @@ import type {
   GraphObject,
   ImageObject,
   LaserPoint,
+  LaserStroke,
   NumlineInterval,
   ObjectDraft,
   ObjectType,
@@ -72,6 +73,11 @@ import type {
 
 export const CELL = 40;
 const MIN_Z = 0.04;
+/** Paper mode: sheet width and the height of one A4 sheet (board units; 20 × 28 cells). */
+export const PAPER_W = 800;
+export const PAPER_H = 1120;
+/** Paper mode grid cell: half the board's, like a 5 mm notebook square (40 across the sheet). */
+export const PAPER_CELL = CELL / 2;
 const MAX_Z = 12;
 const PREF_KEY = "mathboard_prefs";
 const OWNER_ONLY = new Set<ObjectType>(["stamp", "task", "poll", "timer", "quiz"]);
@@ -353,6 +359,14 @@ const NET_EVERY_MS = 40;
 const PRESS_GRAB = 0.7;
 const PRESS_GRAB_MS = 500;
 const PRESS_GRAB_SLOP = 10;
+/** Two/three-finger tap (undo / redo, as in note apps): fingers land within this time (ms)… */
+const TWO_TAP_MS = 300;
+/** …and lift within this time after the last one landed… */
+const TAP_LIFT_MS = 350;
+/** …and move no more than this (px), otherwise it is a pinch/pan. */
+const TWO_TAP_SLOP = 12;
+/** Freehand ink: in stylus-only mode (and right after the stylus) a finger pans instead. */
+const INK_TOOLS = new Set(["pen", "highlighter", "eraser"]);
 /** Tools where a press means something else (selecting, panning, typing, placing). */
 const NO_PRESS_GRAB = new Set(["select", "hand", "laser", "eraser", "text", "formula", "comment", "stamp", "compass"]);
 const HEAVY_CHARS = 60_000;
@@ -393,7 +407,7 @@ export class MathBoard {
   sel = new Set<string>();
   tool = "select";
   style: DrawStyle = { c: "#1d1b2e", s: 4, f: null, dash: false, fs: 28, mfs: 36, ff: "comfortaa", b: false, i: false, hc: "#ffd43b", hs: 24 };
-  prefs: BoardPrefs = { grid: "squares", snap: false, keep: false, recognize: true, ...loadPrefs() };
+  prefs: BoardPrefs = { grid: "squares", snap: false, keep: false, recognize: true, stylusOnly: false, eraser: 10, pressure: true, eraseParts: true, ...loadPrefs() };
   baseCanEdit: boolean;
   uid: string;
   protect = true;
@@ -401,7 +415,9 @@ export class MathBoard {
   isOwner: boolean;
   status: SyncStatus = "connecting";
   peers = new Map<string, Peer>();
-  pointers = new Map<number, { x: number; y: number; type: string }>();
+  pointers = new Map<number, { x: number; y: number; type: string; t: number; sx: number; sy: number }>();
+  /** A two/three-finger touch that may still turn out to be a tap: n = fingers (2 undo, 3 redo). */
+  twoTap: { t: number; n: number } | null = null;
   editing: EditingState | null = null;
   inter: string | null = null;
   interDrag: InterDrag | null = null;
@@ -425,6 +441,8 @@ export class MathBoard {
   pasteN = 0;
   lastDown: { t: number; x: number; y: number } | null = null;
   lastPen = 0;
+  /** The stylus-only pref was already set or left as is in this session (the user may turn it off). */
+  stylusAsked = false;
   lastCursorSent = 0;
   placed = false;
   dirty = true;
@@ -437,7 +455,7 @@ export class MathBoard {
   follow = false;
   followCid: string | null = null;
   teacherView: ViewRect | null = null;
-  laser: { pts: LaserPoint[]; down: boolean } = { pts: [], down: false };
+  laser: LaserStroke[] = [];
   laserHeld = false;
   lastLaser = 0;
   penEraser = false;
@@ -569,7 +587,7 @@ export class MathBoard {
         const pr = this.peers.get(m.cid);
         if (!pr) return;
         pr.laser = pr.laser || [];
-        if (m.d) pr.laser.push({ x: m.x, y: m.y, t: performance.now() });
+        addLaserPoint(pr.laser, m.x, m.y, !!m.d);
         this.requestRender();
       },
     });
@@ -718,7 +736,7 @@ export class MathBoard {
   // ---------- camera ----------
   zoomAt(sx: number, sy: number, factor: number): void {
     const c = this.cam;
-    const z1 = clamp(c.z * factor, MIN_Z, MAX_Z);
+    const z1 = clamp(c.z * factor, this.minZoom(), MAX_Z);
     const wx = c.x + sx / c.z;
     const wy = c.y + sy / c.z;
     c.z = z1;
@@ -1301,7 +1319,7 @@ export class MathBoard {
     this._pagesV = this.store.version;
     const list: PageSummary[] = this.store.all()
       .filter((o) => o.type === "page")
-      .map((o) => ({ id: o.id, name: o.name, for: o.for, priv: o.priv, test: o.test, closed: o.closed, perStudent: o.perStudent, from: o.from }));
+      .map((o) => ({ id: o.id, name: o.name ?? (o.id === "p1" ? "Аркуш 1" : undefined), for: o.for, priv: o.priv, test: o.test, closed: o.closed, perStudent: o.perStudent, from: o.from, paper: !!o.paper }));
     if (!list.some((p) => p.id === "p1")) list.unshift({ id: "p1", name: "Аркуш 1" });
     this._pagesList = list;
     return list;
@@ -1323,6 +1341,7 @@ export class MathBoard {
     this.secPick = null;
     const saved = this.pageCams[id];
     if (saved && !fromView) this.cam = { ...saved };
+    else if (!fromView && this.paperRect()) { this.fitPaper(); return void (this.domDirty = true); }
     else if (!fromView) { this.cam.x = -this.W / 2 / this.cam.z; this.cam.y = -this.H / 2 / this.cam.z; }
     this.domDirty = true;
     this.requestRender();
@@ -1332,10 +1351,102 @@ export class MathBoard {
   addPage(): void {
     if (!this.canEdit) return;
     const o: PageObject = { id: "pg_" + uid(), type: "page", name: `Аркуш ${this.pages().length + 1}`, z: this.store.topZ() + 1 };
+    // A new sheet in a notebook is paper too.
+    if (this.getPage(this.page)?.paper) o.paper = { x: 0, y: 0 };
     const t = this.tx();
     t.set(o.id, o);
     t.done();
     this.setPage(o.id);
+    if (o.paper) this.fitPaper();
+  }
+
+  // ---------- paper mode ----------
+  private _paperKey = "";
+  private _paperRect: Bounds | null = null;
+
+  /** The current page's sheet (board units), or null on the endless board. */
+  paperRect(): Bounds | null {
+    const key = this.page + ":" + this.store.version;
+    if (key === this._paperKey) return this._paperRect;
+    this._paperKey = key;
+    const pp = this.getPage(this.page)?.paper;
+    if (!pp) return (this._paperRect = null);
+    // whole A4 sheets down to the lowest object, plus room to keep writing
+    let bottom = pp.y + PAPER_H;
+    for (const o of this.objs()) {
+      const b = defOf(o).bounds(o);
+      bottom = Math.max(bottom, b.y + b.h + PAPER_H * 0.3);
+    }
+    const n = Math.max(pp.n || 1, Math.ceil((bottom - pp.y) / PAPER_H));
+    return (this._paperRect = { x: pp.x, y: pp.y, w: PAPER_W, h: n * PAPER_H });
+  }
+
+  /** «+ Сторінка» under the sheet (screen px), set while drawing the paper; null when not shown. */
+  private addSheetBtn: { x: number; y: number; w: number; h: number } | null = null;
+
+  /** Paper mode: one more A4 sheet at the bottom, and the view goes to it. */
+  addSheet(): void {
+    const r = this.paperRect();
+    const pg = this.getPage(this.page);
+    if (!r || !pg?.paper || !this.canEdit || !this.isOwner) return;
+    const n = Math.round(r.h / PAPER_H) + 1;
+    const t = this.tx();
+    t.set(pg.id, { ...pg, paper: { ...pg.paper, n } });
+    t.done();
+    this.cam.y = r.y + (n - 1) * PAPER_H - 40 / this.cam.z;
+    this.requestRender();
+    this.emit();
+  }
+
+  /** Turns paper mode on / off for the current page (the sheet is placed over what is already there). */
+  setPaper(on: boolean): void {
+    if (!this.canEdit || !this.isOwner) return;
+    const cur: PageObject = this.getPage(this.page) || { id: this.page, type: "page", name: "Аркуш 1", z: -1e9 };
+    let paper: PageObject["paper"] = null;
+    if (on) {
+      const all = this.objs();
+      const b = all.length ? unionBounds(all.map((o) => defOf(o).bounds(o))) : null;
+      // on the grid, so the sheet's edges fall on cell lines
+      const snap = (v: number) => Math.round(v / CELL) * CELL;
+      paper = b
+        ? { x: snap(b.x + b.w / 2 - PAPER_W / 2), y: snap(b.y - CELL) }
+        : { x: snap(this.cam.x + (this.W / this.cam.z - PAPER_W) / 2), y: snap(this.cam.y + CELL / this.cam.z) };
+    }
+    const t = this.tx();
+    t.set(this.page, { ...cur, paper });
+    t.done();
+    if (on) this.fitPaper();
+    else { this.requestRender(); this.emit(); }
+  }
+
+  /** Smallest zoom: on paper, the sheet never shrinks below about a third of the screen width. */
+  minZoom(): number {
+    return this.paperRect() ? Math.min(1, (this.W * 0.3) / PAPER_W) : MIN_Z;
+  }
+
+  /** Paper mode: zoom to the sheet's width (clear of the side panels) and go to its top. */
+  fitPaper(): void {
+    const r = this.paperRect();
+    if (!r) return;
+    const pad = this.W > 900 ? 96 : 16;
+    const z = clamp((this.W - pad * 2) / r.w, this.minZoom(), 1.5);
+    this.cam.z = z;
+    this.cam.x = r.x + r.w / 2 - this.W / 2 / z;
+    this.cam.y = r.y - pad / z;
+    this.requestRender();
+    this.emit();
+  }
+
+  /** Paper mode: the view never drifts off the sheet (centred when it is narrower than the screen). */
+  private clampToPaper(): void {
+    const r = this.paperRect();
+    if (!r) return;
+    const { cam, W, H } = this;
+    const vw = W / cam.z, vh = H / cam.z, m = 40 / cam.z;
+    // below the sheet: room for «+ Сторінка» and the bottom panels
+    const mb = (this.isOwner && this.canEdit ? 150 : 90) / cam.z;
+    cam.x = r.w + 2 * m <= vw ? r.x + r.w / 2 - vw / 2 : clamp(cam.x, r.x - m, r.x + r.w + m - vw);
+    cam.y = r.h + m + mb <= vh ? clamp(cam.y, r.y + r.h + mb - vh, r.y - m) : clamp(cam.y, r.y - m, r.y + r.h + mb - vh);
   }
 
   renamePage(id: string, name: string): void {
@@ -1462,14 +1573,13 @@ export class MathBoard {
 
   // ---------- laser pointer ----------
   laserPoint(p: Point, down: boolean): void {
-    const now = performance.now();
-    if (down) this.laser.pts.push({ x: p[0], y: p[1], t: now });
-    this.laser.down = down;
+    addLaserPoint(this.laser, p[0], p[1], down);
     this.sync?.sendLaser(p[0], p[1], down);
     this.requestRender();
   }
 
   zoomToFit(): void {
+    if (this.paperRect()) return this.fitPaper();
     const all = this.objs();
     const b = all.length ? unionBounds(all.map((o) => defOf(o).bounds(o))) : null;
     if (!b) { this.cam.z = 1; this.cam.x = -this.W / 2; this.cam.y = -this.H / 2; this.requestRender(); this.emit(); return; }
@@ -1891,7 +2001,12 @@ export class MathBoard {
     const t = this.tx();
     const fs = this.style.mfs;
     const k = fs / 36;
-    const o: BoardObject = { type: "formula", id: uid(), z: this.store.topZ() + 1, x: round(p[0]), y: round(p[1] - 24 * k), w: round(90 * k), h: round(56 * k), fs, latex: "", c: this.style.c };
+    // on the current page, with its author (without pg a formula landed on «Аркуш 1» and
+    // vanished from any other page, so the editor never opened)
+    const o: BoardObject = {
+      type: "formula", id: uid(), z: this.store.topZ() + 1, pg: this.page, by: this.by(),
+      x: round(p[0]), y: round(p[1] - 24 * k), w: round(90 * k), h: round(56 * k), fs, latex: "", c: this.style.c,
+    };
     t.set(o.id, o);
     this.liveTx = t;
     this.setTool("select");
@@ -1937,6 +2052,7 @@ export class MathBoard {
     ta.addEventListener("blur", () => this.stopEditing());
     this.root.append(ta);
     this.editing = { kind: "text", id: o?.id || null, at: pos, ta, fs, color, ts };
+    this.domDirty = true; // a text with maths is a DOM element: hide it under the textarea
     this.requestRender();
     autosize();
     ta.focus();
@@ -1977,6 +2093,7 @@ export class MathBoard {
     const ed = this.editing;
     if (!ed) return;
     this.editing = null;
+    this.domDirty = true;
     if (ed.kind === "text") {
       const text = ed.ta.value.replace(/\s+$/, "");
       ed.ta.remove();
@@ -2350,6 +2467,36 @@ export class MathBoard {
     input.click();
   }
 
+  /**
+   * Paste from a button (iPad has no Ctrl+V): a copied screenshot/image from the system
+   * clipboard, else the board's own copied objects. Must run inside the tap's handler —
+   * Safari only lets clipboard.read() through on a user gesture (it shows a «Вставити» bubble).
+   */
+  async pasteClipboard(): Promise<void> {
+    if (!this.canEdit) return;
+    let items: ClipboardItem[];
+    try {
+      if (!navigator.clipboard?.read) throw new Error("unsupported");
+      items = await navigator.clipboard.read();
+    } catch {
+      if (this.clip.length) return this.paste();
+      this.opts.onNotice?.("Браузер не дав доступу до буфера. Спробуйте Ctrl+V / ⌘V");
+      return;
+    }
+    for (const item of items) {
+      const type = item.types.find((t) => t.startsWith("image/"));
+      if (!type) continue;
+      try {
+        await this.insertImage(await item.getType(type));
+      } catch {
+        this.opts.onNotice?.("Не вдалося вставити зображення");
+      }
+      return;
+    }
+    if (this.clip.length) return this.paste();
+    this.opts.onNotice?.("У буфері немає зображення — спершу скопіюйте скріншот");
+  }
+
   onPaste(e: ClipboardEvent): void {
     if (closestOf(e.target, EDITABLE) || !this.root.isConnected || !this.canEdit) return;
     const items = [...(e.clipboardData?.items || [])];
@@ -2528,10 +2675,28 @@ export class MathBoard {
     const ae = document.activeElement;
     if (ae && ae !== document.body && !this.root.contains(ae) && "blur" in ae && typeof ae.blur === "function") ae.blur();
     const now = performance.now();
-    if (e.pointerType === "pen") this.lastPen = now;
-    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
+    if (e.pointerType === "pen") {
+      this.lastPen = now;
+      // A stylus is in use on this device: from now on a finger pans instead of drawing
+      // (remembered; can be turned off in the bottom bar).
+      if (!this.prefs.stylusOnly && !this.stylusAsked) this.setPrefs({ stylusOnly: true });
+      this.stylusAsked = true;
+    }
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType, t: now, sx: e.clientX, sy: e.clientY });
 
+    // A third finger joining quickly turns a two-finger tap into a three-finger one (redo).
+    if (this.pointers.size === 3 && this.twoTap?.n === 2 && e.pointerType === "touch" && now - this.twoTap.t < TWO_TAP_MS) {
+      this.twoTap = { t: now, n: 3 };
+    } else if (this.pointers.size > 2) this.twoTap = null;
     if (this.pointers.size === 2) {
+      // Two fingers landing together may be a tap — undo, as in GoodNotes / Notability (Apple
+      // Pencil's double-tap isn't exposed to the web). Decided on lift-off: any movement or a
+      // long hold makes it a pinch.
+      const pts = [...this.pointers.values()];
+      this.twoTap =
+        this.canEdit && pts.every((q) => q.type === "touch") && now - Math.min(...pts.map((q) => q.t)) < TWO_TAP_MS
+          ? { t: now, n: 2 }
+          : null;
       if (this.followLocked()) return;
       this.cancelTool();
       this.endInterDrag();
@@ -2540,11 +2705,26 @@ export class MathBoard {
     }
     if (this.pointers.size > 2) return;
 
+    // paper mode: «+ Сторінка» under the sheet
+    const sb = this.addSheetBtn;
+    if (sb && this.pointers.size === 1) {
+      const lx = e.clientX - this.rect.left, ly = e.clientY - this.rect.top;
+      if (lx >= sb.x && lx <= sb.x + sb.w && ly >= sb.y && ly <= sb.y + sb.h) {
+        this.pointers.delete(e.pointerId);
+        this.addSheet();
+        return;
+      }
+    }
+
     const p = this.world(e);
     const dbl = !!this.lastDown && now - this.lastDown.t < 320 && Math.hypot(e.clientX - this.lastDown.x, e.clientY - this.lastDown.y) < 8;
     this.lastDown = dbl ? null : { t: now, x: e.clientX, y: e.clientY };
 
-    const palmRejected = e.pointerType === "touch" && now - this.lastPen < 3000;
+    // With ink tools a finger pans: right after the stylus (a resting palm), or always in
+    // stylus-only mode. Other tools take a finger tap as usual — placing a formula or text,
+    // a comment, a construction point (a finger tap there used to pan, so formulas "did nothing").
+    const palmRejected =
+      e.pointerType === "touch" && INK_TOOLS.has(this.tool) && (now - this.lastPen < 3000 || this.prefs.stylusOnly);
     const viewerPan = !this.canEdit && this.tool !== "laser";
     if (e.button === 1 || this.space || this.tool === "hand" || viewerPan || palmRejected) {
       if (this.followLocked()) return;
@@ -2596,7 +2776,11 @@ export class MathBoard {
 
   onPointerMove(e: PointerEvent): void {
     const pt = this.pointers.get(e.pointerId);
-    if (pt) { pt.x = e.clientX; pt.y = e.clientY; }
+    if (pt) {
+      pt.x = e.clientX;
+      pt.y = e.clientY;
+      if (this.twoTap && Math.hypot(pt.x - pt.sx, pt.y - pt.sy) > TWO_TAP_SLOP) this.twoTap = null;
+    }
     const p = this.world(e);
     this.hover = p;
     if (this.tool === "laser" && this.laserHeld && !this.panning) {
@@ -2633,7 +2817,18 @@ export class MathBoard {
     this.pointers.delete(e.pointerId);
     try { this.root.releasePointerCapture(e.pointerId); } catch {}
     if (this.pinch) {
-      if (this.pointers.size < 2) this.pinch = null;
+      if (this.pointers.size < 2) {
+        const tap = this.twoTap && performance.now() - this.twoTap.t < TAP_LIFT_MS ? this.twoTap : null;
+        // A tap barely moves the fingers; undo that tiny zoom so the view stays put.
+        if (tap) { Object.assign(this.cam, this.pinch.cam); this.requestRender(); this.emit(); }
+        this.pinch = null;
+        this.twoTap = null;
+        if (tap?.n === 3) {
+          if (this.history.canRedo) { this.redo(); this.opts.onNotice?.("Повторено"); }
+        } else if (tap) {
+          if (this.history.canUndo) { this.undo(); this.opts.onNotice?.("Скасовано · три пальці — повторити"); }
+        }
+      }
       return;
     }
     if (this.panning) { this.panning = null; this.updateCursor(); return; }
@@ -2671,7 +2866,7 @@ export class MathBoard {
     const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
     const mx = (a.x + b.x) / 2 - this.rect.left;
     const my = (a.y + b.y) / 2 - this.rect.top;
-    const z1 = clamp(p.cam.z * (d / p.d0), MIN_Z, MAX_Z);
+    const z1 = clamp(p.cam.z * (d / p.d0), this.minZoom(), MAX_Z);
     const wx = p.cam.x + p.mx / p.cam.z;
     const wy = p.cam.y + p.my / p.cam.z;
     this.cam.z = z1;
@@ -2710,7 +2905,8 @@ export class MathBoard {
         return;
       }
     }
-    if (e.ctrlKey || isMouse) {
+    // On paper the mouse wheel scrolls the sheet like a document (Ctrl + wheel zooms).
+    if (e.ctrlKey || (isMouse && !this.paperRect())) {
       this.zoomAt(sx, sy, Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0016)));
     } else {
       this.cam.x += e.deltaX / this.cam.z;
@@ -2795,6 +2991,8 @@ export class MathBoard {
   // ---------- keyboard ----------
   onKey(e: KeyboardEvent): void {
     if (closestOf(e.target, EDITABLE)) return;
+    // A dialog is open: its buttons have focus, so Delete/letters must not reach the board behind it.
+    if (document.querySelector(".modal-back")) return;
     if (!this.root.isConnected) return;
     const mod = e.metaKey || e.ctrlKey;
     const k = e.key.toLowerCase();
@@ -2878,9 +3076,15 @@ export class MathBoard {
     if (!this.canEdit && this.tool !== "hand" && this.tool !== "laser") { this.cancelTool(); this.tool = "hand"; }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, W, H);
-    this.drawGrid(ctx);
+    const paper = this.paperRect();
+    if (paper) {
+      this.clampToPaper();
+      this.drawPaper(ctx, paper);
+    } else {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+      this.drawGrid(ctx);
+    }
 
     ctx.save();
     ctx.setTransform(dpr * z, 0, 0, dpr * z, -cam.x * z * dpr, -cam.y * z * dpr);
@@ -2949,12 +3153,66 @@ export class MathBoard {
     return true;
   }
 
+  /** Paper mode background: grey desk, white sheet with a soft shadow, grid only on the sheet, sheet breaks. */
+  drawPaper(ctx: CanvasRenderingContext2D, r: Bounds): void {
+    const { cam, W, H } = this;
+    const z = cam.z;
+    ctx.fillStyle = "#e9edf0";
+    ctx.fillRect(0, 0, W, H);
+    const sx = (r.x - cam.x) * z, sy = (r.y - cam.y) * z, sw = r.w * z, sh = r.h * z;
+    ctx.save();
+    ctx.shadowColor = "rgba(20, 38, 42, 0.16)";
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(sx, sy, sw, sh);
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(sx, sy, sw, sh);
+    ctx.clip();
+    this.drawGrid(ctx);
+    ctx.restore();
+    // where one A4 sheet ends and the next begins: a strip of the desk, as between notebook pages
+    ctx.fillStyle = "#e9edf0";
+    for (let y = r.y + PAPER_H; y < r.y + r.h - 1; y += PAPER_H) {
+      const py = Math.round((y - cam.y) * z);
+      ctx.fillRect(sx - 1, py - 5, sw + 2, 10);
+    }
+    // «+ Сторінка» under the last sheet (only the owner changes pages)
+    this.addSheetBtn = null;
+    if (this.isOwner && this.canEdit) {
+      const bw = 148, bh = 40;
+      const bx = Math.round(sx + sw / 2 - bw / 2), by = Math.round(sy + sh + 20);
+      if (by < H && by + bh > 0) {
+        this.addSheetBtn = { x: bx, y: by, w: bw, h: bh };
+        ctx.save();
+        ctx.shadowColor = "rgba(20, 38, 42, 0.12)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 2;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.roundRect(bx, by, bw, bh, 12);
+        ctx.fill();
+        ctx.restore();
+        ctx.save();
+        ctx.fillStyle = "#14262a";
+        ctx.font = `600 14px ${uiFont()}`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("+ Сторінка", bx + bw / 2, by + bh / 2 + 1);
+        ctx.restore();
+      }
+    }
+  }
+
   drawGrid(ctx: CanvasRenderingContext2D): void {
     const mode = this.prefs.grid;
     if (mode === "none") return;
     const { cam, W, H } = this;
     const z = cam.z;
-    let step = CELL * z;
+    const paper = !!this.paperRect();
+    let step = (paper ? PAPER_CELL : CELL) * z;
     while (step < 18) step *= 2;
     const ox = -cam.x * z;
     const oy = -cam.y * z;
@@ -2967,17 +3225,17 @@ export class MathBoard {
     }
     ctx.lineWidth = 1;
     for (const major of [false, true]) {
-      ctx.strokeStyle = major ? "#cfd6ec" : "#e6eaf6";
+      ctx.strokeStyle = major ? "#cfd6ec" : paper ? "#dde3f0" : "#e6eaf6";
       ctx.beginPath();
       for (let x = sx0; x < W; x += step) {
         const i = Math.round((x - ox) / step);
-        if ((i % 5 === 0) !== major) continue;
+        if ((!paper && i % 5 === 0) !== major) continue; // a notebook sheet: one even grid
         ctx.moveTo(Math.round(x) + 0.5, 0);
         ctx.lineTo(Math.round(x) + 0.5, H);
       }
       for (let y = sy0; y < H; y += step) {
         const i = Math.round((y - oy) / step);
-        if ((i % 5 === 0) !== major) continue;
+        if ((!paper && i % 5 === 0) !== major) continue; // a notebook sheet: one even grid
         ctx.moveTo(0, Math.round(y) + 0.5);
         ctx.lineTo(W, Math.round(y) + 0.5);
       }
@@ -3019,7 +3277,7 @@ export class MathBoard {
       if (!p.t || now - p.t > 15000) continue;
       drawCursor(ctx, p, z);
     }
-    let alive = drawLaser(ctx, this.laser.pts, "#ff2d2d", z, now);
+    let alive = drawLaser(ctx, this.laser, "#ff2d2d", z, now);
     for (const p of this.peers.values()) if (p.laser) alive = drawLaser(ctx, p.laser, p.color, z, now) || alive;
     ctx.restore();
     if (alive) this.requestRender();
@@ -3206,33 +3464,49 @@ function loadPrefs(): Partial<BoardPrefs> {
 }
 
 /** Laser trail; fades in about a second. Returns true while there is something to draw. */
-function drawLaser(ctx: CanvasRenderingContext2D, pts: LaserPoint[], color: string, z: number, now: number): boolean {
-  const LIFE = 1000;
-  while (pts.length && now - pts[0].t > LIFE) pts.shift();
-  if (!pts.length) return false;
+/** How long a lifted laser stroke takes to fade out, ms. */
+const LASER_FADE = 700;
+/** Longest stroke kept while the pen is held (old points drop off the start). */
+const LASER_MAX_PTS = 4000;
+
+/** Pen down: extend the open stroke (or start one); pen up: close it so it starts fading. */
+function addLaserPoint(strokes: LaserStroke[], x: number, y: number, down: boolean): void {
+  const now = performance.now();
+  let cur = strokes[strokes.length - 1];
+  if (!down) {
+    if (cur && cur.end === null) cur.end = now;
+    return;
+  }
+  if (!cur || cur.end !== null) strokes.push((cur = { pts: [], end: null }));
+  cur.pts.push({ x, y, t: now });
+  if (cur.pts.length > LASER_MAX_PTS) cur.pts.splice(0, cur.pts.length - LASER_MAX_PTS);
+}
+
+/** Laser strokes: whole while held, fading together after lift. Returns true while any is visible. */
+function drawLaser(ctx: CanvasRenderingContext2D, strokes: LaserStroke[], color: string, z: number, now: number): boolean {
+  for (let i = strokes.length - 1; i >= 0; i--) {
+    const e = strokes[i].end;
+    if (e !== null && now - e > LASER_FADE) strokes.splice(i, 1);
+  }
+  if (!strokes.length) return false;
   ctx.save();
   ctx.fillStyle = color;
-  // One filled outline per continuous run, so the trail is a smooth line that tapers to
-  // its tail, with no darker dots where pieces would overlap.
-  let run: LaserPoint[] = [pts[0]];
-  const flush = () => {
-    if (run.length > 1) fillLaserRun(ctx, smoothLaser(run), z, now, LIFE);
-  };
-  for (let i = 1; i < pts.length; i++) {
-    if (pts[i].t - pts[i - 1].t > 250) { flush(); run = []; }
-    run.push(pts[i]);
+  for (const st of strokes) {
+    if (!st.pts.length) continue;
+    const alpha = st.end === null ? 1 : Math.max(0, 1 - (now - st.end) / LASER_FADE);
+    ctx.globalAlpha = alpha;
+    if (st.pts.length > 1) fillLaserRun(ctx, smoothLaser(st.pts), z);
+    // a soft glow at the tip
+    const last = st.pts[st.pts.length - 1];
+    const g = ctx.createRadialGradient(last.x, last.y, 0, last.x, last.y, 16 / z);
+    g.addColorStop(0, color);
+    g.addColorStop(1, "rgba(255,45,45,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, 16 / z, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color;
   }
-  flush();
-  const last = pts[pts.length - 1];
-  const age = (now - last.t) / LIFE;
-  ctx.globalAlpha = Math.max(0, 1 - age);
-  const g = ctx.createRadialGradient(last.x, last.y, 0, last.x, last.y, 16 / z);
-  g.addColorStop(0, color);
-  g.addColorStop(1, "rgba(255,45,45,0)");
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(last.x, last.y, 16 / z, 0, Math.PI * 2);
-  ctx.fill();
   ctx.restore();
   return true;
 }
@@ -3256,19 +3530,17 @@ function smoothLaser(pts: LaserPoint[]): LaserPoint[] {
 }
 
 /** Fills the run as one outline whose width shrinks with each point's age; the head is rounded. */
-function fillLaserRun(ctx: CanvasRenderingContext2D, pts: LaserPoint[], z: number, now: number, life: number): void {
-  const half = (p: LaserPoint) => (3.5 / z) * Math.max(0, 1 - (now - p.t) / life);
+function fillLaserRun(ctx: CanvasRenderingContext2D, pts: LaserPoint[], z: number): void {
+  const w = 3.5 / z;
   const left: Point[] = [], right: Point[] = [];
   for (let i = 0; i < pts.length; i++) {
     const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
     let nx = -(b.y - a.y), ny = b.x - a.x;
     const l = Math.hypot(nx, ny);
     if (l) { nx /= l; ny /= l; } else { nx = 0; ny = 0; }
-    const w = half(pts[i]);
     left.push([pts[i].x + nx * w, pts[i].y + ny * w]);
     right.push([pts[i].x - nx * w, pts[i].y - ny * w]);
   }
-  ctx.globalAlpha = 1;
   ctx.beginPath();
   ctx.moveTo(left[0][0], left[0][1]);
   for (const q of left) ctx.lineTo(q[0], q[1]);
@@ -3277,7 +3549,7 @@ function fillLaserRun(ctx: CanvasRenderingContext2D, pts: LaserPoint[], z: numbe
   ctx.fill();
   const h = pts[pts.length - 1];
   ctx.beginPath();
-  ctx.arc(h.x, h.y, half(h), 0, Math.PI * 2);
+  ctx.arc(h.x, h.y, w, 0, Math.PI * 2);
   ctx.fill();
 }
 

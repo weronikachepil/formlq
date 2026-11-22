@@ -4,8 +4,9 @@ import { useEffect, type RefObject } from "react";
 
 /**
  * Instant tooltips for `.bd [title]` elements instead of the native ones (those appear after ~1 s).
- * The `title` is moved to `data-tip` on first hover; the tip element lives inside `host`
- * so the scoped board styles apply to it.
+ * The `title` is moved to `data-tip` on first hover (icon buttons keep their name in aria-label);
+ * the tip element lives inside `host` so the scoped board styles apply to it. Mouse only: on
+ * touch screens the synthetic hover after a tap would leave a tip hanging over the board.
  */
 export function useInstantTips(host: RefObject<HTMLElement | null>) {
   useEffect(() => {
@@ -17,7 +18,8 @@ export function useInstantTips(host: RefObject<HTMLElement | null>) {
     const hide = () => {
       tip.style.display = "none";
     };
-    const over = (e: MouseEvent) => {
+    const over = (e: PointerEvent) => {
+      if (e.pointerType !== "mouse") return hide();
       const target = e.target instanceof Element ? e.target : null;
       const el = target?.closest<HTMLElement>(".bd [title], .bd [data-tip]");
       if (!el || !root.contains(el)) return hide();
@@ -35,11 +37,11 @@ export function useInstantTips(host: RefObject<HTMLElement | null>) {
       tip.style.left = Math.max(6, Math.min(r.left + r.width / 2 - tw / 2, window.innerWidth - tw - 6)) + "px";
       tip.style.top = (r.bottom + 6 + tip.offsetHeight > window.innerHeight ? r.top - tip.offsetHeight - 6 : r.bottom + 6) + "px";
     };
-    document.addEventListener("mouseover", over);
-    document.addEventListener("mousedown", hide);
+    document.addEventListener("pointerover", over);
+    document.addEventListener("pointerdown", hide);
     return () => {
-      document.removeEventListener("mouseover", over);
-      document.removeEventListener("mousedown", hide);
+      document.removeEventListener("pointerover", over);
+      document.removeEventListener("pointerdown", hide);
       tip.remove();
     };
   }, [host]);

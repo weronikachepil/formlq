@@ -1,6 +1,6 @@
 "use client";
 
-import { HL_COLORS, HL_WIDTHS } from "../constants";
+import { colorName, HL_COLORS, HL_WIDTHS } from "../constants";
 import { Icon } from "../icons";
 import { useBoard } from "../useBoard";
 
@@ -22,7 +22,9 @@ export function HighlighterPanel() {
               className={"bd-sw" + (hc === c ? " on" : "")}
               style={{ background: c }}
               onClick={() => b()?.setHighlighter({ c })}
-              aria-label={c}
+              aria-label={colorName(c)}
+                title={colorName(c)}
+                aria-pressed={hc === c}
             />
           ))}
         </div>

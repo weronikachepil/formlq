@@ -109,7 +109,7 @@ export function PdfDialog({
   const ok = !!pages && pages.length > 0 && pages.length <= 30;
   return (
     <Modal onClose={onClose} className="nl-modal">
-      <h2>{ask.more ? "Довставити сторінки PDF" : "Вставити сторінки PDF"}</h2>
+      <h2>{ask.more ? "Додати ще сторінки PDF" : "Вставити сторінки PDF"}</h2>
       <p className="bd-hint">
         «{ask.name}» — сторінок: {ask.total}
       </p>

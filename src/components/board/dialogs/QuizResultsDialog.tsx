@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { QuizResultCell, QuizResults } from "@/lib/board/engine/board";
 import type { QuizAnswerValue } from "@/lib/board/engine/types";
+import { plural } from "@/lib/format";
 import { uaNum } from "../constants";
 import { useBoard } from "../useBoard";
 import { ConfirmModal, Modal } from "./Modal";
@@ -25,6 +26,10 @@ const ansText = (q: Question, val: QuizAnswerValue | undefined) =>
         .map(([n, l]) => `${n}${l}`)
         .join(" ")
     : String(val ?? "");
+
+/** Correctness mark next to the answer: colour alone is not enough (colour-blind, print). */
+const cellMark = (g: QuizResultCell | undefined) =>
+  !g || g.state === "empty" ? "" : g.state === "full" ? " ✓" : g.state === "part" ? " ½" : " ✗";
 
 const cellClass = (g: QuizResultCell | undefined) =>
   !g ? "q-none" : g.state === "full" ? "q-full" : g.state === "part" ? "q-part" : g.state === "empty" ? "q-none" : "q-bad";
@@ -81,7 +86,8 @@ export function QuizResultsDialog({ onClose }: { onClose: () => void }) {
             {res.draft ? "Не запущено (учні не бачать)" : res.closed ? "Тест завершено" : "Тест іде"}
           </span>
           <span>
-            Здали: <b>{submitted}</b> з <b>{res.rows.length}</b> учнів, що відповідали
+            Здали: <b>{submitted}</b> з <b>{res.rows.length}</b> {plural(res.rows.length, ["учня", "учнів", "учнів"])}, що
+            відповідали
           </span>
           {endsText && (
             <span>
@@ -111,12 +117,20 @@ export function QuizResultsDialog({ onClose }: { onClose: () => void }) {
               листок
               <small>учні не бачать роботи один одного</small>
             </label>
-            <button onClick={() => bd.startTest(res.templateId || st.page, Number(mins) || 0, separate)}>▶ Запустити тест</button>
+            <button
+              disabled={!res.draft}
+              title={res.draft ? undefined : "Тест уже запущено"}
+              onClick={() => bd.startTest(res.templateId || st.page, Number(mins) || 0, separate)}
+            >
+              ▶ Запустити тест
+            </button>
           </div>
           <div className="tb-group">
             <span className="tb-label">2. Завершення</span>
             <button
               className={pageInfo?.closed ? "" : "stop"}
+              disabled={res.draft}
+              title={res.draft ? "Спершу запустіть тест" : undefined}
               onClick={() => {
                 if (pageInfo?.closed) bd.endTest(st.page, false);
                 else setAsk("end");
@@ -206,7 +220,7 @@ export function QuizResultsDialog({ onClose }: { onClose: () => void }) {
                       const g = r.per[q.id];
                       return (
                         <td key={q.id} className={cellClass(g)} title={g ? `${g.earned} з ${g.max}` : "не відповів"}>
-                          {!g ? "·" : mode === "points" ? uaNum(g.earned ?? "") : ansText(q, g.val)}
+                          {!g ? "·" : mode === "points" ? uaNum(g.earned ?? "") : ansText(q, g.val) + cellMark(g)}
                         </td>
                       );
                     })}
@@ -220,7 +234,7 @@ export function QuizResultsDialog({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <p className="bd-hint">
-          ✓ біля імені — учень здав тест. Учні бачать правильні відповіді лише після «Показати відповіді учням», а свій
+          ✓ біля імені — учень здав тест. У клітинках: ✓ правильно, ½ частково, ✗ неправильно. Учні бачать правильні відповіді лише після «Показати відповіді учням», а свій
           підсумковий бал — одразу після здачі.
         </p>
       </Modal>

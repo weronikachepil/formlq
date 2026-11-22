@@ -44,7 +44,7 @@ export function PollProps({ o }: { o: PollObject }) {
           {o.closed ? "Відкрити" : "Закрити"}
         </button>
         <button className={"bd-chip-btn" + (o.hide ? " on" : "")} onClick={() => act.set<PollObject>({ hide: !o.hide })}>
-          Приховати результати від учнів
+          Сховати результати від учнів
         </button>
         <button className="bd-chip-btn" onClick={() => b()?.pollReset(o.id)}>
           Скинути голоси
@@ -145,7 +145,7 @@ export function StampPanel() {
   return (
     <div className="bd-insp">
       <div className="bd-sec">
-        <span className="bd-lbl">Оцінка: клікніть по дошці</span>
+        <span className="bd-lbl">Оцінка: натисніть на дошку</span>
         <div className="bd-line wrap">
           {STAMP_KINDS.map((k) => {
             const v = STAMPS[k];

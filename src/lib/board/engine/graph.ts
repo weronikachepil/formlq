@@ -450,7 +450,8 @@ function drawFeatures(ctx: CanvasRenderingContext2D, o: GraphObject, m: Mapper, 
       for (let i = 0; i < N; i++) {
         const a = l.ys[i], b = l.ys[i + 1];
         if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
-        if (a === 0) { marks.push({ x: xmin + i * dx, y: 0, col: l.col }); continue; }
+        // An exact zero counts once — not at every sample of y = 0 or a flat piece on the axis.
+        if (a === 0) { if (i === 0 || l.ys[i - 1] !== 0) marks.push({ x: xmin + i * dx, y: 0, col: l.col }); continue; }
         if (a * b < 0 && Math.abs(a - b) < spanY * 3) {
           const x0 = bisect(l.fn, xmin + i * dx, xmin + (i + 1) * dx);
           if (x0 !== null && Math.abs(l.fn(x0)) < 1e-4 * (1 + spanY)) marks.push({ x: x0, y: 0, col: l.col });
@@ -478,7 +479,9 @@ function drawFeatures(ctx: CanvasRenderingContext2D, o: GraphObject, m: Mapper, 
         for (let i = 0; i < N; i++) {
           const d0 = A.ys[i] - B.ys[i], d1 = A.ys[i + 1] - B.ys[i + 1];
           if (!Number.isFinite(d0) || !Number.isFinite(d1)) continue;
-          if (d0 === 0 || (d0 * d1 < 0 && Math.abs(d0 - d1) < spanY * 3)) {
+          // Coinciding pieces (y = x and y = |x|, two equal lines) are not hundreds of intersections.
+          const touch = d0 === 0 && (i === 0 || A.ys[i - 1] - B.ys[i - 1] !== 0);
+          if (touch || (d0 !== 0 && d0 * d1 < 0 && Math.abs(d0 - d1) < spanY * 3)) {
             const x0 = d0 === 0 ? xmin + i * dx : bisect(diff, xmin + i * dx, xmin + (i + 1) * dx);
             if (x0 === null) continue;
             const y0 = A.fn(x0);
@@ -487,6 +490,11 @@ function drawFeatures(ctx: CanvasRenderingContext2D, o: GraphObject, m: Mapper, 
         }
       }
     }
+  }
+  // One label per point: a zero that is also an intersection, or neighbouring samples, closer than 8px.
+  for (let i = marks.length - 1; i > 0; i--) {
+    const m = marks[i];
+    if (marks.slice(0, i).some((q) => Math.abs(q.x - m.x) * o.v.sx < 8 && Math.abs(q.y - m.y) * o.v.sy < 8)) marks.splice(i, 1);
   }
 
   const first = lines[0];

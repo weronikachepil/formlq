@@ -1,7 +1,7 @@
 // Board tools. Every tool has down / move / up (+ hover, and overlay for the draft).
 // p is a point in board coordinates, e is the pointer event.
 import {
-  boundsIntersect, clamp, dist, distToSegment, normAngle, rectFromPoints, round1, simplify, snapTo, unionBounds,
+  boundsIntersect, boundsOfPoints, clamp, dist, distToSegment, normAngle, pointInPolygon, rectFromPoints, round1, simplify, simplifyIdx, snapTo, unionBounds,
 } from "./geom";
 import { recognize, type RecognizedShape } from "./recognize";
 import { uiFont } from "./fonts";
@@ -9,7 +9,7 @@ import { fmtLen } from "./measure";
 import { cropToFrame, imageFullRect, rulerEdges } from "./extra";
 import { createConstrTools } from "./constr";
 import {
-  LABELS, T, drawHighlight, parallelogramPoints, quadPoints, rectPoints, regularPoints, rightTriPoints, scaleneTriPoints, trapezoidPoints, triPoints, uid,
+  LABELS, T, drawHighlight, parallelogramPoints, quadPoints, rectPoints, regularPoints, rightTriPoints, scaleneTriPoints, trapezoidPoints, triPoints, uid, pressurePath,
 } from "./shapes";
 import type { MathBoard } from "./board";
 import type {
@@ -123,7 +123,21 @@ type SelectDrag =
   | { mode: "crop"; h: string; o0: ImageObject; full: Bounds; b0: Bounds }
   | { mode: "cropPan"; o0: ImageObject; full: Bounds; start: Point }
   | { mode: "move"; start: Point; moved: boolean; origs: BoardObject[]; b0: Bounds }
-  | { mode: "marquee"; start: Point; cur: Point; base: Set<string> };
+  | { mode: "marquee"; start: Point; cur: Point; base: Set<string> }
+  // Stylus / finger: a free-hand loop, as the lasso in note apps (the mouse keeps the rectangle).
+  | { mode: "lasso"; pts: Point[]; base: Set<string> };
+
+/** Is the object caught by the lasso: most of its points inside (strokes, shapes), else its centre. */
+function inLasso(o: BoardObject, loop: Point[], bd: Bounds): boolean {
+  const pts = "pts" in o && Array.isArray(o.pts) ? (o.pts as Point[]) : null;
+  if (pts && pts.length) {
+    const step = Math.max(1, Math.floor(pts.length / 40));
+    let n = 0, inside = 0;
+    for (let i = 0; i < pts.length; i += step) { n++; if (pointInPolygon(pts[i], loop)) inside++; }
+    return inside / n >= 0.6;
+  }
+  return pointInPolygon([bd.x + bd.w / 2, bd.y + bd.h / 2], loop);
+}
 
 function selectTool(b: MathBoard): Tool {
   let drag: SelectDrag | null = null;
@@ -193,7 +207,9 @@ function selectTool(b: MathBoard): Tool {
       b.closeComment();
       b.vertEdit = null;
       if (!e.shiftKey) b.setSel([]);
-      drag = { mode: "marquee", start: p, cur: p, base: new Set<string>(b.sel) };
+      drag = e.pointerType === "mouse"
+        ? { mode: "marquee", start: p, cur: p, base: new Set<string>(b.sel) }
+        : { mode: "lasso", pts: [p], base: new Set<string>(b.sel) };
     },
     move(p, e) {
       if (!drag) return;
@@ -252,6 +268,21 @@ function selectTool(b: MathBoard): Tool {
         const dx = (p[0] - drag.start[0]) * z;
         const dy = (p[1] - drag.start[1]) * z;
         tx!.set(drag.o0.id, { ...drag.o0, school: false, yaw: drag.o0.yaw + dx * 0.011, pitch: drag.o0.pitch + dy * 0.011 });
+      } else if (drag.mode === "lasso") {
+        const last = drag.pts[drag.pts.length - 1];
+        if (Math.hypot(p[0] - last[0], p[1] - last[1]) * z < 3) return;
+        drag.pts.push(p);
+        if (drag.pts.length < 3) { b.requestOverlay(); return; }
+        const loop = drag.pts;
+        const ids = new Set(drag.base);
+        const lb = boundsOfPoints(loop);
+        for (const o of b.objs() as BoardObject[]) {
+          if (!b.canTouch(o)) continue;
+          const bd = def(o.type).bounds(o);
+          if (boundsIntersect(lb, bd) && inLasso(o, loop, bd)) for (const id of b.groupIds(o) as string[]) ids.add(id);
+        }
+        b.setSel([...ids]);
+        b.requestRender();
       } else if (drag.mode === "marquee") {
         drag.cur = p;
         const rect = rectFromPoints(drag.start, p);
@@ -265,7 +296,7 @@ function selectTool(b: MathBoard): Tool {
     },
     up() {
       if (tx) { tx.done(); tx = null; }
-      if (drag?.mode === "marquee") b.requestRender();
+      if (drag?.mode === "marquee" || drag?.mode === "lasso") b.requestRender();
       drag = null;
     },
     cancel() {
@@ -273,6 +304,21 @@ function selectTool(b: MathBoard): Tool {
       drag = null;
     },
     overlay(ctx) {
+      if (drag?.mode === "lasso") {
+        const z = b.cam.z;
+        ctx.save();
+        ctx.beginPath();
+        drag.pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])));
+        ctx.closePath();
+        ctx.fillStyle = "rgba(109,61,240,0.07)";
+        ctx.fill();
+        ctx.setLineDash([6 / z, 5 / z]);
+        ctx.strokeStyle = "#6d3df0";
+        ctx.lineWidth = 1.5 / z;
+        ctx.stroke();
+        ctx.restore();
+        return;
+      }
       if (drag?.mode !== "marquee") return;
       const r = rectFromPoints(drag.start, drag.cur);
       const z = b.cam.z;
@@ -314,6 +360,12 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
   let shape: RecognizedShape | null = null;
   let path: Path2D | null = null; // draft path, extended incrementally instead of rebuilt every frame
   let built = 1;
+  let prs: number[] | null = null; // stylus pressure per point (pen with pressure), smoothed
+  const pressureOf = (ev: PointerEvent) => {
+    const raw = ev.pressure > 0 ? ev.pressure : 0.5;
+    const prev = prs?.length ? prs[prs.length - 1] : raw;
+    return Math.max(0.05, prev * 0.55 + raw * 0.45); // smoothed: no jitter in the width
+  };
   const color = (): string => (highlighter ? b.style.hc : b.style.c);
   const size = (): number => (highlighter ? b.style.hs : b.style.s);
   const draft = () => ({ type: "stroke" as const, pts, c: color(), s: size(), hl: highlighter });
@@ -330,10 +382,12 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
   };
   return {
     cursor: "crosshair",
-    down(p) {
+    down(p, e) {
       lock = b.rulerLock(p);
       const q: Point = lock ? b.projectToLock(lock, p) : p;
       pts = [[round1(q[0]), round1(q[1])]];
+      prs = null;
+      if (!highlighter && !lock && e?.pointerType === "pen" && b.prefs.pressure) prs = [pressureOf(e)];
       path = null;
       built = 1;
       arm(q);
@@ -342,6 +396,7 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
       if (!pts) return;
       if (lock) {
         const q: Point = b.projectToLock(lock, p);
+        prs = null;
         pts = [pts[0], [round1(q[0]), round1(q[1])]];
         built = 1; path = null;
         b.requestOverlay();
@@ -349,6 +404,7 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
       }
       if (e.shiftKey) {
         // Shift — a straight line from the start (underline)
+        prs = null;
         pts = [pts[0], [round1(p[0]), round1(p[1])]];
         built = 1; path = null;
         b.requestOverlay();
@@ -357,10 +413,14 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
       // A wide highlighter needs fewer points.
       const min = highlighter ? Math.max(0.7 / b.cam.z, size() * 0.3) : 0.7 / b.cam.z;
       const evs = e.getCoalescedEvents?.() || [];
-      const list: Point[] = evs.length ? evs.map((ev) => b.world(ev)) : [p];
-      for (const q of list) {
+      const list: PointerEvent[] = evs.length ? evs : [e];
+      for (const ev of list) {
+        const q = evs.length ? b.world(ev) : p;
         const l = pts[pts.length - 1];
-        if (Math.hypot(q[0] - l[0], q[1] - l[1]) >= min) pts.push([round1(q[0]), round1(q[1])]);
+        if (Math.hypot(q[0] - l[0], q[1] - l[1]) >= min) {
+          pts.push([round1(q[0]), round1(q[1])]);
+          if (prs) prs.push(pressureOf(ev));
+        }
       }
       // Any real movement restarts the wait: a shape is recognised only when the pen is held still.
       // Once recognised, lifting the pen may drift a little without losing the shape.
@@ -378,13 +438,22 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
         b.addObj(sh);
         return;
       }
-      let out = pts.length === 1 ? [pts[0], pts[0]] : simplify(pts, Math.max(0.3, 0.45 / b.cam.z));
+      const eps = Math.max(0.3, 0.45 / b.cam.z);
+      let out: Point[];
+      let w: number[] | undefined;
+      if (prs && pts.length > 1) {
+        const idx = simplifyIdx(pts, eps);
+        out = idx.map((i) => pts![i]);
+        w = idx.map((i) => Math.round(prs![i] * 100) / 100);
+      } else out = pts.length === 1 ? [pts[0], pts[0]] : simplify(pts, eps);
       if (out.length === 1) out = [out[0], out[0]];
-      const o: ObjectDraft<StrokeObject> = { ...draft(), pts: out };
+      if (w && w.length === 1) w = [w[0], w[0]];
+      const o: ObjectDraft<StrokeObject> = w ? { ...draft(), pts: out, w } : { ...draft(), pts: out };
       pts = null;
+      prs = null;
       b.addObj(o);
     },
-    cancel() { clearTimeout(timer); pts = null; shape = null; path = null; },
+    cancel() { clearTimeout(timer); pts = null; prs = null; shape = null; path = null; },
     overlay(ctx) {
       if (shape) {
         drawDraft(ctx, shape, { zoom: b.cam.z });
@@ -392,6 +461,14 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
       }
       if (pts && pts.length && highlighter) {
         drawHighlight(ctx, pts, color(), size(), DRAFT_KEY, true);
+        return;
+      }
+      if (pts && pts.length && prs) {
+        // the same outline the finished stroke will have
+        ctx.save();
+        ctx.fillStyle = color();
+        ctx.fill(pressurePath(pts, prs, size()), "nonzero");
+        ctx.restore();
         return;
       }
       if (pts && pts.length) {
@@ -429,31 +506,97 @@ function penTool(b: MathBoard, highlighter: boolean): Tool {
 }
 
 // ---------- eraser ----------
+/**
+ * The pieces of a stroke left after erasing a circle (centre c, radius r), or null if nothing
+ * of it lies inside. Segments near the circle are subdivided first, so a long straight segment
+ * is cut where the eraser crosses it, not only at its ends. Pressure follows the points.
+ */
+function cutStroke(o: StrokeObject, c: Point, r: number): StrokeObject[] | null {
+  const src = o.pts, w = o.w;
+  const pts: Point[] = [], ws: number[] = [];
+  const step = Math.max(0.5, r / 2);
+  for (let i = 0; i < src.length; i++) {
+    if (i > 0) {
+      const a = src[i - 1], bb = src[i];
+      const len = Math.hypot(bb[0] - a[0], bb[1] - a[1]);
+      if (len > step && distToSegment(c, a, bb) <= r + step) {
+        const n = Math.min(200, Math.ceil(len / step));
+        for (let k = 1; k < n; k++) {
+          const t = k / n;
+          pts.push([round1(a[0] + (bb[0] - a[0]) * t), round1(a[1] + (bb[1] - a[1]) * t)]);
+          if (w) ws.push(w[i - 1] + ((w[i] ?? w[i - 1]) - w[i - 1]) * t);
+        }
+      }
+    }
+    pts.push(src[i]);
+    if (w) ws.push(w[i] ?? w[w.length - 1]);
+  }
+  const out: StrokeObject[] = [];
+  let run: number[] = [];
+  let cut = false;
+  const flush = () => {
+    if (run.length >= 2) {
+      const piece: StrokeObject = { ...o, id: uid(), pts: run.map((i) => pts[i]) };
+      if (w) piece.w = run.map((i) => Math.round(ws[i] * 100) / 100);
+      else delete piece.w;
+      out.push(piece);
+    }
+    run = [];
+  };
+  for (let i = 0; i < pts.length; i++) {
+    if (Math.hypot(pts[i][0] - c[0], pts[i][1] - c[1]) <= r) { cut = true; flush(); }
+    else run.push(i);
+  }
+  flush();
+  return cut ? out : null;
+}
+
 function eraserTool(b: MathBoard): Tool {
   let tx: Tx | null = null;
   let click = false;
+  let last: Point | null = null;
+  const radius = () => (b.prefs.eraser || 10) / b.cam.z;
   const erase = (t: Tx, p: Point) => {
-    const tol = 10 / b.cam.z;
+    const tol = radius();
     for (const o of b.objs() as BoardObject[]) {
       // Pictures (and PDF pages) are never erased: erasing ink over a task removed the task
       // itself. They are deleted on purpose instead (select → trash / Delete).
       if (o.type === "image") continue;
       // big objects are erased only by a click, not by swiping over them
       if (BIG_TYPES.has(o.type) && !click) continue;
-      if (b.canModify(o) && def(o.type).hit(o, p, tol)) t.del(o.id);
+      if (!b.canModify(o) || !def(o.type).hit(o, p, tol)) continue;
+      if (o.type === "stroke" && b.prefs.eraseParts) {
+        // Precise eraser (as in note apps): cut out only what is under it.
+        const parts = cutStroke(o, p, tol + o.s / 2);
+        if (!parts) continue;
+        t.del(o.id);
+        for (const q of parts) t.set(q.id, q);
+      } else t.del(o.id);
     }
   };
   return {
     cursor: "none",
-    down(p) { tx = b.tx(); click = true; erase(tx, p); click = false; },
-    move(p) { if (tx) erase(tx, p); b.requestOverlay(); },
-    up() { if (tx) { tx.done(); tx = null; } },
-    cancel() { if (tx) { tx.done(); tx = null; } },
+    down(p) { tx = b.tx(); click = true; erase(tx, p); click = false; last = p; },
+    move(p) {
+      if (tx) {
+        // A quick swipe jumps far between pointer events: erase along the whole way, not only
+        // at the sampled points, so no line slips through.
+        const from = last || p;
+        const d = Math.hypot(p[0] - from[0], p[1] - from[1]);
+        const n = Math.min(40, Math.ceil(d / radius()));
+        for (let i = 1; i <= n; i++) erase(tx, [from[0] + ((p[0] - from[0]) * i) / n, from[1] + ((p[1] - from[1]) * i) / n]);
+        if (!n) erase(tx, p);
+        last = p;
+      }
+      b.requestOverlay();
+    },
+    up() { last = null; if (tx) { tx.done(); tx = null; } },
+    cancel() { last = null; if (tx) { tx.done(); tx = null; } },
     overlay(ctx) {
       if (!b.hover) return;
       ctx.save();
       ctx.beginPath();
-      ctx.arc(b.hover[0], b.hover[1], 10 / b.cam.z, 0, Math.PI * 2);
+      ctx.arc(b.hover[0], b.hover[1], radius(), 0, Math.PI * 2);
       ctx.fillStyle = "rgba(224,49,49,0.12)";
       ctx.strokeStyle = "rgba(224,49,49,0.7)";
       ctx.lineWidth = 1.5 / b.cam.z;
