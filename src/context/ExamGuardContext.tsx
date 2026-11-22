@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 import { Dialog } from "@/components/ui/dialog";
 
 interface GuardCopy {
@@ -92,56 +92,52 @@ export function ExamGuardProvider({ children }: { children: ReactNode }) {
   return (
     <ExamGuardContext.Provider value={{ isGuarded, setGuarded, requestNav, requestAction }}>
       {children}
-      <Dialog open={!!pendingAction} onClose={cancel} size="sm">
-        <div className="p-7 space-y-5">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-amber-500/12 flex items-center justify-center shrink-0">
-              <AlertTriangle size={18} className="text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="space-y-1 min-w-0 pt-0.5">
-              <p className="font-heading font-bold text-base leading-tight">{copy.title}</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">{copy.message}</p>
-            </div>
-          </div>
+      <Dialog open={!!pendingAction} onClose={cancel} size="sm" className="max-w-[420px]" showClose>
+        <div className="px-7 pb-7 pt-9 text-center">
+          <span className="mx-auto grid size-16 place-items-center rounded-full bg-lavender/45 text-[#14262a] dark:bg-lavender/25 dark:text-foreground">
+            <Info size={26} />
+          </span>
+          <p className="mt-5 font-heading text-xl font-bold leading-tight">{copy.title}</p>
+          <p className="mx-auto mt-2 max-w-xs text-sm text-muted-foreground">{copy.message}</p>
 
           {copy.onSave ? (
-            <div className="space-y-2">
+            <div className="mt-7 space-y-3">
               <button
                 onClick={saveAndLeave}
                 disabled={saving}
-                className="w-full h-11 inline-flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-pill-dark hover:opacity-90 transition-opacity disabled:opacity-60"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {saving && <Loader2 size={15} className="animate-spin" />}
                 Зберегти й вийти
               </button>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={cancel}
                   disabled={saving}
-                  className="flex-1 h-10 rounded-full border border-glass-edge bg-glass shadow-pill text-sm font-semibold hover:bg-glass-strong transition-colors disabled:opacity-60"
+                  className="h-12 rounded-full bg-muted text-sm font-semibold transition-colors hover:bg-muted/70 disabled:opacity-60"
                 >
                   Залишитись
                 </button>
                 <button
                   onClick={confirm}
                   disabled={saving}
-                  className="flex-1 h-10 rounded-full text-sm font-semibold text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-60"
+                  className="h-12 rounded-full text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
                 >
                   {copy.confirmLabel}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex gap-2">
+            <div className="mt-7 grid grid-cols-2 gap-3">
               <button
                 onClick={cancel}
-                className="flex-1 h-10 px-4 rounded-full border border-glass-edge bg-glass shadow-pill text-sm font-semibold hover:bg-glass-strong transition-colors"
+                className="h-12 rounded-full bg-muted text-sm font-semibold transition-colors hover:bg-muted/70"
               >
                 Залишитись
               </button>
               <button
                 onClick={confirm}
-                className="flex-1 h-10 px-4 rounded-full bg-destructive text-white text-sm font-semibold hover:opacity-90 transition-opacity"
+                className="h-12 rounded-full bg-primary text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
               >
                 {copy.confirmLabel}
               </button>

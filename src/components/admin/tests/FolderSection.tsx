@@ -86,10 +86,10 @@ export function FolderSection({
       )}
       <div
         className={cn(
-          "rounded-2xl border bg-card/60 transition-all",
+          "rounded-2xl border bg-card transition-all",
           isDropInto
             ? "border-primary/60 bg-primary/5 ring-2 ring-primary/15"
-            : "border-border/50",
+            : "border-transparent",
           isDragSrc && "opacity-40",
         )}
       >

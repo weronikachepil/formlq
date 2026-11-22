@@ -83,7 +83,7 @@ export function CalendarSidebar({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <MiniCalendar
         // Follow the main calendar when it moves to another month.
         key={`${anchor.getFullYear()}-${anchor.getMonth()}`}
@@ -101,7 +101,7 @@ export function CalendarSidebar({
             aria-expanded={open}
             className="w-full flex items-center gap-2.5 rounded-xl px-2.5 py-2 hover:bg-glass-strong transition-colors"
           >
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="text-[13px] font-semibold text-muted-foreground">
               Учні
             </span>
             {/* Colours of the students currently shown. */}

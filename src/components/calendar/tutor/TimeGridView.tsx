@@ -208,7 +208,7 @@ export function TimeGridView({
             <div
               className={cn(
                 GUTTER,
-                "shrink-0 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground text-right pr-1.5 pt-1.5",
+                "shrink-0 text-[11px] font-semibold text-muted-foreground text-right pr-1.5 pt-1.5",
               )}
             >
               ДЗ

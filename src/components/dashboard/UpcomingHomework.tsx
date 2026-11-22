@@ -31,7 +31,7 @@ export function UpcomingHomework({ userId }: { userId: string }) {
   }, [list]);
 
   return (
-    <section className="rounded-2xl border border-border/50 bg-card p-5 flex flex-col gap-4">
+    <section className="rounded-[18px] border border-border/50 bg-card p-5 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-semibold text-base">Найближче домашнє завдання</h2>
         <Link
@@ -54,9 +54,9 @@ export function UpcomingHomework({ userId }: { userId: string }) {
       ) : (
         <Link
           href={`/dashboard/homework/${next.id}`}
-          className="group text-left rounded-2xl border border-border/50 bg-background hover:border-primary/40 hover:bg-muted/30 transition-all p-4 flex items-center gap-4"
+          className="group text-left rounded-[12px] border border-border/50 bg-background hover:border-primary/40 hover:bg-muted/30 transition-all p-4 flex items-center gap-4"
         >
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <ClipboardCheck size={20} />
           </div>
           <div className="flex-1 min-w-0">

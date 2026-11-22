@@ -114,7 +114,7 @@ function Picker({
         aria-expanded={open}
         className={cn(
           fieldClass,
-          "flex items-center gap-2 text-left rounded-full",
+          "flex items-center gap-2 text-left",
           size === "sm" ? "h-8 px-3.5" : "h-10 px-4",
           onClear && label && "pr-10",
           open && "bg-glass-strong border-foreground/50",
@@ -337,7 +337,8 @@ export function DateTimePicker({
     onChange(toLocalValue(new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m)));
   };
   const label = current
-    ? current.toLocaleString("uk", { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
+    ? // Short month so date and time fit a half-width field: «нд, 22 лист. о 20:50».
+      current.toLocaleString("uk", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
     : "";
 
   return (

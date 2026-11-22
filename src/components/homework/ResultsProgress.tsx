@@ -125,7 +125,7 @@ export function ResultsProgress({ homework, results, hrefOf }: ResultsProgressPr
             aria-hidden
           />
           <div
-            className="relative h-36 flex items-end gap-[2px] border-b border-border"
+            className="relative h-36 flex items-end gap-1.5 border-b border-border"
             role="list"
             aria-label="Результати по завданнях"
           >
@@ -141,8 +141,9 @@ export function ResultsProgress({ homework, results, hrefOf }: ResultsProgressPr
                 >
                   <span
                     className={cn(
-                      "relative w-full rounded-t-[4px] transition-colors group-hover:bg-primary group-focus-visible:bg-primary",
-                      isLast ? "bg-primary" : "bg-primary/55",
+                      "relative w-full rounded-t-[6px] transition-colors group-hover:bg-primary group-focus-visible:bg-primary",
+                      // Soft lavender history, the latest result in ink.
+                      isLast ? "bg-primary" : "bg-lavender",
                     )}
                     style={{ height: `${Math.max(p.pct, 2)}%` }}
                   >

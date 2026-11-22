@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sizes = {
@@ -20,6 +21,8 @@ interface DialogProps {
   closeOnBackdrop?: boolean;
   /** Set false for forms where Escape would silently discard typed input. */
   closeOnEscape?: boolean;
+  /** Round ✕ in the top-right corner. */
+  showClose?: boolean;
   children: React.ReactNode;
 }
 
@@ -31,6 +34,7 @@ export function Dialog({
   className,
   closeOnBackdrop = true,
   closeOnEscape = true,
+  showClose = false,
   children,
 }: DialogProps) {
   useEffect(() => {
@@ -63,14 +67,24 @@ export function Dialog({
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          // Big-radius glass card; nearly opaque so dense forms stay readable over the blur.
-          "relative z-10 w-full rounded-[2rem] border border-glass-edge bg-popover shadow-glass-lg",
+          // Opaque white card with a soft shadow over the blurred page.
+          "relative z-10 w-full rounded-[22px] bg-popover shadow-glass-lg",
           "animate-in fade-in-0 zoom-in-95 duration-150",
           sizes[size],
           className,
         )}
       >
         {children}
+        {showClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрити"
+            className="absolute right-4 top-4 grid size-9 place-items-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+          >
+            <X size={17} />
+          </button>
+        )}
       </div>
     </div>
   );

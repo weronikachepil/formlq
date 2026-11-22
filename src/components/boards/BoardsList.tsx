@@ -24,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { IconButton } from "@/components/ui/icon-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SpinnerPage } from "@/components/ui/spinner";
-import { SectionLabel } from "@/components/ui/section-label";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { RenameBoardDialog } from "@/components/boards/RenameBoardDialog";
 
@@ -118,7 +117,7 @@ export function BoardsList({ emptyHint, fallbackName }: BoardsListProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-4xl space-y-5">
       <form onSubmit={handleCreate} className="flex gap-2">
         <Input
           value={title}
@@ -143,18 +142,18 @@ export function BoardsList({ emptyHint, fallbackName }: BoardsListProps) {
         />
       ) : (
         <div className="space-y-2">
-          <SectionLabel size="2xs">Мої дошки ({boards.length})</SectionLabel>
+          <h2 className="px-1 font-heading text-lg font-bold">Мої дошки<span className="ml-2 text-sm font-medium text-muted-foreground">{boards.length}</span></h2>
           {boards.map((b) => (
             <div
               key={b.id}
               onClick={() => router.push(`/board/${b.id}`)}
-              className="rounded-2xl border border-border/50 bg-card px-4 py-3 flex items-center gap-3 group transition-all cursor-pointer hover:bg-muted/30 hover:border-border/80"
+              className="rounded-[14px] bg-card px-4 py-3.5 flex items-center gap-3 group transition-shadow cursor-pointer hover:shadow-[0_8px_28px_rgba(20,38,42,0.08)]"
             >
-              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full bg-peach/60 text-[#14262a] dark:bg-peach/20 dark:text-foreground flex items-center justify-center shrink-0">
                 <Presentation size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{b.title}</p>
+                <p className="text-[15px] font-semibold truncate">{b.title}</p>
                 <p className="text-xs text-muted-foreground truncate">
                   Змінено {timeAgo(b.updatedAt?.toDate())}
                 </p>
@@ -181,18 +180,18 @@ export function BoardsList({ emptyHint, fallbackName }: BoardsListProps) {
 
       {visits.length > 0 && (
         <div className="space-y-2">
-          <SectionLabel size="2xs">Доступні мені ({visits.length})</SectionLabel>
+          <h2 className="px-1 pt-2 font-heading text-lg font-bold">Доступні мені<span className="ml-2 text-sm font-medium text-muted-foreground">{visits.length}</span></h2>
           {visits.map((v) => (
             <div
               key={v.id}
               onClick={() => router.push(`/board/${v.id}`)}
-              className="rounded-2xl border border-border/50 bg-card px-4 py-3 flex items-center gap-3 group transition-all cursor-pointer hover:bg-muted/30 hover:border-border/80"
+              className="rounded-[14px] bg-card px-4 py-3.5 flex items-center gap-3 group transition-shadow cursor-pointer hover:shadow-[0_8px_28px_rgba(20,38,42,0.08)]"
             >
-              <div className="w-9 h-9 rounded-xl bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center shrink-0">
                 <Presentation size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{v.title}</p>
+                <p className="text-[15px] font-semibold truncate">{v.title}</p>
                 <p className="text-xs text-muted-foreground truncate">
                   {v.ownerName ? `${v.ownerName} · ` : ""}відкрито {timeAgo(v.visitedAt?.toDate())}
                 </p>

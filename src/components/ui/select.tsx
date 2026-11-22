@@ -98,7 +98,7 @@ function Select({ value, onValueChange, children, className, disabled }: SelectP
           disabled={disabled}
           onClick={() => setOpen((o) => !o)}
           className={cn(
-            "flex items-center justify-between gap-2 rounded-full border border-glass-edge bg-glass px-4 py-2 shadow-pill",
+            "flex h-10 items-center justify-between gap-2 rounded-[12px] border border-glass-edge bg-glass px-4",
             "text-sm text-foreground transition-colors cursor-pointer outline-none whitespace-nowrap",
             "hover:bg-glass-strong focus-visible:border-foreground/50",
             open && "bg-glass-strong border-foreground/40",

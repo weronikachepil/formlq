@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Lesson, groupLessonKey, lessonStatus } from "@/lib/lessons";
-import { SectionLabel } from "@/components/ui/section-label";
 import { useStudentColor } from "./student-colors";
 
 export interface RangeStats {
@@ -70,18 +69,18 @@ export function StatsCard({ lessons, rangeLabel, onPickStudent }: StatsCardProps
   ];
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-4 space-y-3">
+    <div className="rounded-[18px] border border-border/50 bg-card p-3.5 space-y-2.5">
       <div className="space-y-0.5">
-        <SectionLabel size="2xs" className="px-0">Статистика</SectionLabel>
+        <h2 className="font-heading text-sm font-bold">Статистика</h2>
         <p className="text-xs text-muted-foreground first-letter:uppercase">{rangeLabel}</p>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
         {tiles.map((t) => (
-          <div key={t.label} className="rounded-xl bg-muted/70 px-3 py-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t.label}</p>
+          <div key={t.label} className="rounded-[10px] bg-muted/70 px-2.5 py-1.5">
+            <p className="text-[11px] text-muted-foreground">{t.label}</p>
             <p
               className={cn(
-                "font-heading font-bold text-lg leading-tight tabular-nums",
+                "font-heading font-bold text-base leading-tight tabular-nums",
                 t.alert && "text-red-600 dark:text-red-400",
               )}
             >

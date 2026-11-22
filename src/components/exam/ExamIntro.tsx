@@ -6,7 +6,6 @@ import { PLURAL, plural, pluralize } from "@/lib/format";
 import { MathText } from "@/components/MathText";
 import { ResultListItem } from "@/components/exam/ResultListItem";
 import { Button } from "@/components/ui/button";
-import { SectionLabel } from "@/components/ui/section-label";
 import { maxScaledScore, type TestQuestion, type TestResult } from "@/lib/tests";
 import type { RunnerConfig } from "@/components/exam/ExamRunner";
 
@@ -79,7 +78,7 @@ export function ExamIntro({
     <div className="-m-6 min-h-[calc(100vh-3.5rem)] flex items-center justify-center px-6">
       <div className="w-full max-w-lg space-y-5 py-8">
         <div className="text-center space-y-1.5">
-          <div className="text-4xl" aria-hidden>
+          <div className="mx-auto mb-3 grid size-16 place-items-center rounded-full bg-lavender/45 text-3xl dark:bg-lavender/20" aria-hidden>
             {introEmoji}
           </div>
           <h1 className="font-heading text-2xl font-bold">{config.title}</h1>
@@ -88,7 +87,7 @@ export function ExamIntro({
 
         {introNote && (
           <div className="rounded-[18px] border border-amber-400/30 bg-amber-400/5 p-4 text-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400 mb-1">
+            <p className="text-[13px] font-semibold text-amber-600 dark:text-amber-400 mb-1">
               Від вчителя
             </p>
             <MathText text={introNote} className="text-foreground/90" />
@@ -106,7 +105,7 @@ export function ExamIntro({
           </dl>
 
           <div className="border-t border-border/50 px-5 py-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Із чого складається</p>
+            <p className="mb-2 text-[13px] font-semibold text-muted-foreground">Із чого складається</p>
             <ul className="space-y-1.5 text-sm">
               {structure
                 .filter(([, count]) => count > 0)
@@ -147,7 +146,7 @@ export function ExamIntro({
 
         {history.length > 0 && (
           <div className="space-y-2">
-            <SectionLabel>Мої спроби · {history.length}</SectionLabel>
+            <h2 className="px-1 font-heading text-lg font-bold">Мої спроби<span className="ml-2 text-sm font-medium text-muted-foreground">{history.length}</span></h2>
             {history.map((r) => (
               <ResultListItem
                 key={r.id}

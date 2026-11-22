@@ -16,6 +16,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { SectionLabel } from "@/components/ui/section-label";
 import { plural, PLURAL } from "@/lib/format";
 import { UserRow } from "@/components/admin/users/UserRow";
+import { SignupsChart } from "@/components/admin/users/SignupsChart";
 
 const PAGE = 10;
 
@@ -115,11 +116,11 @@ export default function AdminUsersPage() {
   const remaining = students.length - studentsVisible;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="max-w-4xl space-y-4">
       {!isLoading && (
-        <div className="rounded-2xl border border-border/50 bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="rounded-[18px] bg-card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1 min-w-0">
-            <p className="text-3xl font-bold font-mono leading-none">{totals.all}</p>
+            <p className="font-heading text-3xl font-bold leading-none">{totals.all}</p>
             <p className="text-xs text-muted-foreground mt-1.5">
               {plural(totals.all, ["зареєстрований користувач", "зареєстровані користувачі", "зареєстрованих користувачів"])}
             </p>
@@ -132,6 +133,8 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+
+      {!isLoading && users.length > 0 && <SignupsChart users={users} />}
 
       <SearchInput
         value={search}
@@ -185,7 +188,7 @@ export default function AdminUsersPage() {
 function Total({ value, label }: { value: number; label: string }) {
   return (
     <div>
-      <p className="text-xl font-bold font-mono leading-none">{value}</p>
+      <p className="font-heading text-xl font-bold leading-none">{value}</p>
       <p className="text-[11px] text-muted-foreground mt-1">{label}</p>
     </div>
   );

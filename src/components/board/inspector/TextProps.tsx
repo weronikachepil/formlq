@@ -129,6 +129,10 @@ export function TextStyleProps({ o }: { o: TextObject | DrawStyle }) {
         </button>
       </div>
       <p className="bd-hint">{"Формула в тексті — між знаками $, напр. $x^2$ чи $\\frac{1}{2}$"}</p>
+      {/* The slim top bar has no room for the sentence: a short chip with the same hint on hover. */}
+      <span className="bd-hint-short" title={"Формула в тексті — між знаками $, напр. $x^2$ чи $\\frac{1}{2}$"}>
+        {"$x^2$ — формула"}
+      </span>
     </div>
   );
 }

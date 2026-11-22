@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Manrope, Montserrat, Pinyon_Script } from "next/font/google";
+import { JetBrains_Mono, Onest, Pinyon_Script } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -11,18 +11,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { SiteIntro } from "@/components/SiteIntro";
 import { VisualViewportVars } from "@/components/VisualViewportVars";
 
-/** Body text (MathBoard design). */
-const manrope = Manrope({
-  variable: "--font-manrope",
+/** One round geometric family for text and headings (same as the landing). */
+const onest = Onest({
+  variable: "--font-onest",
   subsets: ["latin", "cyrillic"],
   weight: ["400", "500", "600", "700", "800"],
-});
-
-/** Headings: heavy, wide. */
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin", "cyrillic"],
-  weight: ["600", "700", "800", "900"],
 });
 
 /** Numbers, timers, code. */
@@ -136,7 +129,7 @@ export default function RootLayout({
   return (
     <html
       lang="uk"
-      className={`${manrope.variable} ${montserrat.variable} ${jetbrainsMono.variable} ${pinyonScript.variable} h-full antialiased`}
+      className={`${onest.variable} ${jetbrainsMono.variable} ${pinyonScript.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

@@ -59,7 +59,7 @@ function ProfileForm() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg">
       <form onSubmit={save} className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">

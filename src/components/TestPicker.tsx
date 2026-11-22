@@ -154,8 +154,8 @@ export function TestPicker({
         type="button"
         onClick={() => (open ? setOpen(false) : openPicker())}
         className={cn(
-          "w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-card text-sm text-left transition-colors outline-none",
-          open ? "border-primary" : "border-border/50 hover:border-border focus-visible:border-primary",
+          "w-full flex items-center gap-2 px-4 h-10 rounded-[12px] border bg-glass text-sm text-left transition-colors outline-none",
+          open ? "border-primary" : "border-glass-edge hover:border-foreground/30 focus-visible:border-primary",
         )}
       >
         {selected ? (

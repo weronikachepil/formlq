@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { SectionLabel } from "@/components/ui/section-label";
 import { HomeworkListItem } from "@/components/homework/HomeworkListItem";
 import { ResultsProgress } from "@/components/homework/ResultsProgress";
 import {
@@ -150,7 +149,7 @@ export default function TutorStudentCabinetPage() {
   const shown = sections.filter((s) => s.items.length);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
+    <div className="max-w-4xl space-y-5">
       <Link
         href="/tutor/students"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -163,7 +162,16 @@ export default function TutorStudentCabinetPage() {
           <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold shrink-0">
             {name[0]?.toUpperCase() ?? "?"}
           </div>
-          <p className="min-w-0 font-semibold truncate">{name}</p>
+          {/* The name is the page title already; here: how to reach them and since when. */}
+          <div className="min-w-0">
+            {link?.studentEmail && <p className="truncate text-sm font-semibold">{link.studentEmail}</p>}
+            {link?.createdAt && (
+              <p className="truncate text-xs text-muted-foreground">
+                Ваш учень з{" "}
+                {link.createdAt.toDate().toLocaleDateString("uk", { day: "numeric", month: "long", year: "numeric" })}
+              </p>
+            )}
+          </div>
         </div>
         {/* "0 прострочені" is noise: overdue appears only when there is some. */}
         <div className="flex gap-6 text-center">
@@ -188,7 +196,7 @@ export default function TutorStudentCabinetPage() {
               <button
                 type="button"
                 onClick={() => setDay(null)}
-                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-primary text-primary-foreground text-xs font-semibold"
+                className="inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-primary text-primary-foreground text-sm font-semibold"
               >
                 Дедлайн{" "}
                 {day.toLocaleDateString("uk", {
@@ -198,14 +206,14 @@ export default function TutorStudentCabinetPage() {
                 <X size={13} />
               </button>
             ) : (
-              <div className="inline-flex flex-wrap rounded-full bg-muted p-1">
+              <div className="inline-flex flex-wrap rounded-full bg-card p-1">
                 {FILTERS.map((f) => (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => setFilter(f.id)}
                     className={cn(
-                      "px-3.5 h-8 rounded-full text-xs font-semibold transition-colors",
+                      "px-4 h-9 rounded-full text-sm font-semibold transition-colors",
                       filter === f.id
                         ? "bg-primary text-primary-foreground"
                         : "text-muted-foreground hover:text-foreground",
@@ -260,14 +268,15 @@ export default function TutorStudentCabinetPage() {
           ) : (
             shown.map((s) => (
               <div key={s.key} className="space-y-2">
-                <SectionLabel
-                  size="2xs"
-                  className={
-                    s.overdue ? "text-red-600 dark:text-red-400" : undefined
-                  }
+                <h2
+                  className={cn(
+                    "px-1 font-heading text-lg font-bold",
+                    s.overdue && "text-red-600 dark:text-red-400",
+                  )}
                 >
-                  {s.label} ({s.items.length})
-                </SectionLabel>
+                  {s.label}
+                  <span className="ml-2 text-sm font-medium text-muted-foreground">{s.items.length}</span>
+                </h2>
                 {s.items.map((hw) => (
                   <HomeworkListItem
                     key={hw.id}

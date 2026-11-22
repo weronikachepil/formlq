@@ -42,7 +42,7 @@ export function AuthModal({ label, children }: { label: string; children: ReactN
             type="button"
             aria-label="Закрити"
             onClick={close}
-            className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-glass-strong text-foreground shadow-pill transition-colors hover:bg-background"
+            className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-foreground/10 bg-white text-foreground transition-colors hover:bg-[#f6f7f7]"
           >
             <X size={18} />
           </button>

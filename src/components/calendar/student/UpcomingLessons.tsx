@@ -14,13 +14,6 @@ export function upcomingLessons(lessons: Lesson[], now: number, limit: number): 
     .slice(0, limit);
 }
 
-/** "сьогодні о 16:00", "зараз · до 17:00", "пн, 17 листопада о 16:00". */
-export function relativeLessonTime(l: Lesson, now: number): string {
-  const start = l.start.toDate();
-  if (start.getTime() <= now) return `зараз · до ${formatHm(new Date(lessonEndMs(l)))}`;
-  return `${formatRelativeDay(start, now)} о ${formatHm(start)}`;
-}
-
 interface UpcomingLessonsProps {
   lessons: Lesson[];
   now: number;
@@ -31,7 +24,17 @@ interface UpcomingLessonsProps {
   onOpen?: (l: Lesson) => void;
 }
 
-/** Compact list of the next lessons with join / board shortcuts. */
+/** Time line next to a date tile: "Завтра · 18:00–19:00", "16:00–17:00", "зараз · до 17:00". */
+function tileTime(l: Lesson, now: number): string {
+  const start = l.start.toDate();
+  const end = new Date(lessonEndMs(l));
+  if (start.getTime() <= now) return `зараз · до ${formatHm(end)}`;
+  const day = formatRelativeDay(start, now);
+  const range = `${formatHm(start)}–${formatHm(end)}`;
+  return day === "сьогодні" || day === "завтра" ? `${day} · ${range}` : range;
+}
+
+/** Compact list of the next lessons: date tile, who and when, board / join on the right. */
 export function UpcomingLessons({ lessons, now, showTutor, viewer = "student", onOpen }: UpcomingLessonsProps) {
   const colorOf = useStudentColor();
   const isTutor = viewer === "tutor";
@@ -39,18 +42,30 @@ export function UpcomingLessons({ lessons, now, showTutor, viewer = "student", o
     <ul className="space-y-1">
       {lessons.map((l) => {
         const live = l.start.toMillis() <= now;
+        const start = l.start.toDate();
         // A tutor thinks in students: the name leads; a non-default subject joins the time line.
         const heading = isTutor ? (l.groupId ? (l.groupName ?? l.studentName ?? "Група") : (l.studentName ?? l.title)) : l.title;
         const subject = isTutor && l.title && l.title !== "Урок" ? ` · ${l.title}` : "";
         return (
-          <li key={l.id} className="rounded-xl hover:bg-glass-strong transition-colors">
+          <li key={l.id} className="flex items-center gap-2 rounded-[12px] pr-1.5 hover:bg-glass-strong transition-colors">
             <button
               type="button"
               onClick={() => onOpen?.(l)}
               disabled={!onOpen}
-              className="w-full flex items-start gap-2.5 px-2 py-2 text-left"
+              className="flex min-w-0 flex-1 items-center gap-3 px-1.5 py-1.5 text-left"
             >
-              <span className={cn("mt-1.5 w-2.5 h-2.5 rounded-[4px] shrink-0", colorOf(isTutor ? (l.groupId ?? l.studentId) : l.tutorId).dot)} />
+              {/* Date tile tinted in the student's (or tutor's) calendar colour. */}
+              <span
+                className={cn(
+                  "grid w-11 shrink-0 place-items-center rounded-[10px] py-1.5 leading-none",
+                  colorOf(isTutor ? (l.groupId ?? l.studentId) : l.tutorId).block,
+                )}
+              >
+                <span className="text-[10px] font-semibold opacity-70">
+                  {start.toLocaleDateString("uk-UA", { weekday: "short" })}
+                </span>
+                <span className="mt-0.5 text-base font-bold">{start.getDate()}</span>
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold truncate">{heading}</span>
                 <span
@@ -59,7 +74,7 @@ export function UpcomingLessons({ lessons, now, showTutor, viewer = "student", o
                     live ? "text-red-600 dark:text-red-400 font-semibold" : "text-muted-foreground",
                   )}
                 >
-                  {relativeLessonTime(l, now)}
+                  {tileTime(l, now)}
                   {isTutor
                     ? subject
                     : showTutor && l.tutorName
@@ -68,7 +83,7 @@ export function UpcomingLessons({ lessons, now, showTutor, viewer = "student", o
                 </span>
               </span>
             </button>
-            <LessonActions lesson={l} now={now} size="sm" className="pl-7 pr-2 pb-2 -mt-1 empty:hidden" />
+            <LessonActions lesson={l} now={now} size="icon" className="shrink-0 empty:hidden" />
           </li>
         );
       })}

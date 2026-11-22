@@ -56,18 +56,16 @@ export function LoginForm({ modal = false }: { modal?: boolean }) {
       footerText="Немає акаунту?"
       footerLinkHref={withNext("/register", nextParam ? next : null)}
       footerLinkLabel="Зареєструватись"
+      subtitle="Раді бачити тебе знову"
     >
-      <p className="text-sm text-muted-foreground -mt-2">
-        Раді бачити тебе знову
-      </p>
 
       <button
         type="button"
         onClick={handleGoogle}
         disabled={loading}
         className={cn(
-          "w-full flex items-center justify-center gap-2.5 h-11 rounded-full border border-glass-edge bg-glass text-sm font-semibold shadow-pill transition-all",
-          "hover:bg-glass-strong active:scale-[0.98]",
+          "w-full flex items-center justify-center gap-2.5 h-11 rounded-full border border-foreground/12 bg-white text-sm font-semibold transition-all",
+          "hover:border-foreground/30 active:scale-[0.98]",
           "disabled:opacity-50 disabled:pointer-events-none",
         )}
       >
@@ -94,7 +92,7 @@ export function LoginForm({ modal = false }: { modal?: boolean }) {
 
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-foreground/10" />
-        <span className="text-xs text-muted-foreground uppercase tracking-wider">
+        <span className="text-xs text-muted-foreground">
           або
         </span>
         <div className="flex-1 h-px bg-foreground/10" />
@@ -113,7 +111,7 @@ export function LoginForm({ modal = false }: { modal?: boolean }) {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="h-11"
+            className="h-11 rounded-[12px]"
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -128,12 +126,12 @@ export function LoginForm({ modal = false }: { modal?: boolean }) {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="h-11"
+            className="h-11 rounded-[12px]"
           />
         </div>
 
         {error && (
-          <div className="rounded-2xl bg-destructive/10 border border-destructive/20 px-4 py-2.5">
+          <div className="rounded-[12px] bg-destructive/10 border border-destructive/20 px-4 py-2.5">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}

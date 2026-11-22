@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, type SignUpRole } from "@/context/AuthContext";
-import { GraduationCap, Presentation } from "lucide-react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,8 +77,8 @@ export function RegisterForm({ modal = false }: { modal?: boolean }) {
         onClick={handleGoogle}
         disabled={loading}
         className={cn(
-          "w-full flex items-center justify-center gap-2.5 h-11 rounded-full border border-glass-edge bg-glass text-sm font-semibold shadow-pill transition-all",
-          "hover:bg-glass-strong active:scale-[0.98]",
+          "w-full flex items-center justify-center gap-2.5 h-11 rounded-full border border-foreground/12 bg-white text-sm font-semibold transition-all",
+          "hover:border-foreground/30 active:scale-[0.98]",
           "disabled:opacity-50 disabled:pointer-events-none",
         )}
       >
@@ -94,7 +93,7 @@ export function RegisterForm({ modal = false }: { modal?: boolean }) {
 
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-foreground/10" />
-        <span className="text-xs text-muted-foreground uppercase tracking-wider">або</span>
+        <span className="text-xs text-muted-foreground">або</span>
         <div className="flex-1 h-px bg-foreground/10" />
       </div>
 
@@ -103,27 +102,27 @@ export function RegisterForm({ modal = false }: { modal?: boolean }) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="first-name" className="text-sm font-medium">Імʼя</Label>
             <Input id="first-name" type="text" placeholder="Олена" value={firstName}
-              onChange={(e) => setFirstName(e.target.value)} required autoComplete="given-name" className="h-11" />
+              onChange={(e) => setFirstName(e.target.value)} required autoComplete="given-name" className="h-11 rounded-[12px]" />
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="last-name" className="text-sm font-medium">Прізвище</Label>
             <Input id="last-name" type="text" placeholder="Коваленко" value={lastName}
-              onChange={(e) => setLastName(e.target.value)} required autoComplete="family-name" className="h-11" />
+              onChange={(e) => setLastName(e.target.value)} required autoComplete="family-name" className="h-11 rounded-[12px]" />
           </div>
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="email" className="text-sm font-medium">Email</Label>
           <Input id="email" type="email" placeholder="you@example.com" value={email}
-            onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className="h-11" />
+            onChange={(e) => setEmail(e.target.value)} required autoComplete="email" className="h-11 rounded-[12px]" />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password" className="text-sm font-medium">Пароль</Label>
           <Input id="password" type="password" placeholder="Мінімум 6 символів" value={password}
-            onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" className="h-11" />
+            onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" className="h-11 rounded-[12px]" />
         </div>
 
         {error && (
-          <div className="rounded-2xl bg-destructive/10 border border-destructive/20 px-4 py-2.5">
+          <div className="rounded-[12px] bg-destructive/10 border border-destructive/20 px-4 py-2.5">
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
@@ -141,11 +140,12 @@ export function RegisterForm({ modal = false }: { modal?: boolean }) {
   );
 }
 
-const ROLES: { value: SignUpRole; label: string; hint: string; Icon: typeof GraduationCap }[] = [
-  { value: "student", label: "Я учень", hint: "Тести й заняття", Icon: GraduationCap },
-  { value: "tutor", label: "Я вчитель", hint: "Учні й розклад", Icon: Presentation },
+const ROLES: { value: SignUpRole; label: string }[] = [
+  { value: "student", label: "Учень" },
+  { value: "tutor", label: "Вчитель" },
 ];
 
+/** Two-option switch: who is signing up. */
 function RolePicker({
   value,
   onChange,
@@ -156,8 +156,8 @@ function RolePicker({
   disabled?: boolean;
 }) {
   return (
-    <div role="radiogroup" aria-label="Хто ви?" className="grid grid-cols-2 gap-2">
-      {ROLES.map(({ value: v, label, hint, Icon }) => {
+    <div role="radiogroup" aria-label="Хто ви?" className="grid grid-cols-2 gap-1 rounded-full bg-[#f1f3f3] p-1">
+      {ROLES.map(({ value: v, label }) => {
         const active = value === v;
         return (
           <button
@@ -168,20 +168,12 @@ function RolePicker({
             disabled={disabled}
             onClick={() => onChange(v)}
             className={cn(
-              "flex min-w-0 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left transition-colors",
+              "h-10 rounded-full text-sm font-semibold transition-colors",
               "disabled:opacity-50 disabled:pointer-events-none",
-              active
-                ? "border-transparent bg-primary text-primary-foreground shadow-pill-dark"
-                : "border-glass-edge bg-glass shadow-pill hover:bg-glass-strong",
+              active ? "bg-primary text-primary-foreground" : "text-[#5f777b] hover:text-[#14262a]",
             )}
           >
-            <Icon size={18} className={cn("shrink-0", active ? "opacity-90" : "text-muted-foreground")} />
-            <span className="flex min-w-0 flex-col">
-              <span className="text-sm font-semibold leading-tight">{label}</span>
-              <span className={cn("truncate text-[11px] leading-snug", active ? "opacity-70" : "text-muted-foreground")}>
-                {hint}
-              </span>
-            </span>
+            {label}
           </button>
         );
       })}

@@ -16,7 +16,7 @@ export function ThemeSelector({ className }: { className?: string }) {
       size="md"
       aria-pressed={dark}
       onClick={toggleMode}
-      className={cn("bg-glass text-foreground shadow-pill hover:bg-glass-strong hover:text-foreground", className)}
+      className={cn("bg-card text-foreground hover:bg-sidebar-accent hover:text-foreground", className)}
     >
       {dark ? <Sun size={16} /> : <Moon size={16} />}
     </IconButton>

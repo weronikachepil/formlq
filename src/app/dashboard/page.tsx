@@ -13,6 +13,7 @@ import { JoinTutorCard } from "@/components/dashboard/JoinTutorCard";
 import { TutorLessonsWidget, TutorOverview } from "@/components/dashboard/TutorDashboard";
 import { SoloBoardsCard, SoloOverview } from "@/components/dashboard/SoloDashboard";
 import { useHasTutor } from "@/hooks/useHasTutor";
+import { StudentActions } from "@/components/dashboard/QuickAction";
 
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
@@ -20,12 +21,12 @@ export default function DashboardPage() {
   const { data: tips = [] } = useQuery({
     queryKey: queryKeys.tips,
     queryFn: getTips,
-    enabled: !!user,
+    enabled: !!user && !canTutor(userProfile?.role),
     staleTime: 10 * 60 * 1000,
   });
 
   const tutor = canTutor(userProfile?.role);
-  // The daily question comes from the platform's bank, which teachers don't see.
+  // Teachers make their own tests; editors manage the catalog in the admin area.
   const teacher = tutor && !isEditor(userProfile?.role);
 
   // A student without a teacher studies on their own: tests, progress, boards.
@@ -36,13 +37,13 @@ export default function DashboardPage() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
       <div className="space-y-6">
-        {/* Tutors start with their own work; the tip is a nice-to-have, so it goes last. */}
+        {(solo || withTutor) && <StudentActions withTutor={withTutor} />}
+        {/* The tip and the daily task are for students; teachers and editors see their own work. */}
         {!tutor && <DailyTip tips={tips} />}
         {user && tutor && <TutorOverview tutorId={user.uid} ownTests={teacher} />}
         {solo && <SoloOverview userId={user.uid} />}
-        {user && userProfile && !teacher && <DailyQuestion userId={user.uid} />}
+        {user && userProfile && !tutor && <DailyQuestion userId={user.uid} />}
         {withTutor && <UpcomingHomework userId={user.uid} />}
-        {tutor && <DailyTip tips={tips} />}
       </div>
 
       <div className="space-y-6">

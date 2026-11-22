@@ -3022,3 +3022,138 @@ html.dark .mathboard .bd-insp .bd-actions {
 .mathboard .bd-insp:not(.top) .bd-sec.bd-line {
   gap: 6px;
 }
+
+/* =====================================================================
+   formlq «clean» (2026-11): the board's chrome matches the rest of the site.
+   Flat grey page, opaque white panels with a hairline edge and a quiet shadow,
+   small corners, Onest in the chrome, sentence-case title. Last in the file so it
+   wins over the glass theme above; the sheet's own content keeps its fonts.
+   ===================================================================== */
+.mathboard {
+  --mb-bg: #eef0f0;
+  --mb-card: #ffffff;
+  --mb-glass-border: 1px solid rgba(20, 38, 42, 0.08);
+  --mb-shadow: 0 1px 2px rgba(20, 38, 42, 0.05), 0 8px 24px rgba(20, 38, 42, 0.06);
+  --mb-shadow-lg: 0 1px 2px rgba(20, 38, 42, 0.06), 0 12px 32px rgba(20, 38, 42, 0.1);
+  --mb-font-head: var(--mb-font-ui), system-ui, sans-serif;
+  font-family: var(--mb-font-ui), system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--mb-bg);
+}
+/* Everything on the sheet keeps the original font (text metrics, exports). */
+.mathboard .mb-root {
+  font-family: var(--mb-font-manrope), system-ui, sans-serif;
+}
+.mathboard :is(.card, .board-bar, .bd-tools, .bd-people, .bd-bottom, .bd-insp, .bd-menu, .bd-pages, .bd-progress, .bd-comment, .mb-sliders) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.mathboard .board-wrap {
+  background: var(--mb-bg);
+}
+.mathboard .board-bar {
+  border-radius: 18px;
+  border: 0;
+  box-shadow: none;
+  padding: 8px 10px 8px 18px;
+}
+.mathboard .board-bar .title {
+  font-family: var(--mb-font-ui), system-ui, sans-serif;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-size: 18px;
+  font-weight: 700;
+}
+.mathboard .board-bar :is(button, .btn).ghost {
+  background: #f1f3f3;
+  box-shadow: none;
+}
+.mathboard .board-bar :is(button, .btn).ghost:hover {
+  background: #e7eaea;
+}
+.mathboard .board-canvas {
+  border-radius: 18px;
+  border: 0;
+  box-shadow: none;
+}
+.mathboard .bd-tools,
+.mathboard .bd-insp {
+  border-radius: 18px;
+}
+.mathboard .bd-menu {
+  border-radius: 16px;
+}
+.mathboard :is(.bd-bottom, .bd-pages, .bd-people) {
+  border-radius: 16px;
+}
+.mathboard :is(.bd-tools, .bd-people, .bd-bottom, .bd-insp, .bd-menu, .bd-pages) {
+  border: var(--mb-glass-border);
+  box-shadow: var(--mb-shadow-lg);
+}
+html.dark .mathboard {
+  --mb-bg: #141517;
+  --mb-card: #1c1d20;
+  --mb-glass-border: 1px solid rgba(255, 255, 255, 0.07);
+  --mb-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --mb-shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.4);
+  background: var(--mb-bg);
+}
+html.dark .mathboard .board-bar :is(button, .btn).ghost {
+  background: rgba(255, 255, 255, 0.07);
+}
+html.dark .mathboard .board-bar :is(button, .btn).ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.mathboard .board-bar > a {
+  color: var(--mb-muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.mathboard .board-bar > a:hover {
+  color: var(--mb-ink);
+}
+
+/* Text bar on top: font + Ж + К on one line, the long formula hint becomes a short chip. */
+.mathboard .bd-insp.top {
+  border-radius: 16px;
+}
+.mathboard .bd-insp.top .bd-line {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.mathboard .bd-insp.top .bd-hint {
+  display: none;
+}
+.mathboard .bd-hint-short {
+  display: none;
+}
+.mathboard .bd-insp.top .bd-hint-short {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #f1f3f3;
+  color: var(--mb-muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: help;
+}
+html.dark .mathboard .bd-insp.top .bd-hint-short {
+  background: rgba(255, 255, 255, 0.07);
+}
+.mathboard .bd .bd-chip-btn {
+  border-radius: 10px;
+  box-shadow: none;
+}
+.mathboard .bd-insp.top .bd-chip-btn {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 10px;
+}
+@media (max-width: 760px) {
+  .mathboard .bd-insp.top {
+    border-radius: 18px;
+  }
+}

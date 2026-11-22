@@ -597,13 +597,13 @@ export function TestsManager({ pageTitle, owner, basePath }: TestsManagerProps) 
     // Wide screens: folders in a side column (like a file manager), tests on the right.
     // Wide screens: exactly the window's height; the folder column and the tests scroll on
     // their own, everything else stays put. Narrow: the page scrolls, the toolbar sticks.
-    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6 lg:h-[calc(100dvh-var(--app-header-h)-3rem-var(--tabs-h,0px))]">
+    <div className="max-w-6xl lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6 lg:h-[calc(100dvh-var(--app-header-h)-3rem-var(--tabs-h,0px))]">
       {!isLoading && (
         <aside
           aria-label="Папки"
           className="hidden lg:flex flex-col gap-1 min-h-0 pt-2"
         >
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <p className="px-3 pb-1 text-[13px] font-semibold text-muted-foreground">
             Папки
           </p>
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-0.5 -mx-1 px-1">

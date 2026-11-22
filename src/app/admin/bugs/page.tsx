@@ -145,7 +145,7 @@ export default function AdminBugsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl space-y-6">
       {open.length > 0 && (
         <div className="space-y-2">
           <SectionLabel className="px-1">Нові · {open.length}</SectionLabel>

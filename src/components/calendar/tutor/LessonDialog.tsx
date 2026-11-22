@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Repeat, Users, X } from "lucide-react";
+import { CalendarPlus, Pencil, Repeat, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Lesson, MAX_SERIES_LESSONS, groupMembersOf } from "@/lib/lessons";
 import type { StudentGroup } from "@/lib/groups";
 import { addDays, addMonths, weeklyOccurrences } from "@/lib/calendar";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { IconButton } from "@/components/ui/icon-button";
 import { Select, SelectItem, SelectLabel } from "@/components/ui/select";
 import { TextInput } from "@/components/ui/text-field";
 import { DatePicker, TimePicker } from "@/components/ui/date-time-picker";
@@ -129,7 +128,7 @@ export function LessonDialog({ draft, ...rest }: LessonDialogProps) {
       // A stray click/Escape must not discard a half-filled lesson.
       closeOnEscape={false}
       closeOnBackdrop={false}
-      className="p-5 max-h-[92dvh] overflow-y-auto"
+      className="max-w-md p-6 max-h-[92dvh] overflow-y-auto"
     >
       {/* Keyed so each opening starts from its own draft. */}
       {draft && <LessonForm key={draft.id ?? `${draft.date}T${draft.time}`} initial={draft} {...rest} />}
@@ -192,19 +191,27 @@ function LessonForm({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-heading font-bold">{isNew ? "Новий урок" : "Редагувати урок"}</p>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-mint/60 text-[#14262a] dark:bg-mint/25 dark:text-foreground">
+          {isNew ? <CalendarPlus size={20} /> : <Pencil size={18} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-heading text-lg font-bold leading-tight">{isNew ? "Новий урок" : "Редагувати урок"}</p>
           {d.seriesId && (
             <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <Repeat size={11} /> Урок щотижневої серії
             </p>
           )}
         </div>
-        <IconButton label="Закрити" onClick={onClose}>
-          <X size={15} />
-        </IconButton>
+        <button
+          type="button"
+          aria-label="Закрити"
+          onClick={onClose}
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+        >
+          <X size={17} />
+        </button>
       </div>
 
       <div className="space-y-2.5">
@@ -375,11 +382,11 @@ function LessonForm({
 
       {conflict && <p className="text-xs text-red-500 px-1">{conflictMessage(conflict)}.</p>}
 
-      <div className="flex gap-2 justify-end pt-1">
-        <Button variant="ghost" size="sm" onClick={onClose}>
+      <div className="grid grid-cols-2 gap-3 pt-1">
+        <Button variant="ghost" size="lg" className="bg-muted hover:bg-muted/70" onClick={onClose}>
           Скасувати
         </Button>
-        <Button size="sm" onClick={save} disabled={!canSave}>
+        <Button size="lg" onClick={save} disabled={!canSave}>
           {busy ? "Збереження…" : isNew && d.repeat ? `Створити ${count}` : "Зберегти"}
         </Button>
       </div>

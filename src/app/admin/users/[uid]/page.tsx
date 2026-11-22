@@ -48,7 +48,7 @@ export default function AdminUserHistoryPage() {
   const totalTime = results.reduce((s, r) => s + (r.timeSpent ?? 0), 0);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="max-w-2xl space-y-4">
       <button
         onClick={() => router.push("/admin/users")}
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
