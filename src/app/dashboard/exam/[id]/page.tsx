@@ -8,6 +8,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   getTest,
   TestDoc,
+  markTestTaken,
   saveTestResult,
   effectiveLinkAccess,
   getUserResults,
@@ -66,6 +67,8 @@ export default function ExamPage() {
       scaleType: test.scaleType ?? "nmt",
     });
     queryClient.invalidateQueries({ queryKey: queryKeys.results(user.uid) });
+    // the catalog card shows how many people finished the test (once per person)
+    void markTestTaken(test.id, user.uid);
     return resultId;
   }
 
