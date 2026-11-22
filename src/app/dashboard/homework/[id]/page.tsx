@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   getTest,
-  markTestTaken,
   saveTestResult,
   getResult,
   updateResult,
@@ -128,8 +127,6 @@ export default function HomeworkRunnerPage() {
       flaggedQuestions: payload.flaggedQuestions,
     });
     await updateHomework(homework.id, { status: "completed", resultId });
-    // homework made from a test counts towards that test's «N людей пройшли»
-    if (homework.testId) void markTestTaken(homework.testId, user.uid);
     queryClient.invalidateQueries({ queryKey: queryKeys.results(user.uid) });
     queryClient.invalidateQueries({ queryKey: queryKeys.studentHomework(user.uid) });
     return resultId;

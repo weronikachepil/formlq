@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock, FileText, UserRound, Users } from "lucide-react";
+import { ArrowRight, Clock, FileText, UserRound } from "lucide-react";
 import { pluralize, PLURAL, scoreColor, scoreColorPct } from "@/lib/format";
 import { SUBJECT_LABEL, isExamFailed, type TestDoc, type TestResult } from "@/lib/tests";
 import { cn } from "@/lib/utils";
@@ -102,11 +102,6 @@ export function TestCard({ test, best, query = "" }: { test: TestDoc; best?: Tes
         {test.durationMinutes && (
           <span className="inline-flex items-center gap-1">
             <Clock size={12} /> {test.durationMinutes} хв
-          </span>
-        )}
-        {!!test.takers && (
-          <span className="inline-flex items-center gap-1" title="Скільки людей уже пройшли цей тест">
-            <Users size={12} /> {pluralize(test.takers, ["людина", "людини", "людей"])}
           </span>
         )}
         <span className="ml-auto inline-flex items-center gap-1 font-semibold text-foreground/80 group-hover:text-foreground">

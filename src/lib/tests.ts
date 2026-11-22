@@ -12,8 +12,6 @@ import {
   writeBatch,
   Timestamp,
   deleteField,
-  increment,
-  runTransaction,
 } from "firebase/firestore";
 import { docsOf } from "@/lib/firestore-helpers";
 import { db } from "@/lib/firebase";
@@ -249,10 +247,6 @@ export interface TestDoc {
   grade?: number | null;
   /** Algebra, geometry or both; null/absent = not set. */
   subject?: TestSubject | null;
-  /** When the test was first published to the catalog (the catalog lists newest first). */
-  publishedAt?: Timestamp | null;
-  /** How many different people have finished it (from the catalog); see markTestTaken. */
-  takers?: number;
 }
 
 /**
@@ -511,70 +505,12 @@ export function isExamFailed(
   return scaleType === "nmt" && rawScore < 5;
 }
 
-/** Publication time used for the catalog order: tests published before it was stored use createdAt. */
-export const publishedMillis = (t: Pick<TestDoc, "publishedAt" | "createdAt">): number =>
-  (t.publishedAt ?? t.createdAt)?.toMillis() ?? 0;
-
 export async function getPublishedTests(): Promise<TestDoc[]> {
   // Server-side filter: drafts (with their full question arrays) are never downloaded.
   const snap = await getDocs(
     query(collection(db, "tests"), where("published", "==", true)),
   );
-  // Newest first.
-  return docsOf<TestDoc>(snap).sort((a, b) => publishedMillis(b) - publishedMillis(a));
-}
-
-/**
- * Counts a person who finished a test — from the catalog, by link or as homework made from
- * it — once per person: a marker doc
- * tests/{id}/takers/{uid} plus `takers + 1`, in one transaction (firestore.rules allow
- * exactly this). Never throws: counting must not get in the way of saving a result.
- */
-export async function markTestTaken(testId: string, uid: string): Promise<void> {
-  try {
-    const marker = doc(db, "tests", testId, "takers", uid);
-    await runTransaction(db, async (tx) => {
-      if ((await tx.get(marker)).exists()) return;
-      tx.set(marker, { at: serverTimestamp() });
-      tx.update(doc(db, "tests", testId), { takers: increment(1) });
-    });
-  } catch (e) {
-    console.warn("[tests] не вдалося врахувати проходження", e);
-  }
-}
-
-/**
- * Editors: counts the people who have already finished each test (results saved before the
- * counter existed), homework made from the test included, and writes the markers, so their
- * next attempts are not counted again.
- */
-export async function recountTestTakers(): Promise<{ tests: number; people: number }> {
-  const snap = await getDocs(collection(db, "testResults"));
-  const byTest = new Map<string, Set<string>>();
-  for (const d of snap.docs) {
-    const r = d.data() as Partial<TestResult>;
-    // homework not made from a test carries its own id as testId: no such test, skipped below
-    if (!r.testId || !r.userId) continue;
-    if (!byTest.has(r.testId)) byTest.set(r.testId, new Set());
-    byTest.get(r.testId)!.add(r.userId);
-  }
-  let people = 0;
-  let tests = 0;
-  for (const [testId, users] of byTest) {
-    const testSnap = await getDoc(doc(db, "tests", testId)).catch(() => null);
-    if (!testSnap?.exists()) continue;
-    const ids = [...users];
-    // markers in chunks (a batch holds at most 500 writes), then the total
-    for (let i = 0; i < ids.length; i += 450) {
-      const batch = writeBatch(db);
-      for (const uid of ids.slice(i, i + 450)) batch.set(doc(db, "tests", testId, "takers", uid), { at: serverTimestamp() });
-      await batch.commit();
-    }
-    await updateDoc(doc(db, "tests", testId), { takers: ids.length });
-    tests++;
-    people += ids.length;
-  }
-  return { tests, people };
+  return docsOf<TestDoc>(snap).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }
 
 /**
@@ -642,15 +578,8 @@ export async function updateTest(
   id: string,
   data: Partial<Omit<TestDoc, "id" | "createdAt">>,
 ): Promise<void> {
-  // The first publication is remembered (saving a published test again keeps the date).
-  let publishedAt: Record<string, unknown> = {};
-  if (data.published === true) {
-    const prev = (await getDoc(doc(db, "tests", id)).catch(() => null))?.data() as Partial<TestDoc> | undefined;
-    if (!prev?.publishedAt) publishedAt = { publishedAt: serverTimestamp() };
-  }
   await updateDoc(doc(db, "tests", id), {
     ...data,
-    ...publishedAt,
     // linkAccess supersedes the legacy flag, which the rules would otherwise still honour.
     ...("linkAccess" in data && { publicAccess: deleteField() }),
     updatedAt: serverTimestamp(),
