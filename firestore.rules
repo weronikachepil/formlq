@@ -72,6 +72,16 @@ service cloud.firestore {
       return request.resource.data.get(field, "") is string
         && request.resource.data.get(field, "").size() > 0;
     }
+    // Anyone signed in may add themselves to a test's takers: the marker
+    // tests/{id}/takers/{uid} is created in the same write and `takers` grows by exactly 1,
+    // nothing else changes (lib/tests.ts markTestTaken). Once per person.
+    function takerUpdate(testId) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(["takers"])
+        && request.resource.data.takers == resource.data.get("takers", 0) + 1
+        && !exists(/databases/$(database)/documents/tests/$(testId)/takers/$(request.auth.uid))
+        && existsAfter(/databases/$(database)/documents/tests/$(testId)/takers/$(request.auth.uid));
+    }
+
     function teacherTestOk() {
       return request.resource.data.createdBy == request.auth.uid
         && request.resource.data.get("personal", false) == true
@@ -101,8 +111,16 @@ service cloud.firestore {
         || (isAuth() && resource.data.published == true);
       allow create: if isEditor() || (isTeacher() && teacherTestOk());
       allow update: if isEditor()
-        || (isTeacher() && resource.data.get("createdBy", "") == request.auth.uid && teacherTestOk());
+        || (isTeacher() && resource.data.get("createdBy", "") == request.auth.uid && teacherTestOk())
+        || (isAuth() && takerUpdate(testId));
       allow delete: if isEditor() || (isTeacher() && resource.data.get("createdBy", "") == request.auth.uid);
+
+      // Who has finished the test (one doc per person, id = uid); only the count is shown.
+      match /takers/{uid} {
+        allow get: if isAuth() && (uid == request.auth.uid || isEditor());
+        allow create: if isAuth() && (uid == request.auth.uid || isEditor());
+        allow update: if isEditor();
+      }
     }
 
     // A test given by link for a time window (src/lib/assignments.ts). The public doc
