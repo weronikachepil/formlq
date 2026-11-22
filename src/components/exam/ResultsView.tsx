@@ -3,9 +3,10 @@
 import { useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { pluralize, PLURAL } from "@/lib/format";
-import { TestResult, QuestionResult } from "@/lib/tests";
+import type { TestResult } from "@/lib/tests";
 import { ScoreHeader } from "@/components/exam/ScoreHeader";
 import { QuestionCard } from "@/components/exam/QuestionCard";
+import { QuestionMap } from "@/components/exam/QuestionMap";
 
 interface EditableField {
   value: string;
@@ -29,15 +30,6 @@ interface ResultsViewProps {
   editableComment?: (questionId: string) => EditableField;
   /** Show the "student flagged N questions" banner (tutor). */
   flaggedBanner?: boolean;
-}
-
-function questionStatus(
-  q: QuestionResult,
-): "correct" | "partial" | "wrong" | "skipped" {
-  if (q.isCorrect) return "correct";
-  if ((q.partialScore ?? 0) > 0) return "partial";
-  if (!q.userAnswer) return "skipped";
-  return "wrong";
 }
 
 export function ResultsView({
@@ -107,38 +99,7 @@ export function ResultsView({
         )
       )}
 
-      {/* Quick map */}
-      <div className="flex flex-wrap gap-1.5">
-        {questions.map((q, i) => {
-          const st = questionStatus(q);
-          return (
-            <button
-              key={q.id ?? i}
-              type="button"
-              onClick={() => scrollToQuestion(i)}
-              className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border transition-all relative hover:scale-110 active:scale-95",
-                highlightIdx === i &&
-                  "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110",
-                st === "correct"
-                  ? "bg-green-500/15 border-green-500/40 text-green-600 dark:text-green-400"
-                  : st === "partial"
-                    ? "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400"
-                    : st === "wrong"
-                      ? "bg-red-500/15 border-red-500/40 text-red-500"
-                      : "bg-muted border-border/50 text-muted-foreground",
-              )}
-            >
-              {i + 1}
-              {flagged.includes(q.id) && (
-                <span className="absolute -top-1.5 -right-1.5 text-[10px]">
-                  🦆
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <QuestionMap questions={questions} onSelect={scrollToQuestion} highlightIdx={highlightIdx} flagged={flagged} />
 
       {/* Question cards */}
       <div className="space-y-3">
@@ -149,7 +110,7 @@ export function ResultsView({
               refs.current[i] = el;
             }}
             className={cn(
-              "scroll-mt-20 rounded-2xl transition-all duration-500",
+              "scroll-mt-20 rounded-[18px] transition-all duration-500",
               highlightIdx === i &&
                 "ring-2 ring-primary ring-offset-2 ring-offset-background shadow-lg",
             )}

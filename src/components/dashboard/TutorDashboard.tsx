@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  CheckCircle2,
   CalendarClock,
   CalendarPlus,
   ClipboardPlus,
@@ -100,7 +101,7 @@ export function TutorOverview({
 
   return (
     <>
-      <section className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
+      <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <SectionLabel>Огляд</SectionLabel>
@@ -122,8 +123,8 @@ export function TutorOverview({
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {tiles.map((t) => (
-            <div key={t.label} className="rounded-xl bg-muted/70 px-3 py-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
+            <div key={t.label} className="rounded-[12px] bg-muted/70 px-3 py-2.5">
+              <p className="text-xs text-muted-foreground truncate">
                 {t.label}
               </p>
               {loading ? (
@@ -143,9 +144,9 @@ export function TutorOverview({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/50 bg-card p-5 space-y-3">
+      <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-semibold text-base flex items-center gap-2">
+          <h2 className="font-heading font-bold text-base flex items-center gap-2">
             Потребує уваги
             {hw.overdue > 0 && (
               <span className="text-[11px] font-semibold rounded-full px-2 py-0.5 text-red-600 dark:text-red-400 bg-red-500/10">
@@ -168,10 +169,11 @@ export function TutorOverview({
             ))}
           </div>
         ) : attention.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-muted-foreground text-sm gap-1 py-6">
-            <span className="text-2xl">✨</span>
-            <p>Усе під контролем — найближчих дедлайнів немає</p>
-          </div>
+          // Nothing to do = one quiet line, not half a screen.
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle2 size={16} className="shrink-0 text-green-600 dark:text-green-400" />
+            Усе під контролем — найближчих дедлайнів немає
+          </p>
         ) : (
           <ul className="space-y-1 -mx-1">
             {attention.map((h) => {
@@ -237,7 +239,7 @@ function QuickAction({ href, Icon, label }: { href: string; Icon: LucideIcon; la
 /** A brand-new tutor: point at the one thing that unlocks everything else. */
 function FirstStudentCard() {
   return (
-    <section className="rounded-2xl border border-border/50 bg-card p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+    <section className="rounded-[18px] border border-border/50 bg-card p-6 flex flex-col sm:flex-row sm:items-center gap-4">
       <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
         <UserPlus size={22} />
       </div>

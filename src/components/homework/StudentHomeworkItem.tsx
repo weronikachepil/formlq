@@ -23,9 +23,9 @@ function ScoreChip({ result }: { result: TestResult }) {
   const isNmt = (result.scaleType ?? "nmt") === "nmt";
   if (isExamFailed(result.rawScore, result.scaleType ?? "nmt")) {
     return (
-      <span className="shrink-0 inline-flex flex-col items-center justify-center w-14 h-11 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400">
-        <span className="text-sm font-bold leading-none">✕</span>
-        <span className="text-[9px] font-semibold mt-0.5">НЕ СКЛАВ</span>
+      <span className="shrink-0 inline-flex flex-col items-center justify-center w-14 h-11 rounded-[10px] bg-muted text-muted-foreground">
+        <span className="text-sm font-bold leading-none">—</span>
+        <span className="text-[9px] font-semibold uppercase mt-0.5">не зар.</span>
       </span>
     );
   }

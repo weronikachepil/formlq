@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { QuestionResult } from "@/lib/tests";
 import { MathText } from "@/components/MathText";
 import { pluralize, PLURAL } from "@/lib/format";
+import { parseListAnswer } from "@/lib/tests";
 
 interface QuestionCardProps {
   q: QuestionResult;
@@ -49,7 +50,15 @@ export function QuestionCard({
       : (q.correctOptionId ?? "");
   } else if (q.type === "open") {
     userLabel = q.userAnswer || "—";
-    correctLabel = q.correctAnswer ?? "";
+    correctLabel = (q.correctAnswer ?? "") + (q.tolerance ? ` (± ${String(q.tolerance).replace(".", ",")})` : "");
+  } else if (q.type === "multi") {
+    const label = (ids: string[]) =>
+      (q.options ?? [])
+        .filter((o) => ids.includes(o.id))
+        .map((o) => `${o.id}${o.text ? `. ${o.text}` : ""}`)
+        .join("; ");
+    userLabel = label(parseListAnswer(q.userAnswer)) || "—";
+    correctLabel = label(q.correctOptionIds ?? []);
   } else if (q.type === "matching") {
     try {
       const parsed = JSON.parse(q.userAnswer) as Record<string, string>;
@@ -65,13 +74,14 @@ export function QuestionCard({
       .join(", ");
   }
 
-  const skipped = !q.userAnswer || q.userAnswer === "";
-  const isPartial = q.type === "matching" && !q.isCorrect && (q.partialScore ?? 0) > 0;
+  const skipped = !q.userAnswer || q.userAnswer === "" || q.userAnswer === "[]";
+  const isPartial =
+    (q.type === "matching" || q.type === "multi" || q.type === "order") && !q.isCorrect && (q.partialScore ?? 0) > 0;
 
   return (
     <div
       className={cn(
-        "rounded-2xl border bg-card p-5 space-y-4 border-l-[3px]",
+        "rounded-[18px] border bg-card p-5 space-y-4 border-l-[3px]",
         q.isCorrect
           ? "border-border/50 border-l-green-500/60"
           : isPartial
@@ -141,7 +151,48 @@ export function QuestionCard({
 
       {/* Answers */}
       <div className="space-y-2 text-sm">
-        {q.type === "matching" && q.leftItems ? (() => {
+        {q.type === "order" && q.items ? (() => {
+          const got = parseListAnswer(q.userAnswer);
+          const byId = new Map(q.items.map((it) => [it.id, it]));
+          return (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <span className="text-muted-foreground text-xs">{answerLabel}:</span>
+                {got.length ? (
+                  <ol className="space-y-1">
+                    {got.map((id, i) => {
+                      const ok = q.items?.[i]?.id === id;
+                      return (
+                        <li
+                          key={id}
+                          className={cn("flex gap-1.5 text-xs font-medium", ok ? "text-green-600 dark:text-green-400" : "text-red-500")}
+                        >
+                          <span className="tabular-nums">{i + 1}.</span>
+                          <MathText text={byId.get(id)?.text ?? "—"} />
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <p className="text-xs text-muted-foreground">—</p>
+                )}
+              </div>
+              {!q.isCorrect && (
+                <div className="space-y-1">
+                  <span className="text-muted-foreground text-xs">Правильний порядок:</span>
+                  <ol className="space-y-1">
+                    {q.items.map((it, i) => (
+                      <li key={it.id} className="flex gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                        <span className="tabular-nums">{i + 1}.</span>
+                        <MathText text={it.text} />
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          );
+        })() : q.type === "matching" && q.leftItems ? (() => {
           let pairs: Record<string, string> = {};
           try { pairs = JSON.parse(q.userAnswer); } catch { /* noop */ }
           return (

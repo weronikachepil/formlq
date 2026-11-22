@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { usePageHeader } from "@/context/HeaderContext";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
+import { lastSeenAt } from "@/lib/presence";
 import { subscribeToUsers, updateUserRole } from "@/lib/users";
 import { queryKeys } from "@/lib/queryKeys";
 import { UserProfile, UserRole } from "@/types";
@@ -13,13 +14,14 @@ import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/search-input";
 import { SectionLabel } from "@/components/ui/section-label";
+import { plural, PLURAL } from "@/lib/format";
 import { UserRow } from "@/components/admin/users/UserRow";
 
 const PAGE = 10;
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
-  const { onlineUids, count: onlineCount } = useOnlineUsers();
+  const { onlineUids, presence, count: onlineCount } = useOnlineUsers();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -91,17 +93,46 @@ export default function AdminUsersPage() {
       search={search}
       isSelf={u.uid === currentUser?.uid}
       isOnline={onlineUids.has(u.uid)}
+      lastSeen={lastSeenAt(presence[u.uid])}
       updating={updatingRole === u.uid}
       onSetRole={setRole}
       onOpen={openUser}
     />
   );
 
+  // Totals over everyone registered, independent of the search.
+  const totals = useMemo(() => {
+    let editors = 0;
+    let tutors = 0;
+    for (const u of users) {
+      if (u.role === "editor") editors++;
+      else if (u.role === "tutor") tutors++;
+    }
+    return { all: users.length, editors, tutors, students: users.length - editors - tutors };
+  }, [users]);
+
   const { online, editors, tutors, students } = groups;
   const remaining = students.length - studentsVisible;
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
+      {!isLoading && (
+        <div className="rounded-2xl border border-border/50 bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <p className="text-3xl font-bold font-mono leading-none">{totals.all}</p>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              {plural(totals.all, ["зареєстрований користувач", "зареєстровані користувачі", "зареєстрованих користувачів"])}
+            </p>
+          </div>
+          <div className="flex gap-5 text-center">
+            <Total value={totals.students} label={PLURAL.student[2]} />
+            <Total value={totals.tutors} label="вчителів" />
+            <Total value={totals.editors} label="редакторів" />
+            <Total value={onlineCount} label="онлайн" />
+          </div>
+        </div>
+      )}
+
       <SearchInput
         value={search}
         onChange={(v) => {
@@ -147,6 +178,15 @@ export default function AdminUsersPage() {
           {filtered.length === 0 && <EmptyState emoji="👤" title="Нічого не знайдено" />}
         </div>
       )}
+    </div>
+  );
+}
+
+function Total({ value, label }: { value: number; label: string }) {
+  return (
+    <div>
+      <p className="text-xl font-bold font-mono leading-none">{value}</p>
+      <p className="text-[11px] text-muted-foreground mt-1">{label}</p>
     </div>
   );
 }

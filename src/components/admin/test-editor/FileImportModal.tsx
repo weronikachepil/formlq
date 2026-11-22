@@ -363,9 +363,13 @@ function PreviewRow({
       ? q.correctOptionId
       : q.type === "open"
         ? q.correctAnswer
-        : Object.entries(q.correctPairs)
-            .map(([l, r]) => `${l}-${r}`)
-            .join(", ");
+        : q.type === "matching"
+          ? Object.entries(q.correctPairs)
+              .map(([l, r]) => `${l}-${r}`)
+              .join(", ")
+          : q.type === "multi"
+            ? q.correctOptionIds.join(", ")
+            : q.items.map((it) => it.id).join(" → ");
   // Icon + text, not color alone, so the missing state reads without color.
   const imageTag = (name: string | undefined, label: string) => {
     if (!name) return null;

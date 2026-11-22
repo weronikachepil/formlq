@@ -121,7 +121,42 @@ function QuestionPreview({ q, index }: { q: TestQuestion; index: number }) {
         <p className="text-sm flex items-baseline gap-2">
           <span className="text-muted-foreground text-xs shrink-0">Правильна відповідь</span>
           <MathText text={q.correctAnswer || "—"} className="font-medium text-green-700 dark:text-green-400" />
+          {q.tolerance ? <span className="text-xs text-muted-foreground">± {String(q.tolerance).replace(".", ",")}</span> : null}
         </p>
+      )}
+
+      {q.type === "multi" && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {q.options.map((o) => {
+            const right = q.correctOptionIds.includes(o.id);
+            return (
+              <div
+                key={o.id}
+                className={cn(
+                  "rounded-xl border px-3 py-2 text-sm flex gap-2",
+                  right ? "border-green-500/50 bg-green-500/10" : "border-border/50",
+                )}
+              >
+                <span className={cn("font-semibold shrink-0", right && "text-green-700 dark:text-green-400")}>{o.id}</span>
+                <div className="min-w-0">
+                  {o.text && <MathText text={o.text} />}
+                  {o.imageUrl && <Picture src={o.imageUrl} small />}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {q.type === "order" && (
+        <ol className="space-y-1.5 text-sm">
+          {q.items.map((it, i) => (
+            <li key={it.id} className="flex gap-2">
+              <span className="font-semibold shrink-0 tabular-nums">{i + 1}.</span>
+              <MathText text={it.text} className="min-w-0" />
+            </li>
+          ))}
+        </ol>
       )}
 
       {q.type === "matching" && (

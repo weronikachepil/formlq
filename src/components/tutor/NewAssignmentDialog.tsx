@@ -10,10 +10,10 @@ import { createAssignment } from "@/lib/assignments";
 import { pluralize, PLURAL } from "@/lib/format";
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SectionLabel } from "@/components/ui/section-label";
 import { TextInput } from "@/components/ui/text-field";
 import { DateTimePicker, toLocalValue } from "@/components/ui/date-time-picker";
 import { TestPicker } from "@/components/TestPicker";
+import { cn } from "@/lib/utils";
 
 const parse = (v: string) => (v ? new Date(v) : null);
 
@@ -90,8 +90,14 @@ export function NewAssignmentDialog({ onClose, onCreated }: { onClose: () => voi
     }
   }
 
+  // Common lengths: one tap; anything else in the «інша» field.
+  const presets = [30, 45, 60, 90];
+  const custom = !presets.includes(dur);
+  // The attempt can't outlast the window (see `save`): say so before it surprises anyone.
+  const capped = !error && dur > windowMin && windowMin > 0;
+
   return (
-    <Dialog open onClose={onClose} size="md" className="p-6" closeOnBackdrop={false}>
+    <Dialog open onClose={onClose} size="md" className="rounded-[18px] p-6" closeOnBackdrop={false}>
       <form onSubmit={save} className="space-y-5">
         <div className="space-y-1">
           <h2 className="font-heading font-bold text-xl">Нове тестування</h2>
@@ -100,10 +106,9 @@ export function NewAssignmentDialog({ onClose, onCreated }: { onClose: () => voi
           </p>
         </div>
 
-        <div className="space-y-2">
-          <SectionLabel>Тест</SectionLabel>
+        <Field label="Тест">
           {tests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground px-1">
               Немає тестів із питаннями.{" "}
               <Link href="/tutor/tests" className="underline underline-offset-2">
                 Створити тест
@@ -113,53 +118,79 @@ export function NewAssignmentDialog({ onClose, onCreated }: { onClose: () => voi
             <TestPicker tests={[...tests]} folders={[...folders]} value={testId} onChange={pickTest} />
           )}
           {test && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground px-1">
               {pluralize(test.questions.length, PLURAL.question)}
               {test.personal && test.createdBy !== user?.uid ? ` · автор: ${test.authorName || "викладач"}` : ""}. Учні
               отримають копію тесту: зміни в ньому після створення тестування не вплинуть.
             </p>
           )}
-        </div>
+        </Field>
 
-        <div className="space-y-2">
-          <SectionLabel as="label" htmlFor="as-title">
-            Назва для учнів
-          </SectionLabel>
+        <Field label="Назва для учнів" htmlFor="as-title">
           <TextInput id="as-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Напр. Контрольна 9-Б" maxLength={80} />
+        </Field>
+
+        {/* When it can be taken: the window and its length in one place. */}
+        <div className="space-y-1.5">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <Field label="Відкривається">
+              <DateTimePicker value={opens} onChange={setOpens} clearable={false} />
+            </Field>
+            <Field label="Закривається">
+              <DateTimePicker value={closes} onChange={setCloses} clearable={false} />
+            </Field>
+          </div>
+          {error ? (
+            <p className="text-xs text-red-600 dark:text-red-400 px-1">{error}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground px-1 tabular-nums">
+              Доступно {windowMin >= 60 ? `${Math.floor(windowMin / 60)} год ${windowMin % 60 ? `${windowMin % 60} хв` : ""}`.trim() : `${windowMin} хв`}
+            </p>
+          )}
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <SectionLabel>Відкривається</SectionLabel>
-            <DateTimePicker value={opens} onChange={setOpens} clearable={false} />
+        <div className="space-y-1.5">
+          <span className="block text-xs font-semibold text-muted-foreground px-1">Час на проходження</span>
+          <div role="radiogroup" aria-label="Час на проходження" className="grid grid-cols-5 gap-1.5">
+            {presets.map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={dur === m}
+                onClick={() => setMinutes(String(m))}
+                className={cn(
+                  "h-10 rounded-[12px] text-sm font-semibold tabular-nums transition-colors",
+                  dur === m
+                    ? "bg-primary text-primary-foreground shadow-pill-dark"
+                    : "border border-glass-edge bg-glass shadow-pill hover:bg-glass-strong",
+                )}
+              >
+                {m} хв
+              </button>
+            ))}
+            <label>
+              <span className="sr-only">Інший час, хв</span>
+              <TextInput
+                type="number"
+                min={1}
+                placeholder="інша"
+                value={custom ? minutes : ""}
+                onChange={(e) => setMinutes(e.target.value)}
+                className={cn("tabular-nums text-center", custom && minutes && "ring-2 ring-ring/40")}
+              />
+            </label>
           </div>
-          <div className="space-y-2">
-            <SectionLabel>Закривається</SectionLabel>
-            <DateTimePicker value={closes} onChange={setCloses} clearable={false} />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <SectionLabel as="label" htmlFor="as-min">
-            Час на проходження, хв
-          </SectionLabel>
-          <TextInput
-            id="as-min"
-            type="number"
-            min={1}
-            value={minutes}
-            onChange={(e) => setMinutes(e.target.value)}
-            className="sm:w-40"
-          />
-          <p className="text-xs text-muted-foreground">
-            Відлік іде від моменту, коли учень почав, але не довше, ніж до закриття. Коли час вийде, відповіді
-            надішлються автоматично.
+          <p className={cn("text-xs px-1", capped ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground")}>
+            {capped
+              ? `Вікно коротше (${windowMin} хв) — на проходження буде ${windowMin} хв.`
+              : "Відлік іде від моменту, коли учень почав, але не довше, ніж до закриття. Коли час вийде, відповіді надішлються автоматично."}
           </p>
         </div>
 
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-
-        <div className="flex justify-end gap-2 pt-1">
+        <div className="flex items-center justify-end gap-2 pt-1">
+          {/* Say why «Створити» is disabled instead of leaving a grey button. */}
+          {!test && tests.length > 0 && <p className="mr-auto text-xs text-muted-foreground">Оберіть тест</p>}
           <Button type="button" variant="outline" onClick={onClose}>
             Скасувати
           </Button>
@@ -169,5 +200,16 @@ export function NewAssignmentDialog({ onClose, onCreated }: { onClose: () => voi
         </div>
       </form>
     </Dialog>
+  );
+}
+
+function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={htmlFor} className="block text-xs font-semibold text-muted-foreground px-1">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }

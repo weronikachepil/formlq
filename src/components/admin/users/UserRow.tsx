@@ -15,6 +15,8 @@ interface UserRowProps {
   search: string;
   isSelf: boolean;
   isOnline: boolean;
+  /** Last activity, ms (presence); null = never seen since presence was tracked. */
+  lastSeen: number | null;
   updating: boolean;
   onSetRole: (uid: string, role: UserRole) => void;
   onOpen: (uid: string) => void;
@@ -28,6 +30,7 @@ export const UserRow = memo(function UserRow({
   search,
   isSelf,
   isOnline,
+  lastSeen,
   updating,
   onSetRole,
   onOpen,
@@ -35,6 +38,8 @@ export const UserRow = memo(function UserRow({
   const locked = isProtectedEmail(u.email);
   const isEditor = isEditorRole(u.role);
   const isTutor = u.role === "tutor";
+  const seen = isOnline ? "онлайн" : lastSeen ? `був(ла) ${timeAgo(new Date(lastSeen))}` : "ще не заходив(ла)";
+  const seenCls = isOnline ? "text-green-600 dark:text-green-400 font-medium" : "text-muted-foreground";
 
   return (
     <div
@@ -82,11 +87,15 @@ export const UserRow = memo(function UserRow({
         <p className="text-xs text-muted-foreground truncate">
           <Highlight text={u.email ?? ""} query={search} />
         </p>
+        <p className={cn("md:hidden text-[11px] truncate", seenCls)}>{seen}</p>
       </div>
 
-      <span className="hidden md:block shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground/50 tabular-nums">
-        {u.createdAt ? timeAgo(u.createdAt.toDate()) : "—"}
-      </span>
+      <div className="hidden md:block shrink-0 whitespace-nowrap text-right tabular-nums">
+        <p className={cn("text-xs", seenCls)}>{seen}</p>
+        <p className="text-[11px] text-muted-foreground/50" title="Зареєстрований(а)">
+          реєстр. {u.createdAt ? timeAgo(u.createdAt.toDate()) : "—"}
+        </p>
+      </div>
 
       <div
         onClick={(e) => e.stopPropagation()}

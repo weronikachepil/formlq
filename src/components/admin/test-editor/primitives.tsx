@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { DIFFICULTIES, type Difficulty } from "./constants";
 
-/** Pill-style tab bar (bg-muted track, raised active segment). */
+/** Pill tab bar, like the app's other filters (muted track, ink active pill). */
 export function SegmentedControl<T extends string>({
   value,
   options,
@@ -12,16 +12,16 @@ export function SegmentedControl<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="flex gap-1 bg-muted/40 p-1 rounded-xl w-fit">
+    <div className="inline-flex flex-wrap gap-0.5 bg-muted p-1 rounded-full w-fit">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={cn(
-            "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+            "px-4 h-8 rounded-full text-xs font-semibold transition-colors whitespace-nowrap",
             value === o.value
-              ? "bg-background shadow-sm text-foreground"
+              ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -74,8 +74,10 @@ export function StepButton({
     <button
       type="button"
       className={cn(
-        "rounded-lg border border-border/50 bg-background hover:border-primary/60 text-sm font-bold flex items-center justify-center transition-colors",
+        "rounded-full border border-glass-edge bg-glass shadow-pill hover:bg-glass-strong text-sm font-bold flex items-center justify-center transition-colors disabled:opacity-40 disabled:pointer-events-none",
         size === "sm" ? "w-7 h-7" : "w-8 h-8",
+        // Finger-sized on touch screens (iPad).
+        "pointer-coarse:w-10 pointer-coarse:h-10",
         className,
       )}
       {...props}

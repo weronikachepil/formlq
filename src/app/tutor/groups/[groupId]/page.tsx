@@ -10,7 +10,7 @@ import { usePageHeader } from "@/context/HeaderContext";
 import { queryKeys } from "@/lib/queryKeys";
 import { getTutorStudents, subscribeTutorHomework, type Homework } from "@/lib/tutor";
 import { subscribeTutorGroups, type StudentGroup } from "@/lib/groups";
-import { getResult, type TestResult } from "@/lib/tests";
+import { getResult, isExamFailed, type TestResult } from "@/lib/tests";
 import { getHomeworkStatusMeta, isHomeworkOverdue } from "@/lib/homework-status";
 import { pluralize, PLURAL } from "@/lib/format";
 import { DeleteGroupConfirm, GroupDialog } from "@/components/tutor/GroupDialog";
@@ -222,6 +222,8 @@ function Cell({ hw, result, now }: { hw: Homework; result: TestResult | null | u
     cls = "text-green-700 dark:text-green-400 bg-green-500/10";
     if (result === undefined) label = "…";
     else if (!result) label = "Здано";
+    // Below the threshold the scale still yields 100 — show the raw points only.
+    else if (isExamFailed(result.rawScore, result.scaleType ?? "nmt")) label = `не зар. · ${result.rawScore}/${result.maxRaw}`;
     else if ((result.scaleType ?? "nmt") === "nmt") label = `${result.nmtScore} · ${result.rawScore}/${result.maxRaw}`;
     else label = `${result.rawScore}/${result.maxRaw}`;
   } else if (isHomeworkOverdue(hw, now)) {

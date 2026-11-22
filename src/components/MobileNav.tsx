@@ -23,8 +23,8 @@ export function MobileNav({ onReportBug }: { onReportBug: () => void }) {
     function onPointerDown(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
 
   // Close the menu on navigation (state adjusted during render, not in an effect).

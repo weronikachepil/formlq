@@ -158,21 +158,18 @@ export default function TutorStudentCabinetPage() {
         <ArrowLeft size={14} /> Усі учні
       </Link>
 
-      <div className="rounded-2xl border border-border/50 bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+      <div className="rounded-[18px] border border-border/50 bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold shrink-0">
             {name[0]?.toUpperCase() ?? "?"}
           </div>
           <p className="min-w-0 font-semibold truncate">{name}</p>
         </div>
-        <div className="flex gap-4 text-center">
-          <Counter value={summary.active} label="активні" />
-          <Counter
-            value={summary.overdue}
-            label="прострочені"
-            danger={summary.overdue > 0}
-          />
-          <Counter value={summary.done} label="виконані" />
+        {/* "0 прострочені" is noise: overdue appears only when there is some. */}
+        <div className="flex gap-6 text-center">
+          {summary.overdue > 0 && <Counter value={summary.overdue} label="прострочено" danger />}
+          <Counter value={summary.active} label="в роботі" />
+          <Counter value={summary.done} label="виконано" />
         </div>
       </div>
 
@@ -324,7 +321,7 @@ function Counter({
     <div>
       <p
         className={cn(
-          "text-xl font-bold font-mono leading-none",
+          "font-heading text-2xl font-bold leading-none tabular-nums",
           danger && "text-red-600 dark:text-red-400",
         )}
       >

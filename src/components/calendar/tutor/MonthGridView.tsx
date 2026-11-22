@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Check, CheckCircle2, ClipboardList } from "lucide-react";
+import { Check, CheckCircle2, ClipboardList, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Lesson, lessonStatus } from "@/lib/lessons";
 import type { Homework } from "@/lib/tutor";
@@ -55,7 +55,11 @@ export function MonthGridView({
   const onCellClick = !mode.readOnly && onCreateAt ? onCreateAt : onDayClick;
   const month = anchor.getMonth();
   const days = useMemo(() => monthGridDays(anchor.getFullYear(), month), [anchor, month]);
-  const lessonsByDay = useMemo(() => groupByDay(lessons, (l) => l.start.toDate()), [lessons]);
+  const lessonsByDay = useMemo(
+    // By start time within a day (an optimistic move can leave the list out of order).
+    () => groupByDay([...lessons].sort((a, b) => a.start.toMillis() - b.start.toMillis()), (l) => l.start.toDate()),
+    [lessons],
+  );
   const hwByDay = useMemo(() => groupByDay(homework, (h) => h.dueAt?.toDate() ?? null), [homework]);
   const today = new Date(now);
 
@@ -172,7 +176,8 @@ export function MonthGridView({
                         status === "canceled" && "opacity-50 line-through",
                       )}
                     >
-                      <span className="font-mono text-[10px] opacity-80 shrink-0">{formatHm(l.start.toDate())}</span>
+                      <span className="text-[10px] font-medium tabular-nums opacity-75 shrink-0">{formatHm(l.start.toDate())}</span>
+                      {l.groupId && <Users size={10} className="shrink-0 opacity-80" aria-label="Група" />}
                       <span className="truncate font-medium">{mode.lessonTitle(l)}</span>
                       {status === "done" && <Check size={10} strokeWidth={3} className="shrink-0 ml-auto" />}
                     </button>

@@ -41,8 +41,8 @@ export function UpcomingLessonsCard({
 
   return (
     <StudentColorsProvider value={colorOf}>
-      <section className="rounded-2xl border border-border/50 bg-card p-4 space-y-2">
-        <h2 className="font-semibold text-base px-1">Найближчі заняття</h2>
+      <section className="rounded-[18px] border border-border/50 bg-card p-4 space-y-2">
+        <h2 className="font-heading font-bold text-base px-1">Найближчі заняття</h2>
         {lessons === null ? (
           <div className="space-y-2 py-1">
             {[0, 1].map((i) => (

@@ -7,50 +7,76 @@ import { maxScaledScore, isExamFailed, type TestResult } from "@/lib/tests";
 interface ResultListItemProps {
   result: TestResult;
   href: string;
+  /** On the test's own page: the title is already above, so the date leads. */
+  hideTitle?: boolean;
 }
 
-export function ResultListItem({ result, href }: ResultListItemProps) {
+/**
+ * One attempt: score badge, what/when, correct count and time. Below the NMT
+ * threshold the badge says "не зар." in grey — same wording as the result page,
+ * no red cross, no gendered "не склав".
+ */
+export function ResultListItem({ result, href, hideTitle = false }: ResultListItemProps) {
   const isNmt = (result.scaleType ?? "nmt") === "nmt";
   const maxScaled = isNmt ? 200 : maxScaledScore(result.scoreTable ?? []);
   const scaledPct = maxScaled ? (result.nmtScore / maxScaled) * 100 : 0;
   const { text, bg } = isNmt ? scoreColor(result.nmtScore) : scoreColorPct(scaledPct);
   const questions = result.questions ?? [];
   const correct = questions.filter((q) => q.isCorrect).length;
-  const pct = questions.length ? Math.round((correct / questions.length) * 100) : 0;
   const failed = isExamFailed(result.rawScore, result.scaleType ?? "nmt");
 
+  const stats = (
+    <>
+      <span className="tabular-nums">
+        <b className="font-semibold text-foreground">{correct}</b> з {questions.length} вірно
+      </span>
+      {result.timeSpent ? (
+        <span className="inline-flex items-center gap-1 tabular-nums">
+          <Clock size={11} />
+          {formatDuration(result.timeSpent)}
+        </span>
+      ) : null}
+    </>
+  );
+
   return (
-    <Link href={href} className="block">
-      <div className="rounded-2xl border border-border/50 bg-card px-5 py-4 flex items-center gap-4 hover:bg-muted/30 hover:border-border/80 transition-all group">
-        {failed ? (
-          <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 bg-red-500/10">
-            <span className="text-lg leading-none">❌</span>
-            <span className="text-[9px] font-medium leading-none mt-0.5 text-red-500">НЕ СКЛАВ</span>
-          </div>
-        ) : (
-          <div className={cn("w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0", bg)}>
-            <span className={cn("text-lg font-bold leading-none tabular-nums", text)}>{result.nmtScore}</span>
-            <span className={cn("text-[9px] font-medium leading-none mt-0.5", text)}>{isNmt ? "НМТ" : "БАЛ"}</span>
-          </div>
+    <Link
+      href={href}
+      className="group flex items-center gap-3.5 rounded-[14px] border border-border/50 bg-card px-4 py-3 outline-none transition-colors hover:border-primary/30 focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
+      <div
+        className={cn(
+          "w-12 h-12 shrink-0 rounded-[10px] flex flex-col items-center justify-center",
+          // Neutral, so it never reads like an amber 140–159 score.
+          failed ? "bg-muted text-muted-foreground" : cn(bg, text),
         )}
-
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">{result.testTitle || "Без назви"}</p>
-          {result.testSubtitle && (
-            <p className="text-xs text-muted-foreground truncate">{result.testSubtitle}</p>
-          )}
-          <p className="text-xs text-muted-foreground mt-0.5">{formatDate(result.completedAt)}</p>
-        </div>
-
-        <div className="hidden sm:flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
-          <span>Правильно: <b className="text-foreground">{correct}/{questions.length}</b> ({pct}%)</span>
-          {result.timeSpent ? (
-            <span className="flex items-center gap-1"><Clock size={11} />{formatDuration(result.timeSpent)}</span>
-          ) : null}
-        </div>
-
-        <ChevronRight size={16} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+      >
+        <span className="font-heading text-lg font-bold leading-none tabular-nums">{failed ? "—" : result.nmtScore}</span>
+        <span className="mt-1 text-[9px] font-semibold uppercase leading-none tracking-wide">
+          {failed ? "не зар." : isNmt ? "НМТ" : "бал"}
+        </span>
       </div>
+
+      <div className="min-w-0 flex-1">
+        {hideTitle ? (
+          <p className="text-sm font-semibold tabular-nums">{formatDate(result.completedAt)}</p>
+        ) : (
+          <>
+            <p className="truncate text-sm font-semibold">{result.testTitle || "Без назви"}</p>
+            {result.testSubtitle && <p className="truncate text-xs text-muted-foreground">{result.testSubtitle}</p>}
+            <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">{formatDate(result.completedAt)}</p>
+          </>
+        )}
+        {/* Phones: stats under the text instead of a right column. */}
+        <p className="mt-0.5 flex gap-3 text-xs text-muted-foreground sm:hidden">{stats}</p>
+      </div>
+
+      <div className="hidden shrink-0 flex-col items-end gap-1 text-xs text-muted-foreground sm:flex">{stats}</div>
+
+      <ChevronRight
+        size={16}
+        className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground"
+      />
     </Link>
   );
 }

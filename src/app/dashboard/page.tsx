@@ -36,11 +36,13 @@ export default function DashboardPage() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
       <div className="space-y-6">
-        <DailyTip tips={tips} />
+        {/* Tutors start with their own work; the tip is a nice-to-have, so it goes last. */}
+        {!tutor && <DailyTip tips={tips} />}
         {user && tutor && <TutorOverview tutorId={user.uid} ownTests={teacher} />}
         {solo && <SoloOverview userId={user.uid} />}
         {user && userProfile && !teacher && <DailyQuestion userId={user.uid} />}
         {withTutor && <UpcomingHomework userId={user.uid} />}
+        {tutor && <DailyTip tips={tips} />}
       </div>
 
       <div className="space-y-6">

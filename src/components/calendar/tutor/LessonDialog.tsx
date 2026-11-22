@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Repeat, X } from "lucide-react";
+import { Repeat, Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Lesson, MAX_SERIES_LESSONS, groupMembersOf } from "@/lib/lessons";
 import type { StudentGroup } from "@/lib/groups";
@@ -37,6 +37,9 @@ export interface LessonDraft {
   repeat: boolean;
   until: string; // yyyy-mm-dd
 }
+
+/** The usual lengths: one tap instead of typing. */
+const DURATIONS = [45, 60, 90];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toDateInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -144,6 +147,8 @@ function LessonForm({
 }: Omit<LessonDialogProps, "draft"> & { initial: LessonDraft }) {
   const [d, setD] = useState(initial);
   const [busy, setBusy] = useState(false);
+  // Typed text of the "other" length, so "120" can be typed digit by digit.
+  const [otherDur, setOtherDur] = useState(() => (DURATIONS.includes(initial.durationMin) ? "" : String(initial.durationMin)));
   const set = (patch: Partial<LessonDraft>) => setD((prev) => ({ ...prev, ...patch }));
   const isNew = !d.id;
 
@@ -229,10 +234,14 @@ function LessonForm({
                 <SelectLabel>Групи</SelectLabel>
                 {groups.map((g) => (
                   <SelectItem key={g.id} value={`g:${g.id}`}>
-                    👥 {g.name} <span className="text-muted-foreground">· {g.studentIds.length}</span>
+                    <Users size={13} className="inline -mt-0.5 mr-1.5 text-muted-foreground" />
+                    {g.name} <span className="text-muted-foreground">· {g.studentIds.length}</span>
                   </SelectItem>
                 ))}
-                {d.groupId && !group && <SelectItem value={`g:${d.groupId}`}>👥 {d.groupName ?? "Група"}</SelectItem>}
+                {d.groupId && !group && <SelectItem value={`g:${d.groupId}`}>
+                    <Users size={13} className="inline -mt-0.5 mr-1.5 text-muted-foreground" />
+                    {d.groupName ?? "Група"}
+                  </SelectItem>}
               </>
             )}
             {(!d.groupId || isNew) && (
@@ -254,26 +263,9 @@ function LessonForm({
             </span>
           )}
         </Field>
-        <Field label="Назва">
-          <TextInput value={d.title} onChange={(e) => set({ title: e.target.value })} />
-        </Field>
-        <div className="grid grid-cols-[1.4fr_1fr] gap-2">
-          <Field label="Дата">
-            <DatePicker value={d.date} onChange={(date) => set({ date })} />
-          </Field>
-          <Field label="Час">
-            <TimePicker value={d.time} onChange={(time) => set({ time })} />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Тривалість (хв)">
-            <TextInput
-              type="number"
-              min={15}
-              step={15}
-              value={d.durationMin}
-              onChange={(e) => set({ durationMin: Math.max(15, Number(e.target.value) || 60) })}
-            />
+        <div className="grid grid-cols-[1fr_7.5rem] gap-2">
+          <Field label="Предмет / тема">
+            <TextInput value={d.title} onChange={(e) => set({ title: e.target.value })} />
           </Field>
           <Field label="Ціна, ₴">
             <TextInput
@@ -285,8 +277,61 @@ function LessonForm({
               value={d.price}
               onChange={(e) => set({ price: e.target.value })}
               aria-invalid={priceInvalid}
+              className="tabular-nums"
             />
           </Field>
+        </div>
+        <div className="grid grid-cols-[1.4fr_1fr] gap-2">
+          <Field label="Дата">
+            <DatePicker value={d.date} onChange={(date) => set({ date })} />
+          </Field>
+          <Field label="Час">
+            <TimePicker value={d.time} onChange={(time) => set({ time })} />
+          </Field>
+        </div>
+        <div className="space-y-1">
+          <span className="block text-xs font-semibold text-muted-foreground px-1">Тривалість</span>
+          <div role="radiogroup" aria-label="Тривалість" className="grid grid-cols-4 gap-1.5">
+            {DURATIONS.map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={d.durationMin === m}
+                onClick={() => {
+                  setOtherDur("");
+                  set({ durationMin: m });
+                }}
+                className={cn(
+                  "h-10 rounded-[12px] text-sm font-semibold tabular-nums transition-colors",
+                  d.durationMin === m
+                    ? "bg-primary text-primary-foreground shadow-pill-dark"
+                    : "border border-glass-edge bg-glass shadow-pill hover:bg-glass-strong",
+                )}
+              >
+                {m} хв
+              </button>
+            ))}
+            <label className="relative">
+              <span className="sr-only">Інша тривалість, хв</span>
+              <TextInput
+                type="number"
+                min={15}
+                step={15}
+                placeholder="інша"
+                value={otherDur}
+                onChange={(e) => {
+                  setOtherDur(e.target.value);
+                  const n = Math.round(Number(e.target.value));
+                  if (n >= 15) set({ durationMin: n });
+                }}
+                onBlur={() => {
+                  if (otherDur && Math.round(Number(otherDur)) < 15) setOtherDur("");
+                }}
+                className={cn("tabular-nums text-center", !DURATIONS.includes(d.durationMin) && "ring-2 ring-ring/40")}
+              />
+            </label>
+          </div>
         </div>
 
         {isNew && (

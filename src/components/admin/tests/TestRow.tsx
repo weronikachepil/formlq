@@ -1,25 +1,27 @@
 "use client";
 
+import { Menu } from "@base-ui/react/menu";
 import { cn } from "@/lib/utils";
 import {
-  Pencil,
-  Trash2,
-  FileText,
-  GripVertical,
+  ArrowDown,
+  ArrowUp,
+  Check,
+  ChevronRight,
   Eye,
   EyeOff,
-  ChevronUp,
-  ChevronDown,
+  Folder,
+  FolderInput,
+  FolderMinus,
+  FolderPlus,
+  GripVertical,
+  MoreHorizontal,
+  Pencil,
   QrCode,
+  Trash2,
 } from "lucide-react";
 import type { TestDoc, TestFolder } from "@/lib/tests";
-import { MoveToFolderMenu } from "./MoveToFolderMenu";
+import { pluralize, PLURAL } from "@/lib/format";
 import { Highlight } from "@/components/ui/highlight";
-import { IconButton } from "@/components/ui/icon-button";
-
-/** Matches IconButton (sm, neutral) — the menu trigger can't be an IconButton. */
-const menuTriggerCls =
-  "w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all data-[popup-open]:bg-muted data-[popup-open]:text-foreground";
 
 interface TestRowProps {
   test: TestDoc;
@@ -39,7 +41,7 @@ interface TestRowProps {
   onDragEnd: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
-  /** Omitted where tests aren't published (a teacher's own tests): no toggle, no dimming. */
+  /** Omitted where tests aren't published (a teacher's own tests): no status, no toggle. */
   onTogglePublished?: () => void;
   onShare: () => void;
   onEdit: () => void;
@@ -48,6 +50,23 @@ interface TestRowProps {
   onMoveToNewFolder: () => void;
 }
 
+export const menuPopupCls = cn(
+  "min-w-56 max-w-72 max-h-80 overflow-y-auto rounded-[18px] border border-glass-edge bg-popover p-1.5 shadow-glass-lg outline-none",
+  "origin-[var(--transform-origin)] transition-[transform,opacity] duration-150",
+  "data-[starting-style]:opacity-0 data-[starting-style]:scale-95",
+  "data-[ending-style]:opacity-0 data-[ending-style]:scale-95",
+);
+
+export const menuItemCls = cn(
+  "flex items-center gap-2.5 px-2.5 py-2 pointer-coarse:py-2.5 rounded-[10px] text-sm cursor-pointer outline-none select-none",
+  "data-[highlighted]:bg-muted data-[disabled]:opacity-40 data-[disabled]:cursor-default",
+);
+
+/** The «⋯» button: always visible, so the actions are never a hover-only mystery. */
+export const menuTriggerCls =
+  "w-9 h-9 pointer-coarse:w-10 pointer-coarse:h-10 shrink-0 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors data-[popup-open]:bg-muted data-[popup-open]:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
+
+/** One test: the whole row opens it; everything else is in «⋯», named in words. */
 export function TestRow({
   test,
   index,
@@ -72,14 +91,11 @@ export function TestRow({
   onMoveTo,
   onMoveToNewFolder,
 }: TestRowProps) {
-  const publishable = !!onTogglePublished;
-  const dimmed = publishable && !test.published;
+  const count = test.questions?.length ?? 0;
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
   return (
-    <div
-      className="relative"
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-    >
+    <div className="relative" onDragOver={onDragOver} onDrop={onDrop}>
       {dropIndicator && (
         <div
           className={cn(
@@ -89,152 +105,170 @@ export function TestRow({
         />
       )}
       <div
+        role="link"
+        tabIndex={0}
+        aria-label={`Відкрити тест «${test.title || "Без назви"}»`}
         draggable={draggable}
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
+        onClick={onEdit}
+        onKeyDown={(e) => {
+          if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onEdit();
+          }
+        }}
         className={cn(
-          "rounded-2xl border bg-card px-4 py-3 flex items-center gap-3 group transition-all select-none relative overflow-hidden",
-          dimmed ? "border-border/30 opacity-60" : "border-border/50",
+          "group rounded-2xl border border-border/50 bg-card pl-3 pr-2 py-2.5 flex items-center gap-3 cursor-pointer select-none transition-colors",
+          "hover:border-border hover:bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
           isDragSrc && "opacity-40",
         )}
       >
+        {/* Mouse: drag by the grip. Touch: «Вище / Нижче» in «⋯» (no tiny arrows to miss). */}
         {draggable && (
-          <>
-            <div className="hidden [@media(hover:hover)]:flex shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors cursor-grab active:cursor-grabbing">
-              <GripVertical size={16} />
-            </div>
-            <div className="flex [@media(hover:hover)]:hidden flex-col shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMoveUp();
-                }}
-                disabled={index === 0}
-                aria-label="Вгору"
-                className="text-muted-foreground disabled:opacity-20 p-0.5"
-              >
-                <ChevronUp size={14} />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMoveDown();
-                }}
-                disabled={index === total - 1}
-                aria-label="Вниз"
-                className="text-muted-foreground disabled:opacity-20 p-0.5"
-              >
-                <ChevronDown size={14} />
-              </button>
-            </div>
-          </>
-        )}
-
-        {publishable && (
-          <div
-            className={cn(
-              "w-2 h-2 rounded-full shrink-0",
-              test.published ? "bg-green-500" : "bg-muted-foreground/30",
-            )}
-          />
+          <div className="hidden [@media(hover:hover)]:flex shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors cursor-grab active:cursor-grabbing">
+            <GripVertical size={16} />
+          </div>
         )}
 
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">
             <Highlight text={test.title || "Без назви"} query={highlight} />
           </p>
-          {test.subtitle && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              <Highlight text={test.subtitle} query={highlight} />
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            {pluralize(count, PLURAL.task)}
+            {test.subtitle && (
+              <>
+                {" · "}
+                <Highlight text={test.subtitle} query={highlight} />
+              </>
+            )}
+          </p>
         </div>
 
-        <div
-          className="relative shrink-0 ml-auto flex items-center"
-          style={{ minWidth: "fit-content" }}
-        >
+        {onTogglePublished && (
           <span
             className={cn(
-              "text-[10px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap transition-all duration-150",
-              "group-hover:opacity-0 group-hover:scale-90 group-hover:pointer-events-none",
-              "group-has-[[data-popup-open]]:opacity-0",
-              "[@media(hover:none)]:hidden",
-              "bg-muted text-muted-foreground",
+              "shrink-0 hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full",
+              test.published
+                ? "bg-green-500/12 text-green-700 dark:text-green-400"
+                : "bg-muted text-muted-foreground",
             )}
           >
-            #{index + 1}
+            {test.published ? <Eye size={12} /> : <EyeOff size={12} />}
+            {test.published ? "Опубліковано" : "Чернетка"}
           </span>
+        )}
 
-          <div
-            className={cn(
-              "flex items-center gap-1 transition-all duration-150",
-              "absolute right-0 opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100",
-              "group-has-[[data-popup-open]]:opacity-100 group-has-[[data-popup-open]]:scale-100",
-              "[@media(hover:none)]:static [@media(hover:none)]:opacity-100 [@media(hover:none)]:scale-100",
-            )}
+        <ChevronRight
+          size={16}
+          className="shrink-0 hidden [@media(hover:hover)]:block text-muted-foreground/30 group-hover:text-muted-foreground transition-colors"
+          aria-hidden
+        />
+
+        <Menu.Root>
+          <Menu.Trigger
+            aria-label="Дії з тестом"
+            onClick={stop}
+            onKeyDown={stop}
+            className={menuTriggerCls}
           >
-            <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground mr-1">
-              <FileText size={11} />
-              <span>{test.questions?.length ?? 0}</span>
-            </div>
+            <MoreHorizontal size={17} />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner sideOffset={6} align="end" className="z-50 outline-none">
+              <Menu.Popup className={menuPopupCls} onClick={stop}>
+                <Menu.Item onClick={onEdit} className={menuItemCls}>
+                  <Pencil size={15} className="text-muted-foreground" /> Відкрити й редагувати
+                </Menu.Item>
+                {onTogglePublished && (
+                  <Menu.Item onClick={onTogglePublished} className={menuItemCls}>
+                    {test.published ? (
+                      <>
+                        <EyeOff size={15} className="text-muted-foreground" /> Зняти з публікації
+                      </>
+                    ) : (
+                      <>
+                        <Eye size={15} className="text-muted-foreground" /> Опублікувати
+                      </>
+                    )}
+                  </Menu.Item>
+                )}
+                <Menu.Item onClick={onShare} className={menuItemCls}>
+                  <QrCode size={15} className="text-muted-foreground" /> Поділитися посиланням
+                </Menu.Item>
 
-            {onTogglePublished && (
-              <IconButton
-                label={test.published ? "Деактивувати" : "Активувати"}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onTogglePublished();
-                }}
-              >
-                {test.published ? <Eye size={13} /> : <EyeOff size={13} />}
-              </IconButton>
-            )}
+                {draggable && (
+                  <>
+                    <Menu.Item
+                      onClick={onMoveUp}
+                      disabled={index === 0}
+                      className={cn(menuItemCls, "[@media(hover:hover)]:hidden")}
+                    >
+                      <ArrowUp size={15} className="text-muted-foreground" /> Перемістити вище
+                    </Menu.Item>
+                    <Menu.Item
+                      onClick={onMoveDown}
+                      disabled={index === total - 1}
+                      className={cn(menuItemCls, "[@media(hover:hover)]:hidden")}
+                    >
+                      <ArrowDown size={15} className="text-muted-foreground" /> Перемістити нижче
+                    </Menu.Item>
+                  </>
+                )}
 
-            <IconButton
-              label="Поділитися"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onShare();
-              }}
-            >
-              <QrCode size={13} />
-            </IconButton>
+                <Menu.SubmenuRoot>
+                  <Menu.SubmenuTrigger className={menuItemCls}>
+                    <FolderInput size={15} className="text-muted-foreground" />
+                    <span className="flex-1">Перемістити в папку</span>
+                    <ChevronRight size={14} className="text-muted-foreground" />
+                  </Menu.SubmenuTrigger>
+                  <Menu.Portal>
+                    <Menu.Positioner sideOffset={4} className="z-50 outline-none">
+                      <Menu.Popup className={menuPopupCls} onClick={stop}>
+                        {folders.map((f) => {
+                          const current = f.id === currentFolderId;
+                          return (
+                            <Menu.Item
+                              key={f.id}
+                              disabled={current}
+                              onClick={() => onMoveTo(f.id)}
+                              className={menuItemCls}
+                            >
+                              <Folder size={15} className="shrink-0 text-primary" />
+                              <span className="truncate flex-1">{f.name}</span>
+                              {current && <Check size={14} className="shrink-0 text-muted-foreground" />}
+                            </Menu.Item>
+                          );
+                        })}
+                        {currentFolderId !== null && (
+                          <Menu.Item onClick={() => onMoveTo(null)} className={menuItemCls}>
+                            <FolderMinus size={15} className="shrink-0 text-muted-foreground" />
+                            <span className="truncate flex-1">Вийняти з папки</span>
+                          </Menu.Item>
+                        )}
+                        <div className="my-1 h-px bg-border/60" />
+                        <Menu.Item onClick={onMoveToNewFolder} className={menuItemCls}>
+                          <FolderPlus size={15} className="shrink-0 text-muted-foreground" />
+                          <span>Нова папка…</span>
+                        </Menu.Item>
+                      </Menu.Popup>
+                    </Menu.Positioner>
+                  </Menu.Portal>
+                </Menu.SubmenuRoot>
 
-            <MoveToFolderMenu
-              folders={folders}
-              currentFolderId={currentFolderId}
-              onMove={onMoveTo}
-              onMoveToNewFolder={onMoveToNewFolder}
-              triggerClassName={menuTriggerCls}
-            />
-
-            <IconButton
-              label="Редагувати"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit();
-              }}
-            >
-              <Pencil size={13} />
-            </IconButton>
-
-            <IconButton
-              label="Видалити"
-              tone="danger"
-              disabled={deleting}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onDelete();
-              }}
-            >
-              <Trash2 size={13} />
-            </IconButton>
-          </div>
-        </div>
+                <div className="my-1 h-px bg-border/60" />
+                <Menu.Item
+                  onClick={onDelete}
+                  disabled={deleting}
+                  className={cn(menuItemCls, "text-destructive data-[highlighted]:bg-destructive/10")}
+                >
+                  <Trash2 size={15} /> Видалити тест
+                </Menu.Item>
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
       </div>
     </div>
   );

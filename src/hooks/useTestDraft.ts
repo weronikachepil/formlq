@@ -10,6 +10,9 @@ import {
   makeEmptyMCQ,
   makeEmptyOpen,
   makeEmptyMatching,
+  makeEmptyMulti,
+  makeEmptyOrder,
+  makeEmptyTrueFalse,
   NMT_2025_TABLE,
   getLinkAccess,
   type LinkAccess,
@@ -19,7 +22,8 @@ import {
   type TestSubject,
 } from "@/lib/tests";
 
-type QuestionType = TestQuestion["type"];
+/** A question type, or «Так / Ні» — a two-option choice question. */
+type AddKind = TestQuestion["type"] | "truefalse";
 
 /**
  * Editable draft of a test: loads it, tracks dirtiness against the last
@@ -123,8 +127,10 @@ export function useTestDraft(
   const snapshot = useMemo(() => JSON.stringify(draft), [draft]);
   const isDirty = snapshot !== savedSnapshot;
 
-  async function save() {
-    if (saving || !isDirty) return;
+  /** Resolves true when the draft is saved (or had nothing to save). */
+  async function save(): Promise<boolean> {
+    if (!isDirty) return true;
+    if (saving) return false;
     setSaving(true);
     try {
       await updateTest(id, { ...draft, ...extra });
@@ -134,24 +140,32 @@ export function useTestDraft(
       setSaved(true);
       clearTimeout(savedTimer.current);
       savedTimer.current = setTimeout(() => setSaved(false), 2000);
+      return true;
     } catch {
       // Draft stays dirty, so nothing is lost; the user can retry.
       toast.error(
         "Не вдалося зберегти тест. Перевірте з'єднання й спробуйте ще раз",
       );
+      return false;
     } finally {
       setSaving(false);
     }
   }
+
+  const saveRef = useRef(save);
+  useEffect(() => {
+    saveRef.current = save;
+  });
 
   // Unsaved edits: warn on tab close/reload, and on in-app navigation (sidebar, logout).
   const { setGuarded } = useExamGuard();
   useEffect(() => {
     if (loading || !isDirty) return;
     setGuarded(true, {
-      title: "Вийти без збереження?",
-      message: "Незбережені зміни в тесті буде втрачено.",
-      confirmLabel: "Вийти без збереження",
+      title: "Зберегти зміни?",
+      message: "У тесті є незбережені зміни. Якщо вийти без збереження, їх буде втрачено.",
+      confirmLabel: "Не зберігати",
+      onSave: () => saveRef.current(),
     });
     const onUnload = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", onUnload);
@@ -162,10 +176,6 @@ export function useTestDraft(
   }, [loading, isDirty, setGuarded]);
 
   // ⌘S / Ctrl+S saves instead of opening the browser's "Save page" dialog.
-  const saveRef = useRef(save);
-  useEffect(() => {
-    saveRef.current = save;
-  });
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
@@ -178,14 +188,17 @@ export function useTestDraft(
   }, []);
 
   /** Appends an empty question of `type`; returns its id. */
-  function addQuestion(type: QuestionType): string {
+  function addQuestion(type: AddKind): string {
     const order = questions.length;
-    const next =
-      type === "mcq"
-        ? makeEmptyMCQ(order)
-        : type === "matching"
-          ? makeEmptyMatching(order)
-          : makeEmptyOpen(order);
+    const make: Record<AddKind, (order: number) => TestQuestion> = {
+      mcq: makeEmptyMCQ,
+      truefalse: makeEmptyTrueFalse,
+      multi: makeEmptyMulti,
+      open: makeEmptyOpen,
+      matching: makeEmptyMatching,
+      order: makeEmptyOrder,
+    };
+    const next = make[type](order);
     setQuestions((prev) => [...prev, next]);
     return next.id;
   }

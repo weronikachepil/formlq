@@ -11,7 +11,7 @@ import {
   saveDailyAnswer,
   todayDateKey,
 } from "@/lib/questions";
-import type { BankQuestion } from "@/lib/tests";
+import { openAnswerCorrect, type BankQuestion } from "@/lib/tests";
 import { cn } from "@/lib/utils";
 import { MathText } from "@/components/MathText";
 import { Select, SelectItem } from "@/components/ui/select";
@@ -92,7 +92,7 @@ export function DailyQuestion({ userId }: { userId: string }) {
 
   if (!question) {
     return (
-      <section className="rounded-2xl border border-dashed border-border/50 py-8 text-center text-sm text-muted-foreground">
+      <section className="rounded-[18px] border border-dashed border-border/50 py-8 text-center text-sm text-muted-foreground">
         Схвалених завдань ще немає
       </section>
     );
@@ -105,7 +105,8 @@ export function DailyQuestion({ userId }: { userId: string }) {
       case "mcq":
         return selected === q.correctOptionId;
       case "open":
-        return selected.trim().toLowerCase() === q.correctAnswer.trim().toLowerCase();
+        // "." and "," are the same decimal separator, like in tests.
+        return openAnswerCorrect(selected, q.correctAnswer);
       case "matching":
         return q.leftItems.every((item) => matching[item.id] === q.correctPairs[item.id]);
       default:
@@ -137,7 +138,7 @@ export function DailyQuestion({ userId }: { userId: string }) {
   }
 
   return (
-    <section className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
+    <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
       <div>
         <DailyCaption className="mb-2" />
         <MathText text={q.text} className="text-sm font-medium leading-relaxed" />
@@ -275,7 +276,7 @@ function AnsweredCard({ question, correct }: { question: BankQuestion | null; co
   const correctLabel = question ? correctAnswerLabel(question) : "";
 
   return (
-    <section className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
+    <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
       <div className="flex items-center gap-2">
         <DailyCaption />
         <span

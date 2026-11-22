@@ -19,7 +19,7 @@ type MCQEditorQ = {
   options: QuestionOption[];
   correctOptionId: string;
 };
-type OpenEditorQ = { correctAnswer: string };
+type OpenEditorQ = { correctAnswer: string; tolerance?: number };
 type MatchingEditorQ = {
   leftItems: MatchingItem[];
   rightOptions: MatchingItem[];
@@ -87,11 +87,9 @@ export function QuestionImageUpload({
     );
   }
 
+  // Optional, so it stays small: a pill button, not a big drop zone.
   return (
-    <div className="space-y-1">
-      <SectionLabel as="label">
-        {label} <span className="normal-case font-normal">(необов`язково)</span>
-      </SectionLabel>
+    <div>
       <input
         ref={inputRef}
         type="file"
@@ -104,14 +102,13 @@ export function QuestionImageUpload({
         }}
       />
       <button
+        type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="w-full h-24 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-1.5 text-muted-foreground disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 h-8 pointer-coarse:h-10 px-3 rounded-full border border-dashed border-border/70 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 hover:bg-muted/40 transition-colors disabled:opacity-50"
       >
-        <ImagePlus size={20} />
-        <span className="text-xs">
-          {uploading ? "Завантаження..." : "Додати зображення"}
-        </span>
+        <ImagePlus size={14} />
+        {uploading ? "Завантаження…" : `+ ${label}`}
       </button>
     </div>
   );
@@ -166,7 +163,7 @@ function OptionImageSlot({
           type="button"
           aria-label="Видалити зображення"
           onClick={onRemoved}
-          className="absolute top-1 right-1 w-6 h-6 rounded-md bg-background/90 border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive transition-all opacity-0 group-hover:opacity-100"
+          className="absolute top-1 right-1 w-6 h-6 rounded-md bg-background/90 border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive transition-all opacity-0 group-hover:opacity-100 pointer-coarse:opacity-100 pointer-coarse:w-8 pointer-coarse:h-8"
         >
           <XIcon size={11} />
         </button>
@@ -188,14 +185,13 @@ function OptionImageSlot({
         }}
       />
       <button
+        type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="w-full h-8 rounded-lg border border-dashed border-border/40 bg-muted/10 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-1.5 text-muted-foreground disabled:opacity-50"
+        className="inline-flex items-center gap-1 h-6 px-2 pointer-coarse:h-9 pointer-coarse:px-3 rounded-full text-[11px] text-muted-foreground/80 hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
       >
         <ImagePlus size={12} />
-        <span className="text-[11px]">
-          {uploading ? "Завантаження..." : "Додати зображення"}
-        </span>
+        {uploading ? "Завантаження…" : "зображення"}
       </button>
     </>
   );
@@ -228,7 +224,7 @@ export function MCQEditor({
               type="button"
               onClick={() => onCorrectChange(opt.id)}
               className={cn(
-                "w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 transition-all mt-2",
+                "w-7 h-7 pointer-coarse:w-10 pointer-coarse:h-10 pointer-coarse:mt-0.5 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 transition-all mt-2",
                 question.correctOptionId === opt.id
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border hover:border-primary/60 text-muted-foreground",
@@ -242,7 +238,7 @@ export function MCQEditor({
                 mono
                 value={opt.text}
                 onChange={(e) => onOptionChange(opt.id, e.target.value)}
-                placeholder={`Варіант ${opt.id}... Використовуйте $...$ для math`}
+                placeholder={`Варіант ${opt.id}`}
                 rows={1}
                 className={rowTextareaClass}
               />
@@ -275,21 +271,226 @@ export function MCQEditor({
 export function OpenEditor({
   question,
   onChange,
+  onToleranceChange,
 }: {
   question: OpenEditorQ;
   onChange: (correctAnswer: string) => void;
+  /** Shown only when given (teacher tests; the НМТ bank stays exact). */
+  onToleranceChange?: (tolerance: number | undefined) => void;
 }) {
+  const [tolText, setTolText] = useState(
+    question.tolerance ? String(question.tolerance).replace(".", ",") : "",
+  );
   return (
-    <div className="space-y-1">
-      <SectionLabel as="label">
-        Правильна відповідь
-      </SectionLabel>
-      <TextInput
-        value={question.correctAnswer}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Числова або текстова відповідь..."
-        className="bg-background"
-      />
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <SectionLabel as="label">
+          Правильна відповідь
+        </SectionLabel>
+        <TextInput
+          value={question.correctAnswer}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Числова або текстова відповідь..."
+          className="bg-background"
+        />
+      </div>
+      {onToleranceChange && (
+        <div className="space-y-1">
+          <SectionLabel as="label">
+            Допустима похибка ±{" "}
+            <span className="normal-case font-normal">(для числових, необов`язково)</span>
+          </SectionLabel>
+          <TextInput
+            value={tolText}
+            inputMode="decimal"
+            onChange={(e) => {
+              setTolText(e.target.value);
+              const n = Number(e.target.value.trim().replace(",", "."));
+              onToleranceChange(e.target.value.trim() && Number.isFinite(n) && n > 0 ? n : undefined);
+            }}
+            placeholder="Напр. 0,01 — зарахує 3,14 при відповіді 3,1416"
+            className="bg-background"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── MultiEditor ───────────────────────────────────────────────────────────────
+
+const OPTION_LETTERS = ["А", "Б", "В", "Г", "Д", "Е", "Є", "Ж"];
+
+export function MultiEditor({
+  contextId,
+  question,
+  onChange,
+}: {
+  contextId: string;
+  question: { id: string; options: QuestionOption[]; correctOptionIds: string[] };
+  onChange: (patch: { options?: QuestionOption[]; correctOptionIds?: string[] }) => void;
+}) {
+  const { options, correctOptionIds } = question;
+  const toggle = (id: string) =>
+    onChange({
+      correctOptionIds: correctOptionIds.includes(id)
+        ? correctOptionIds.filter((x) => x !== id)
+        : options.map((o) => o.id).filter((x) => x === id || correctOptionIds.includes(x)),
+    });
+  const add = () => {
+    const id = OPTION_LETTERS.find((l) => !options.some((o) => o.id === l));
+    if (id) onChange({ options: [...options, { id, text: "" }] });
+  };
+  const remove = (id: string) =>
+    onChange({
+      options: options.filter((o) => o.id !== id),
+      correctOptionIds: correctOptionIds.filter((x) => x !== id),
+    });
+
+  return (
+    <div className="space-y-2">
+      <SectionLabel as="label">Варіанти відповіді</SectionLabel>
+      <div className="space-y-3">
+        {options.map((opt) => {
+          const on = correctOptionIds.includes(opt.id);
+          return (
+            <div key={opt.id} className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => toggle(opt.id)}
+                aria-pressed={on}
+                className={cn(
+                  "w-7 h-7 pointer-coarse:w-10 pointer-coarse:h-10 pointer-coarse:mt-0.5 rounded-lg border-2 flex items-center justify-center text-xs font-bold shrink-0 transition-all mt-2",
+                  on
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border hover:border-primary/60 text-muted-foreground",
+                )}
+                title={on ? "Правильна — натисніть, щоб зняти" : "Позначити правильною"}
+              >
+                {opt.id}
+              </button>
+              <div className="flex-1 space-y-1.5">
+                <Textarea
+                  mono
+                  value={opt.text}
+                  onChange={(e) =>
+                    onChange({ options: options.map((o) => (o.id === opt.id ? { ...o, text: e.target.value } : o)) })
+                  }
+                  placeholder={`Варіант ${opt.id}`}
+                  rows={1}
+                  className={rowTextareaClass}
+                />
+                {opt.text && opt.text.includes("$") && (
+                  <div className="px-3 py-1.5 rounded-lg border border-border/30 bg-muted/30 text-sm">
+                    <MathText text={opt.text} />
+                  </div>
+                )}
+                <OptionImageSlot
+                  contextId={contextId}
+                  questionId={question.id}
+                  optionId={opt.id}
+                  imageUrl={opt.imageUrl}
+                  onUploaded={(url) =>
+                    onChange({ options: options.map((o) => (o.id === opt.id ? { ...o, imageUrl: url } : o)) })
+                  }
+                  onRemoved={() =>
+                    onChange({ options: options.map((o) => (o.id === opt.id ? { ...o, imageUrl: undefined } : o)) })
+                  }
+                />
+              </div>
+              {options.length > 2 && (
+                <IconButton label="Видалити варіант" tone="danger" className="text-xs mt-1 pointer-coarse:w-10 pointer-coarse:h-10" onClick={() => remove(opt.id)}>
+                  ✕
+                </IconButton>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {options.length < OPTION_LETTERS.length && (
+        <Button variant="outline" size="sm" className="text-xs" onClick={add}>
+          + Додати варіант
+        </Button>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Натисніть літери всіх правильних варіантів. Бали: за кожен правильний вибір частка, неправильний вибір її знімає.
+      </p>
+    </div>
+  );
+}
+
+// ── OrderEditor ───────────────────────────────────────────────────────────────
+
+export function OrderEditor({
+  question,
+  onChange,
+}: {
+  question: { items: MatchingItem[] };
+  onChange: (patch: { items: MatchingItem[] }) => void;
+}) {
+  const { items } = question;
+  const set = (next: MatchingItem[]) => onChange({ items: next });
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= items.length) return;
+    const next = [...items];
+    [next[i], next[j]] = [next[j], next[i]];
+    set(next);
+  };
+  const add = () => {
+    const id = String(Math.max(0, ...items.map((i) => Number(i.id) || 0)) + 1);
+    set([...items, { id, text: "" }]);
+  };
+
+  return (
+    <div className="space-y-2">
+      <SectionLabel as="label">Елементи у правильному порядку</SectionLabel>
+      {items.map((item, i) => (
+        <div key={item.id} className="flex items-start gap-2">
+          <span className="text-xs font-semibold w-5 text-center shrink-0 text-muted-foreground mt-2.5 tabular-nums">
+            {i + 1}.
+          </span>
+          <div className="flex-1 space-y-1">
+            <Textarea
+              mono
+              value={item.text}
+              onChange={(e) => set(items.map((x) => (x.id === item.id ? { ...x, text: e.target.value } : x)))}
+              placeholder={`Крок ${i + 1}`}
+              rows={1}
+              className={rowTextareaClass}
+            />
+            {item.text && item.text.includes("$") && (
+              <div className="px-3 py-1.5 rounded-lg border border-border/30 bg-muted/30 text-sm">
+                <MathText text={item.text} />
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 mt-1">
+            <IconButton label="Вище" className="pointer-coarse:w-10 pointer-coarse:h-10" onClick={() => move(i, -1)} disabled={i === 0}>
+              ↑
+            </IconButton>
+            <IconButton label="Нижче" className="pointer-coarse:w-10 pointer-coarse:h-10" onClick={() => move(i, 1)} disabled={i === items.length - 1}>
+              ↓
+            </IconButton>
+            {items.length > 2 && (
+              <IconButton
+                label="Видалити"
+                tone="danger"
+                className="text-xs pointer-coarse:w-10 pointer-coarse:h-10"
+                onClick={() => set(items.filter((x) => x.id !== item.id))}
+              >
+                ✕
+              </IconButton>
+            )}
+          </div>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" className="text-xs" onClick={add}>
+        + Додати елемент
+      </Button>
+      <p className="text-xs text-muted-foreground">
+        Учень побачить їх перемішаними. Бали — за частку елементів на своєму місці.
+      </p>
     </div>
   );
 }
@@ -352,7 +553,7 @@ export function MatchingEditor({
                 mono
                 value={item.text}
                 onChange={(e) => updateLeft(item.id, e.target.value)}
-                placeholder={`Вираз ${item.id}... Використовуйте $...$ для math`}
+                placeholder={`Вираз ${item.id}`}
                 rows={1}
                 className={rowTextareaClass}
               />
@@ -365,7 +566,7 @@ export function MatchingEditor({
             <IconButton
               label="Видалити рядок"
               tone="danger"
-              className="text-xs mt-1"
+              className="text-xs mt-1 pointer-coarse:w-10 pointer-coarse:h-10"
               onClick={() => removeLeft(item.id)}
             >
               ✕
@@ -396,7 +597,7 @@ export function MatchingEditor({
                 mono
                 value={opt.text}
                 onChange={(e) => updateRight(opt.id, e.target.value)}
-                placeholder={`Варіант ${opt.id}... Використовуйте $...$ для math`}
+                placeholder={`Варіант ${opt.id}`}
                 rows={1}
                 className={rowTextareaClass}
               />
@@ -436,7 +637,7 @@ export function MatchingEditor({
                     key={opt.id}
                     onClick={() => setPair(item.id, opt.id)}
                     className={cn(
-                      "w-7 h-7 rounded-full border-2 text-xs font-bold transition-all",
+                      "w-7 h-7 pointer-coarse:w-10 pointer-coarse:h-10 rounded-full border-2 text-xs font-bold transition-all",
                       question.correctPairs[item.id] === opt.id
                         ? "border-primary bg-primary text-primary-foreground"
                         : "border-border hover:border-primary/60 text-muted-foreground",

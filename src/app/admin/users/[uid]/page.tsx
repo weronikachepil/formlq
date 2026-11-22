@@ -11,6 +11,7 @@ import { ROLE_META, canTutor } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { usePageHeader } from "@/context/HeaderContext";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
+import { lastSeenAt } from "@/lib/presence";
 import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ResultListItem } from "@/components/exam/ResultListItem";
@@ -59,9 +60,8 @@ export default function AdminUserHistoryPage() {
         (() => {
           const online = onlineUids.has(uid);
           const entry = presence[uid];
-          const lastSeen = entry?.lastChanged
-            ? new Date(entry.lastChanged)
-            : null;
+          const seenMs = lastSeenAt(entry);
+          const lastSeen = seenMs ? new Date(seenMs) : null;
 
           return (
             <div className="rounded-2xl border border-border/50 bg-card px-5 py-4 flex items-center gap-4">
