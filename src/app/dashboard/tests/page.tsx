@@ -78,14 +78,8 @@ export default function TestsPage() {
   });
   const best = useMemo(() => bestByTest(results), [results]);
 
-  // The platform's own tests first (in its order), then teachers' — newest first.
-  const ordered = useMemo(() => {
-    const updated = (t: TestDoc) => t.updatedAt?.toMillis() ?? 0;
-    return [
-      ...tests.filter((t) => !t.personal),
-      ...tests.filter((t) => t.personal).sort((a, b) => updated(b) - updated(a)),
-    ];
-  }, [tests]);
+  // Newest published first — platform and teachers' tests alike (getPublishedTests sorts).
+  const ordered = tests;
   const teacherCount = ordered.filter((t) => t.personal).length;
 
   const q: Query = { text: search.trim().toLowerCase(), source: filter, grade, subject };
