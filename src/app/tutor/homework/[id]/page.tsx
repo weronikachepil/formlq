@@ -90,7 +90,7 @@ export default function TutorHomeworkReviewPage() {
   ].filter(Boolean);
 
   return (
-    <div className="max-w-3xl space-y-5 pb-8">
+    <div className="space-y-5 pb-8">
       {/* What was assigned, to whom, by when. */}
       <div className="rounded-[18px] bg-card p-5 sm:p-6 space-y-4">
         <div className="flex items-start justify-between gap-3">

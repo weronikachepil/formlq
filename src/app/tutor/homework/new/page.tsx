@@ -308,7 +308,7 @@ export default function NewHomeworkPage() {
   ];
 
   return (
-    <div className="grid max-w-6xl items-start gap-5 pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="grid items-start gap-5 pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
     <div className="min-w-0 space-y-4">
       {/* 1 — the main decision comes first: what to give. */}
       <Step n={1} done={hasContent && !!title.trim()} title="Що задати">

@@ -116,7 +116,7 @@ export default function AdminUsersPage() {
   const remaining = students.length - studentsVisible;
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="space-y-4">
       {!isLoading && (
         <div className="rounded-[18px] bg-card p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1 min-w-0">

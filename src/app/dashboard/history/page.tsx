@@ -68,7 +68,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-5">
+    <div className="space-y-5">
       <section className="rounded-[18px] bg-card p-5 sm:p-6">
         <div className="flex items-center gap-4">
           <span className="grid size-14 shrink-0 place-items-center rounded-full bg-mint text-[#14262a]">

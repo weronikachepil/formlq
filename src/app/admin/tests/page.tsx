@@ -23,7 +23,7 @@ export default function AdminTestsPage() {
 
   return (
     // --tabs-h: the sticky toolbars and folder column below sit under these tabs.
-    <div className="max-w-6xl" style={{ "--tabs-h": "3.5rem" } as React.CSSProperties}>
+    <div style={{ "--tabs-h": "3.5rem" } as React.CSSProperties}>
       {/* Narrow screens: sticks under the header. Wide: the lists below scroll inside, so it stays anyway. */}
       <div className="sticky lg:static top-[var(--app-header-h)] z-30 h-[var(--tabs-h)] flex items-center bg-background lg:bg-transparent -mx-4 md:-mx-6 px-4 md:px-6 lg:mx-0 lg:px-0">
         <SegmentedControl

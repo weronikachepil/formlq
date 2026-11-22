@@ -91,7 +91,7 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
 
   if (homework.length === 0) {
     return (
-      <div className="max-w-4xl">
+      <div>
         <EmptyState
           emoji="📭"
           title="Немає домашніх завдань"
@@ -102,7 +102,7 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
   }
 
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="space-y-5">
       <div className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1 min-w-0">
