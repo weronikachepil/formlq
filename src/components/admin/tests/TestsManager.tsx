@@ -598,7 +598,15 @@ export function TestsManager({ pageTitle, owner, basePath }: TestsManagerProps) 
     // Wide screens: exactly the window's height; the folder column and the tests scroll on
     // their own, everything else stays put. Narrow: the page scrolls, the toolbar sticks.
     <div className="max-w-6xl lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6 lg:h-[calc(100dvh-var(--app-header-h)-3rem-var(--tabs-h,0px))]">
-      {!isLoading && (
+      {isLoading ? (
+        // Same column while loading, so nothing jumps when the folders arrive.
+        <aside aria-hidden className="hidden lg:flex flex-col gap-2 pt-2">
+          <span className="mx-3 mb-1 h-3.5 w-14 animate-pulse rounded-full bg-muted" />
+          {Array.from({ length: 7 }, (_, i) => (
+            <span key={i} className="h-10 animate-pulse rounded-[12px] bg-muted/60" />
+          ))}
+        </aside>
+      ) : (
         <aside
           aria-label="Папки"
           className="hidden lg:flex flex-col gap-1 min-h-0 pt-2"
