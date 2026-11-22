@@ -1,7 +1,7 @@
 const STEPS: { title: string; text: string }[] = [
   {
     title: "Оберіть режим",
-    text: "Тренуйтеся на тестах НМТ і тестах від викладачів або відкрийте дошку для заняття чи самостійної роботи.",
+    text: "Тест НМТ, тест від викладача або дошка для заняття.",
   },
   {
     title: "Працюйте",
@@ -9,7 +9,7 @@ const STEPS: { title: string; text: string }[] = [
   },
   {
     title: "Аналізуйте",
-    text: "Дивіться бали, розбір помилок і прогрес — і знайте, що повторити перед іспитом.",
+    text: "Бали, розбір помилок і прогрес — знаєте, що повторити перед іспитом.",
   },
 ];
 
@@ -17,18 +17,16 @@ export function HowItWorks() {
   return (
     <section id="how">
       <div className="wrap">
-        <div className="center-head">
-          <p className="eyebrow">Як це працює</p>
-          <h2>Три кроки до результату</h2>
-        </div>
-        <div className="steps">
+        <p className="eyebrow">Як це працює</p>
+        <h2>Три кроки</h2>
+        <ol className="steps">
           {STEPS.map((s) => (
-            <div key={s.title} className="card step">
+            <li key={s.title}>
               <h3>{s.title}</h3>
               <p>{s.text}</p>
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );

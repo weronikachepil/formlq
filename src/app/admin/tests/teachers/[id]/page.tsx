@@ -33,7 +33,7 @@ export default function TeacherTestPage() {
   ].filter(Boolean);
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
+    <div className="max-w-3xl space-y-4">
       <Link
         href="/admin/tests?tab=teachers"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"

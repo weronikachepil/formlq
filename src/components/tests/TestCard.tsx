@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock, FileText, UserRound, Users } from "lucide-react";
+import { ArrowRight, ChevronRight, Clock, FileText, UserRound, Users } from "lucide-react";
 import { pluralize, PLURAL, scoreColor, scoreColorPct } from "@/lib/format";
 import { SUBJECT_LABEL, isExamFailed, type TestDoc, type TestResult } from "@/lib/tests";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,7 @@ export function TestCard({ test, best, query = "" }: { test: TestDoc; best?: Tes
   return (
     <Link
       href={`/dashboard/exam/${test.id}`}
-      className="group rounded-[18px] border border-border/50 bg-card p-4 flex flex-col gap-3 outline-none hover:border-primary/30 hover:shadow-glass focus-visible:ring-3 focus-visible:ring-ring/40 transition-[border-color,box-shadow]"
+      className="group rounded-[18px] bg-card p-5 flex flex-col gap-3 outline-none hover:shadow-[0_8px_28px_rgba(20,38,42,0.08)] focus-visible:ring-3 focus-visible:ring-ring/40 transition-shadow"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -67,18 +67,20 @@ export function TestCard({ test, best, query = "" }: { test: TestDoc; best?: Tes
           )}
         </div>
         {notCounted && (
-          <div className="shrink-0 text-right" title="Жодна спроба не подолала поріг">
-            <p className="font-heading text-lg font-bold leading-none text-muted-foreground">—</p>
-            <p className="mt-1 text-[10px] font-medium text-muted-foreground">не зараховано</p>
-          </div>
+          <span
+            className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
+            title="Жодна спроба не подолала поріг"
+          >
+            Не зараховано
+          </span>
         )}
         {best && score && (
-          <div className="shrink-0 text-right" title="Ваш найкращий результат">
-            <p className={cn("font-heading text-lg font-bold leading-none tabular-nums", score.text)}>
-              {nmt ? best.nmtScore : `${best.rawScore}/${best.maxRaw}`}
-            </p>
-            <p className="mt-1 text-[10px] font-medium text-muted-foreground">найкращий</p>
-          </div>
+          <span
+            className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums", score.bg, score.text)}
+            title="Ваш найкращий результат"
+          >
+            {nmt ? best.nmtScore : `${best.rawScore}/${best.maxRaw}`} · найкращий
+          </span>
         )}
       </div>
 
@@ -95,7 +97,7 @@ export function TestCard({ test, best, query = "" }: { test: TestDoc; best?: Tes
         </div>
       )}
 
-      <div className="mt-auto flex items-center gap-3 border-t border-border/50 pt-3 text-xs text-muted-foreground tabular-nums">
+      <div className="mt-auto flex items-center gap-3 pt-1 text-xs text-muted-foreground tabular-nums">
         <span className="inline-flex items-center gap-1">
           <FileText size={12} /> {pluralize(test.questions?.length ?? 0, PLURAL.question)}
         </span>
@@ -114,6 +116,80 @@ export function TestCard({ test, best, query = "" }: { test: TestDoc; best?: Tes
           <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
         </span>
       </div>
+    </Link>
+  );
+}
+
+/**
+ * One test as a numbered list row (catalog grouped lists): number, title, facts,
+ * the best score as a coloured badge, chevron.
+ */
+export function TestRow({
+  test,
+  index,
+  best,
+  query = "",
+}: {
+  test: TestDoc;
+  index: number;
+  best?: TestResult;
+  query?: string;
+}) {
+  const nmt = (test.scaleType ?? "nmt") === "nmt";
+  const notCounted = !!best && !counted(best);
+  const score = best && !notCounted
+    ? nmt
+      ? scoreColor(best.nmtScore)
+      : scoreColorPct(best.maxRaw ? (best.rawScore / best.maxRaw) * 100 : 0)
+    : null;
+
+  return (
+    <Link
+      href={`/dashboard/exam/${test.id}`}
+      className="group flex items-center gap-4 rounded-[14px] bg-muted/50 px-4 py-3.5 outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/40"
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-full bg-card text-sm font-semibold tabular-nums">
+        {index}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-semibold">
+          <Highlight text={test.title} query={query} />
+        </span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {test.personal && (
+            <span className="inline-flex items-center gap-1 font-semibold text-violet-700 dark:text-violet-300">
+              <UserRound size={12} />
+              <Highlight text={test.authorName || "Викладач"} query={query} />
+            </span>
+          )}
+          <span>{pluralize(test.questions?.length ?? 0, PLURAL.question)}</span>
+          {test.durationMinutes && <span>{test.durationMinutes} хв</span>}
+          {test.grade && <span>{test.grade} клас</span>}
+          {test.subject && <span>{SUBJECT_LABEL[test.subject]}</span>}
+          {!!test.takers && (
+            <span className="inline-flex items-center gap-1" title="Скільки людей уже пройшли цей тест">
+              <Users size={12} /> {pluralize(test.takers, ["людина", "людини", "людей"])}
+            </span>
+          )}
+        </span>
+      </span>
+      {notCounted && (
+        <span
+          className="hidden shrink-0 rounded-full bg-card px-2.5 py-1 text-[11px] font-semibold text-muted-foreground sm:inline"
+          title="Жодна спроба не подолала поріг"
+        >
+          Не зараховано
+        </span>
+      )}
+      {best && score && (
+        <span
+          className={cn("shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums", score.bg, score.text)}
+          title="Ваш найкращий результат"
+        >
+          {nmt ? best.nmtScore : `${best.rawScore}/${best.maxRaw}`}
+        </span>
+      )}
+      <ChevronRight size={18} className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }

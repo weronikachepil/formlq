@@ -40,7 +40,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             onKeyDown?.(e);
           }}
           className={cn(
-            "w-full rounded-full border border-glass-edge bg-glass pl-9 pr-8 text-sm shadow-pill outline-none transition-colors",
+            "w-full rounded-[12px] border border-glass-edge bg-glass pl-9 pr-8 text-sm outline-none transition-colors",
             "placeholder:text-muted-foreground/70 hover:bg-glass-strong focus:bg-glass-strong focus:border-foreground/50",
             size === "sm" ? "h-8" : "h-10",
             className,

@@ -1,32 +1,35 @@
 import Link from "next/link";
 import { BoardMock } from "./BoardMock";
+import { ArrowIcon } from "./icons";
 
-const PILLS = ["Минулі роки НМТ", "Тести від викладачів", "Автоперевірка", "Дошка онлайн"];
+const FACTS = ["Тести для 5–11 класів і НМТ", "Домашні від викладача", "Дошка для уроків"];
 
 export function Hero() {
   return (
     <header className="hero" id="top">
       <div className="wrap hero-grid">
         <div>
-          <p className="eyebrow">Платформа для математики</p>
+          <p className="eyebrow">Для учнів і викладачів</p>
           <h1>
-            Готуйся до НМТ<br />і вчись на <em>дошці</em>
+            <em>Математика</em> <br />від 5&nbsp;класу до&nbsp;НМТ
           </h1>
           <p className="lead">
-            Тести НМТ минулих років і тести від викладачів з автоперевіркою та розбором — і жива
-            математична дошка з графіками, фігурами й формулами, де вчитель та учні працюють разом.
+            Тести з автоперевіркою та розбором, домашні завдання від викладача й дошка з графіками,
+            фігурами та формулами, де вчитель і учні працюють разом.
           </p>
           <div className="cta">
-            <a className="btn" href="#tests">Розв’язувати тести</a>
-            <Link className="btn ghost" href="/register">Відкрити дошку</Link>
+            <Link className="btn lg" href="/register">
+              Почати безплатно <ArrowIcon />
+            </Link>
+            <a className="btn ghost lg" href="#tests">Як виглядають тести</a>
           </div>
-          <div className="pills">
-            {PILLS.map((label) => (
-              <span key={label} className="pill"><b>✦</b>{label}</span>
+          <ul className="facts">
+            {FACTS.map((f) => (
+              <li key={f}>{f}</li>
             ))}
-          </div>
+          </ul>
         </div>
-        <BoardMock />
+        <BoardMock patternId="hero-grid" />
       </div>
     </header>
   );

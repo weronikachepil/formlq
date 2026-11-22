@@ -131,7 +131,7 @@ export function TestEditor({ id, backHref, personal = false }: TestEditorProps) 
 
   return (
     <div>
-      <main className="max-w-5xl mx-auto space-y-6">
+      <main className="max-w-5xl space-y-6">
         {/* Header */}
         <div className="space-y-3">
           <Link

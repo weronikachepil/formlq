@@ -1,4 +1,4 @@
-// Line icons for the features grid. Stroke/fill come from `.landing .ic svg`.
+// Line icons. Stroke/fill come from `.landing .ic svg` and `.landing .arrow`.
 
 export function ChartIcon() {
   return (
@@ -37,5 +37,11 @@ export function PeopleIcon() {
 export function CheckboxIcon() {
   return (
     <svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9" /></svg>
+  );
+}
+
+export function ArrowIcon() {
+  return (
+    <svg className="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
   );
 }

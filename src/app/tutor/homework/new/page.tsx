@@ -281,8 +281,35 @@ export default function NewHomeworkPage() {
     </label>
   );
 
+  // Right-hand summary: what the student will get, filled in as the form is.
+  const studentName = students.find((s) => s.studentId === studentId)?.studentName;
+  const questionCount = source === "test" ? (selectedTest?.questions.length ?? 0) : customQuestions.length;
+  const summary: { label: string; value: string | null }[] = [
+    {
+      label: "Кому",
+      value: group ? `Група «${group.name}» · ${pluralize(groupMembers.length, PLURAL.student)}` : (studentName ?? null),
+    },
+    {
+      label: "Що",
+      value: source === "test" ? (selectedTest?.title ?? null) : customQuestions.length ? "Завдання з банку" : null,
+    },
+    { label: "Назва для учня", value: title.trim() || null },
+    { label: "Питань", value: questionCount ? pluralize(questionCount, PLURAL.question) : null },
+    {
+      label: "Час",
+      value: source === "test" ? (selectedTest ? `${selectedTest.durationMinutes ?? 150} хв` : null) : "без обмеження",
+    },
+    {
+      label: "Дедлайн",
+      value: due
+        ? new Date(due).toLocaleString("uk", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })
+        : "без дедлайну",
+    },
+  ];
+
   return (
-    <div className="max-w-2xl mx-auto space-y-4 pb-6">
+    <div className="grid max-w-6xl items-start gap-5 pb-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="min-w-0 space-y-4">
       {/* 1 — the main decision comes first: what to give. */}
       <Step n={1} done={hasContent && !!title.trim()} title="Що задати">
         {editor && (
@@ -438,8 +465,8 @@ export default function NewHomeworkPage() {
         {pdfField}
       </Step>
 
-      {/* Sticky action bar: says what's missing instead of a silent grey button. */}
-      <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-[18px] border border-glass-edge bg-glass p-2 pl-4 shadow-pill backdrop-blur-xl">
+      {/* Phones/tablets: sticky action bar (large screens use the summary card). */}
+      <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-[18px] border border-glass-edge bg-glass p-2 pl-4 shadow-pill backdrop-blur-xl lg:hidden">
         <p className="min-w-0 flex-1 text-xs text-muted-foreground">
           {missing.length ? (
             <>
@@ -462,6 +489,51 @@ export default function NewHomeworkPage() {
         </Button>
       </div>
     </div>
+
+    {/* Large screens: a live summary beside the form, with the action. */}
+    <aside className="sticky top-[calc(var(--app-header-h)+1rem)] hidden space-y-4 rounded-[18px] bg-card p-5 lg:block">
+      <h2 className="font-heading text-base font-bold">Підсумок</h2>
+      <dl className="space-y-3">
+        {summary.map((row) => (
+          <div key={row.label}>
+            <dt className="text-xs text-muted-foreground">{row.label}</dt>
+            <dd className={cn("text-sm font-semibold", !row.value && "font-normal text-muted-foreground/70")}>
+              {row.value ?? "—"}
+            </dd>
+          </div>
+        ))}
+        {note.trim() && (
+          <div>
+            <dt className="text-xs text-muted-foreground">Коментар</dt>
+            <dd className="text-sm">{note.trim()}</dd>
+          </div>
+        )}
+        {pdfUrl && (
+          <div>
+            <dt className="text-xs text-muted-foreground">Конспект</dt>
+            <dd className="flex items-center gap-1.5 text-sm font-semibold">
+              <FileText size={14} className="shrink-0" />
+              <span className="truncate">{pdfName || "Конспект.pdf"}</span>
+            </dd>
+          </div>
+        )}
+      </dl>
+      {missing.length > 0 && (
+        <p className="rounded-[12px] bg-muted/70 px-3 py-2 text-xs text-muted-foreground">
+          Ще не вказано: <span className="font-semibold text-foreground">{missing.join(", ")}</span>
+        </p>
+      )}
+      <div className="space-y-2">
+        <Button disabled={!canSubmit || saving} onClick={handleAssign} className="w-full gap-1.5" size="lg">
+          <Check size={16} />
+          {saving ? "Призначення..." : "Призначити"}
+        </Button>
+        <Button variant="ghost" className="w-full" onClick={() => router.back()}>
+          Скасувати
+        </Button>
+      </div>
+    </aside>
+    </div>
   );
 }
 
@@ -480,7 +552,7 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
+    <section className="rounded-[18px] border border-border/50 bg-card p-5 sm:p-6 space-y-4">
       <div className="flex items-center gap-2.5">
         <span
           className={cn(

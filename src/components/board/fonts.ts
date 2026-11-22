@@ -1,4 +1,4 @@
-import { JetBrains_Mono, Manrope, Marck_Script, Montserrat } from "next/font/google";
+import { JetBrains_Mono, Manrope, Marck_Script, Montserrat, Onest } from "next/font/google";
 
 // Fonts of the mathboard design (board.css reads them through these variables). The canvas also
 // draws with Manrope and Marck Script; the engine reads their variables from `.mathboard`.
@@ -17,6 +17,14 @@ const montserrat = Montserrat({
   weight: ["700", "800", "900"],
 });
 
+/** The board's chrome (top bar, toolbars, menus): the same font as the rest of formlq.
+ *  Content on the sheet keeps Manrope, so text layout and exports don't change. */
+const onest = Onest({
+  variable: "--mb-font-ui",
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700"],
+});
+
 /** Numbers: zoom, counters, scores. */
 const jetbrainsMono = JetBrains_Mono({
   variable: "--mb-font-jetbrains",
@@ -33,5 +41,5 @@ const marckScript = Marck_Script({
 
 /** Class names of the board's CSS fonts; put them on the `.mathboard` root. Declared here, not in the
  *  root layout, so only board pages download them. */
-export const boardFonts = [manrope, montserrat, jetbrainsMono, marckScript].map((f) => f.variable).join(" ");
+export const boardFonts = [manrope, montserrat, onest, jetbrainsMono, marckScript].map((f) => f.variable).join(" ");
 

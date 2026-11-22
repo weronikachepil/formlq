@@ -42,7 +42,7 @@ export function UpcomingLessonsCard({
   return (
     <StudentColorsProvider value={colorOf}>
       <section className="rounded-[18px] border border-border/50 bg-card p-4 space-y-2">
-        <h2 className="font-heading font-bold text-base px-1">Найближчі заняття</h2>
+        <h2 className="font-heading font-bold text-base px-1.5">Найближчі заняття</h2>
         {lessons === null ? (
           <div className="space-y-2 py-1">
             {[0, 1].map((i) => (
@@ -50,10 +50,7 @@ export function UpcomingLessonsCard({
             ))}
           </div>
         ) : next.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-muted-foreground text-sm gap-1 py-6">
-            <span className="text-2xl">📅</span>
-            <p>Немає запланованих занять</p>
-          </div>
+          <p className="px-1 py-4 text-sm text-muted-foreground">Немає запланованих занять</p>
         ) : (
           <div className="-mx-1">
             <UpcomingLessons

@@ -2,11 +2,10 @@ import "./landing.css";
 import { landingFontVariables } from "./fonts";
 import { LandingNav } from "./LandingNav";
 import { Hero } from "./Hero";
-import { Products } from "./Products";
-import { QuizPreview } from "./QuizPreview";
+import { TestsSection } from "./TestsSection";
 import { Features } from "./Features";
-import { HowItWorks } from "./HowItWorks";
 import { Audience } from "./Audience";
+import { HowItWorks } from "./HowItWorks";
 import { Faq } from "./Faq";
 import { FinalCta } from "./FinalCta";
 import { LandingFooter } from "./LandingFooter";
@@ -17,11 +16,10 @@ export function Landing() {
     <div className={`landing ${landingFontVariables}`}>
       <LandingNav />
       <Hero />
-      <Products />
-      <QuizPreview />
+      <TestsSection />
       <Features />
-      <HowItWorks />
       <Audience />
+      <HowItWorks />
       <Faq />
       <FinalCta />
       <LandingFooter />

@@ -225,7 +225,7 @@ function PopoverBody({
 
       {group ? (
         <div className="rounded-[12px] border border-border/60 py-1.5 px-3 space-y-1">
-          <p className="flex items-baseline justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="flex items-baseline justify-between gap-2 text-xs font-semibold text-muted-foreground">
             Оплата
             <span className="normal-case tracking-normal text-[11px]">
               {lesson.price !== undefined ? `${lesson.price.toLocaleString("uk")} ₴ з учня` : "ціну не вказано"}
@@ -247,7 +247,7 @@ function PopoverBody({
       ) : (
       <div className="flex items-center justify-between gap-3 rounded-[12px] border border-border/60 py-1.5 pl-3 pr-1.5">
         <p className="flex min-w-0 items-baseline gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ціна</span>
+          <span className="text-xs font-semibold text-muted-foreground">Ціна</span>
           <span className="text-sm font-semibold tabular-nums">
             {lesson.price !== undefined ? `${lesson.price.toLocaleString("uk")} ₴` : "не вказано"}
           </span>
@@ -259,7 +259,7 @@ function PopoverBody({
       {!group && (
       <div className="rounded-[12px] border border-border/60 px-3 py-2 space-y-1">
         <div className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             Домашні
             {overdue > 0 && (
               <span className="normal-case tracking-normal text-[11px] text-red-600 dark:text-red-400">прострочено: {overdue}</span>

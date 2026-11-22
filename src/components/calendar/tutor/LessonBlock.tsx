@@ -72,24 +72,28 @@ export function LessonBlock({
       onContextMenu={(e) => e.preventDefault()}
       style={style}
       className={cn(
-        "absolute rounded-lg bg-popover overflow-hidden select-none touch-manipulation [-webkit-touch-callout:none]",
+        "absolute rounded-[8px] bg-popover overflow-hidden select-none touch-manipulation [-webkit-touch-callout:none]",
         "outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         editable ? "cursor-grab" : "cursor-pointer",
         dragging ? "z-30 shadow-glass-lg ring-2 ring-foreground/30 cursor-grabbing" : "z-10 hover:z-20 hover:shadow-glass",
       )}
     >
       <div
+        className={cn("absolute inset-0", color.block, status === "canceled" && "opacity-45")}
+        style={status === "missed" ? { backgroundImage: MISSED_HATCH } : undefined}
+      />
+      {/* Straight colour marker inset from the corners (a border-left bent with the radius). */}
+      <span
+        aria-hidden
         className={cn(
-          "absolute inset-0 border-l-[3px] rounded-lg",
-          color.block,
-          status === "missed" ? "border-red-500" : color.edge,
+          "absolute left-1 top-1 bottom-1 w-[3px] rounded-full",
+          status === "missed" ? "bg-red-500" : color.dot,
           status === "canceled" && "opacity-45",
         )}
-        style={status === "missed" ? { backgroundImage: MISSED_HATCH } : undefined}
       />
       <div
         className={cn(
-          "relative h-full pl-2.5 pr-1 text-[11px] leading-tight tabular-nums",
+          "relative h-full pl-3 pr-1 text-[11px] leading-tight",
           short ? "py-0.5 flex items-center gap-1 min-w-0" : "py-1 space-y-0.5",
           status === "canceled" && "opacity-60 line-through",
         )}
@@ -106,7 +110,8 @@ export function LessonBlock({
               {lesson.groupId && <Users size={11} className="inline mr-1 -mt-px opacity-80" aria-label="Група" />}
               {title}
             </p>
-            {durationMin >= 60 && subtitle && <p className="truncate opacity-80">{subtitle}</p>}
+            {/* The default «Урок» says nothing; a lesson's own subject does. */}
+            {durationMin >= 60 && subtitle && subtitle !== "Урок" && <p className="truncate opacity-80">{subtitle}</p>}
           </>
         )}
         <span className={cn("absolute top-1 right-1 flex items-center gap-0.5", narrow && "max-sm:hidden")}>

@@ -24,8 +24,8 @@ export function StudentCabinetCard({ studentId, name, subtitle, summary }: Stude
     <Link
       href={`/tutor/students/${studentId}`}
       className={cn(
-        "group rounded-[18px] border bg-card p-4 flex flex-col gap-3 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
-        overdue ? "border-red-500/30 hover:border-red-500/50" : "border-border/50 hover:border-primary/30",
+        "group rounded-[18px] border bg-card p-5 flex flex-col gap-3 outline-none transition-shadow hover:shadow-[0_8px_28px_rgba(20,38,42,0.08)] focus-visible:ring-2 focus-visible:ring-ring/50",
+        overdue ? "border-red-500/30" : "border-transparent",
       )}
     >
       <div className="flex items-center gap-3">
@@ -42,27 +42,35 @@ export function StudentCabinetCard({ studentId, name, subtitle, summary }: Stude
         />
       </div>
 
-      {/* Coloured status badges: blue = in progress, red = overdue, green = done. */}
-      <div className="flex flex-wrap gap-1.5">
-        <Badge icon={<Hourglass size={12} />} tone="text-blue-600 dark:text-blue-400 bg-blue-500/10">
-          {active} {plural(active, ["активне", "активні", "активних"])}
-        </Badge>
-        {overdue > 0 && (
-          <Badge icon={<AlertCircle size={12} />} tone="text-red-600 dark:text-red-400 bg-red-500/10">
-            {overdue} прострочено
-          </Badge>
-        )}
-        <Badge icon={<CheckCircle2 size={12} />} tone="text-green-600 dark:text-green-400 bg-green-500/10">
-          {done} виконано
-        </Badge>
-      </div>
+      {/* Coloured status badges: blue = in progress, red = overdue, green = done. Zeros say nothing, so they're left out. */}
+      {total > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {active > 0 && (
+            <Badge icon={<Hourglass size={12} />} tone="text-blue-600 dark:text-blue-400 bg-blue-500/10">
+              {active} {plural(active, ["активне", "активні", "активних"])}
+            </Badge>
+          )}
+          {overdue > 0 && (
+            <Badge icon={<AlertCircle size={12} />} tone="text-red-600 dark:text-red-400 bg-red-500/10">
+              {overdue} прострочено
+            </Badge>
+          )}
+          {done > 0 && (
+            <Badge icon={<CheckCircle2 size={12} />} tone="text-green-600 dark:text-green-400 bg-green-500/10">
+              {done} виконано
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* How far along overall, and the next deadline. */}
       <div className="space-y-1.5">
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-          <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${pct}%` }} />
-        </div>
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground tabular-nums">
+        {total > 0 && (
+          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${pct}%` }} />
+          </div>
+        )}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{total ? `${done} з ${total}` : "Завдань ще немає"}</span>
           {nextDueMs !== null && (
             <span className="inline-flex items-center gap-1">
@@ -78,7 +86,7 @@ export function StudentCabinetCard({ studentId, name, subtitle, summary }: Stude
 
 function Badge({ icon, tone, children }: { icon: React.ReactNode; tone: string; children: React.ReactNode }) {
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums", tone)}>
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", tone)}>
       {icon}
       {children}
     </span>

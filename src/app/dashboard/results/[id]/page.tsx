@@ -52,7 +52,7 @@ export default function ResultPage() {
   });
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-8">
+    <div className="max-w-2xl space-y-6 pb-8">
       <ScoreHeader result={result} />
 
       <QuestionMap questions={questions} />

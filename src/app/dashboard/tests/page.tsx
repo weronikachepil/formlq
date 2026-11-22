@@ -19,7 +19,8 @@ import { cn } from "@/lib/utils";
 import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/search-input";
-import { TestCard, bestByTest } from "@/components/tests/TestCard";
+import { FileText } from "lucide-react";
+import { TestRow, bestByTest } from "@/components/tests/TestCard";
 
 type Filter = "all" | "nmt" | "teachers";
 
@@ -36,6 +37,28 @@ interface Query {
   source: Filter;
   grade: string; // ALL or "5".."11"
   subject: TestSubject | typeof ALL;
+}
+
+/**
+ * Catalog group of a test. Teachers' tests are one group; platform tests are split
+ * into formlq's own NMT imitations and real NMT sessions by year (read from the title).
+ */
+function groupOf(t: TestDoc): string {
+  if (t.personal) return "Від викладачів";
+  if (/імітац/i.test(t.title)) return "Імітації НМТ від formlq";
+  const year = t.title.match(/20\d\d/)?.[0];
+  return year ? `НМТ ${year} року` : "Інші тести";
+}
+
+/** Groups in the order their first (newest) test appears; tests keep their order. */
+function groupTests(list: TestDoc[]): { name: string; tests: TestDoc[] }[] {
+  const map = new Map<string, TestDoc[]>();
+  for (const t of list) {
+    const g = groupOf(t);
+    if (!map.has(g)) map.set(g, []);
+    map.get(g)!.push(t);
+  }
+  return [...map].map(([name, tests]) => ({ name, tests }));
 }
 
 function matches(t: TestDoc, q: Query): boolean {
@@ -90,13 +113,33 @@ export default function TestsPage() {
   ) as Record<Filter, number>;
   const filtered = !!q.text || filter !== "all" || grade !== ALL || subject !== ALL;
 
+  const groups = groupTests(visible);
+  // "Пройдено": at least one attempt, counted or not.
+  const done = ordered.filter((t) => best.has(t.id)).length;
+  const donePct = ordered.length ? Math.round((done / ordered.length) * 100) : 0;
+
   if (isLoading || teacher || !userProfile) return <SpinnerPage />;
   if (tests.length === 0) {
     return <EmptyState emoji="📝" title="Тести ще не додані" description="Зайдіть пізніше" />;
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5">
+    <div className="max-w-5xl space-y-5">
+      <section className="flex items-center gap-4 rounded-[18px] bg-card p-5 sm:p-6">
+        <span className="grid size-14 shrink-0 place-items-center rounded-full bg-lavender text-[#14262a]">
+          <FileText size={24} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-heading text-xl font-bold sm:text-2xl">Тести з математики</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {done} з {ordered.length} тестів пройдено
+          </p>
+          <div className="mt-2.5 h-1.5 max-w-sm overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${donePct}%` }} />
+          </div>
+        </div>
+      </section>
+
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <SearchInput
           value={search}
@@ -142,7 +185,7 @@ export default function TestsPage() {
                 )}
               >
                 {FILTER_LABEL[f]}
-                <span className="ml-1.5 text-xs opacity-60 tabular-nums">{counts[f]}</span>
+                <span className="ml-1.5 text-xs opacity-60">{counts[f]}</span>
               </button>
             ))}
           </div>
@@ -156,11 +199,19 @@ export default function TestsPage() {
           description={filtered ? "Спробуйте інший запит або приберіть фільтри" : undefined}
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-          {visible.map((t) => (
-            <TestCard key={t.id} test={t} best={best.get(t.id)} query={search} />
-          ))}
-        </div>
+        groups.map((g) => (
+          <section key={g.name} className="rounded-[18px] bg-card p-4 sm:p-6 space-y-3">
+            <h2 className="px-1 font-heading text-lg font-bold">
+              {g.name}
+              <span className="ml-2 text-sm font-medium text-muted-foreground">{g.tests.length}</span>
+            </h2>
+            <div className="space-y-2">
+              {g.tests.map((t, i) => (
+                <TestRow key={t.id} test={t} index={i + 1} best={best.get(t.id)} query={search} />
+              ))}
+            </div>
+          </section>
+        ))
       )}
     </div>
   );

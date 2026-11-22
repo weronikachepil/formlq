@@ -7,28 +7,34 @@ import {
   ArrowRight,
   CheckCircle2,
   CalendarClock,
+  CalendarDays,
   CalendarPlus,
+  ClipboardList,
   ClipboardPlus,
   FilePlus,
   Presentation,
   UserPlus,
-  type LucideIcon,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Lesson, collapseGroupLessons, lessonStatus, subscribeTutorLessons } from "@/lib/lessons";
 import { Homework, TutorStudent, subscribeTutorHomework, subscribeTutorStudents } from "@/lib/tutor";
 import { formatDueCountdown, isHomeworkOverdue, summarizeHomework } from "@/lib/homework-status";
-import { addDays, startOfDay, startOfWeek } from "@/lib/calendar";
+import { addDays, formatHm, formatRelativeDay, startOfDay, startOfWeek } from "@/lib/calendar";
 import { pluralize } from "@/lib/format";
 import { computeStats } from "@/components/calendar/tutor/StatsCard";
 import { useNow } from "@/components/calendar/tutor/useNow";
-import { SectionLabel } from "@/components/ui/section-label";
 import { UpcomingLessonsCard } from "./CalendarWidget";
+import { QuickAction } from "./QuickAction";
+import { StudentCabinetCard } from "@/components/homework/StudentCabinetCard";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Unfinished homework due within this window is worth a look. */
 const SOON_MS = 2 * DAY_MS;
 const ATTENTION_LIMIT = 5;
+/** Students shown on the home page; the rest are one click away. */
+const STUDENTS_LIMIT = 6;
 
 const uah = (n: number) => `${n.toLocaleString("uk")} ₴`;
 
@@ -90,42 +96,72 @@ export function TutorOverview({
     ).length;
   }, [lessons, now]);
 
-  const tiles: { label: string; value: string; alert?: boolean }[] = [
-    { label: "Учнів", value: String(students?.length ?? 0) },
-    { label: "Уроків цього тижня", value: String(week.count) },
-    { label: "ДЗ у роботі", value: String(hw.active + hw.overdue) },
-    { label: "Не оплачено", value: uah(unpaid), alert: unpaid > 0 },
+  // Who needs the teacher first: overdue homework, then the soonest lesson, then by name.
+  const cabinets = useMemo(() => {
+    return (students ?? [])
+      .map((st) => {
+        const next = (lessons ?? [])
+          .filter((l) => l.studentId === st.studentId && lessonStatus(l) === "planned" && l.start.toMillis() >= now)
+          .reduce<Lesson | null>((a, l) => (!a || l.start.toMillis() < a.start.toMillis() ? l : a), null);
+        const summary = summarizeHomework((homework ?? []).filter((h) => h.studentId === st.studentId), now);
+        let subtitle = "Уроків не заплановано";
+        if (next) {
+          const d = next.start.toDate();
+          const rel = formatRelativeDay(d, now);
+          // Short enough for the card: "завтра о 18:00", "24 лист. о 16:30".
+          const day = rel === "сьогодні" || rel === "завтра" ? rel : d.toLocaleDateString("uk", { day: "numeric", month: "short" });
+          subtitle = `Урок ${day} о ${formatHm(d)}`;
+        }
+        return { studentId: st.studentId, name: st.studentName, subtitle, summary, nextMs: next?.start.toMillis() ?? Infinity };
+      })
+      .sort(
+        (a, b) =>
+          Number(b.summary.overdue > 0) - Number(a.summary.overdue > 0) ||
+          a.nextMs - b.nextMs ||
+          a.name.localeCompare(b.name, "uk"),
+      );
+  }, [students, lessons, homework, now]);
+
+  const tiles: { label: string; value: string; href: string; Icon: typeof Users; alert?: boolean }[] = [
+    { label: "Учнів", value: String(students?.length ?? 0), href: "/tutor/students", Icon: Users },
+    { label: "Уроків цього тижня", value: String(week.count), href: "/tutor/calendar", Icon: CalendarDays },
+    { label: "ДЗ у роботі", value: String(hw.active + hw.overdue), href: "/tutor/students", Icon: ClipboardList },
+    { label: "Не оплачено", value: uah(unpaid), href: "/tutor/calendar", Icon: Wallet, alert: unpaid > 0 },
   ];
 
   if (!loading && students!.length === 0) return <FirstStudentCard />;
 
   return (
     <>
+      <div className={cn("grid gap-3", ownTests ? "grid-cols-2 xl:grid-cols-4" : "grid-cols-2 sm:grid-cols-3")}>
+        <QuickAction href="/tutor/homework/new" Icon={ClipboardPlus} label="Призначити ДЗ" hint="Тест або завдання з дедлайном" tone="lavender" />
+        {ownTests && <QuickAction href="/tutor/tests" Icon={FilePlus} label="Створити тест" hint="Власний тест для учнів" tone="gold" />}
+        <QuickAction href="/tutor/calendar" Icon={CalendarPlus} label="Запланувати урок" hint="Додати в календар" tone="mint" />
+        <QuickAction href="/tutor/boards" Icon={Presentation} label="Відкрити дошку" hint="Для уроку чи пояснення" tone="peach" />
+      </div>
+
       <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <SectionLabel>Огляд</SectionLabel>
-            <p className="text-sm text-muted-foreground mt-1">
-              {loading
-                ? "Завантаження…"
-                : todayLeft > 0
-                  ? `Сьогодні ще ${pluralize(todayLeft, ["урок", "уроки", "уроків"])}`
-                  : "На сьогодні уроків більше немає"}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <QuickAction href="/tutor/homework/new" Icon={ClipboardPlus} label="Призначити ДЗ" />
-            {ownTests && <QuickAction href="/tutor/tests" Icon={FilePlus} label="Тест" />}
-            <QuickAction href="/tutor/calendar" Icon={CalendarPlus} label="Урок" />
-            <QuickAction href="/tutor/boards" Icon={Presentation} label="Дошка" />
-          </div>
+        <div>
+          <h2 className="font-heading font-bold text-base">Огляд</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {loading
+              ? "Завантаження…"
+              : todayLeft > 0
+                ? `Сьогодні ще ${pluralize(todayLeft, ["урок", "уроки", "уроків"])}`
+                : "На сьогодні уроків більше немає"}
+          </p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {tiles.map((t) => (
-            <div key={t.label} className="rounded-[12px] bg-muted/70 px-3 py-2.5">
-              <p className="text-xs text-muted-foreground truncate">
-                {t.label}
+            <Link
+              key={t.label}
+              href={t.href}
+              className="group rounded-[12px] bg-muted/70 px-3 py-2.5 transition-colors hover:bg-muted"
+            >
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <t.Icon size={13} className="shrink-0" />
+                <span className="truncate">{t.label}</span>
               </p>
               {loading ? (
                 <div className="h-7 mt-0.5 w-10 rounded-md bg-muted animate-pulse" />
@@ -139,7 +175,7 @@ export function TutorOverview({
                   {t.value}
                 </p>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -165,7 +201,7 @@ export function TutorOverview({
         {loading ? (
           <div className="space-y-2">
             {[0, 1].map((i) => (
-              <div key={i} className="h-12 rounded-xl bg-muted/60 animate-pulse" />
+              <div key={i} className="h-12 rounded-[12px] bg-muted/60 animate-pulse" />
             ))}
           </div>
         ) : attention.length === 0 ? (
@@ -182,11 +218,11 @@ export function TutorOverview({
                 <li key={h.id}>
                   <Link
                     href={`/tutor/students/${h.studentId}`}
-                    className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-glass-strong transition-colors"
+                    className="flex items-center gap-3 rounded-[12px] px-2 py-2 hover:bg-glass-strong transition-colors"
                   >
                     <span
                       className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
+                        "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
                         overdue
                           ? "bg-red-500/10 text-red-600 dark:text-red-400"
                           : "bg-amber-500/10 text-amber-600 dark:text-amber-400",
@@ -212,6 +248,25 @@ export function TutorOverview({
           </ul>
         )}
       </section>
+
+      {cabinets.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h2 className="font-heading font-bold text-base">Мої учні</h2>
+            <Link
+              href="/tutor/students"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              Усі учні <ArrowRight size={13} />
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {cabinets.slice(0, STUDENTS_LIMIT).map(({ nextMs: _nextMs, ...c }) => (
+              <StudentCabinetCard key={c.studentId} {...c} />
+            ))}
+          </div>
+        </section>
+      )}
     </>
   );
 }
@@ -225,22 +280,11 @@ export function TutorLessonsWidget({ tutorId }: { tutorId: string }) {
   return <UpcomingLessonsCard lessons={shown} viewer="tutor" />;
 }
 
-function QuickAction({ href, Icon, label }: { href: string; Icon: LucideIcon; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full text-sm font-semibold border border-glass-edge bg-glass shadow-pill hover:bg-glass-strong transition-colors"
-    >
-      <Icon size={15} /> {label}
-    </Link>
-  );
-}
-
 /** A brand-new tutor: point at the one thing that unlocks everything else. */
 function FirstStudentCard() {
   return (
     <section className="rounded-[18px] border border-border/50 bg-card p-6 flex flex-col sm:flex-row sm:items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
         <UserPlus size={22} />
       </div>
       <div className="flex-1">

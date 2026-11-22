@@ -24,7 +24,10 @@ const DAILY_STALE = 60 * 60 * 1000;
 
 function DailyCaption({ className }: { className?: string }) {
   return (
-    <SectionLabel size="2xs" className={cn("px-0 text-primary", className)}>
+    <SectionLabel
+      size="2xs"
+      className={cn("inline-flex rounded-full bg-lavender/40 px-2.5 py-1 text-foreground dark:bg-lavender/25", className)}
+    >
       Завдання дня
     </SectionLabel>
   );

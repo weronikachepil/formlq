@@ -36,7 +36,7 @@ export function MiniCalendar({ marks, selected, onSelect, legend, initialMonth }
   const month = view.getMonth();
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-3 space-y-2">
+    <div className="rounded-[18px] border border-border/50 bg-card p-3 space-y-2">
       <div className="flex items-center justify-between">
         <IconButton label="Попередній місяць" onClick={() => setView(new Date(year, month - 1, 1))}>
           <ChevronLeft size={16} />

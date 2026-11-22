@@ -142,7 +142,7 @@ export function StudentCalendarView({ lessons, homework, defaultView, defaultDat
             />
 
             <div className="rounded-2xl border border-border/50 bg-card p-3 space-y-2">
-              <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="px-2 pt-1 text-[13px] font-semibold text-muted-foreground">
                 Найближчі
               </p>
               {next.length ? (
@@ -182,7 +182,7 @@ export function StudentCalendarView({ lessons, homework, defaultView, defaultDat
 
             {multiTutor && (
               <div className="rounded-2xl border border-border/50 bg-card p-3 space-y-1.5">
-                <p className="px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="px-2 pt-1 text-[13px] font-semibold text-muted-foreground">
                   Вчителі
                 </p>
                 {tutors.map((t) => (

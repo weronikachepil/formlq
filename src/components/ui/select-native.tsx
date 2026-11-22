@@ -14,7 +14,7 @@ export function SelectNative({
       <select
         {...props}
         className={cn(
-          "w-full appearance-none pl-4 pr-9 py-2 rounded-full border border-glass-edge bg-glass shadow-pill",
+          "w-full appearance-none pl-4 pr-9 py-2 rounded-[12px] border border-glass-edge bg-glass",
           "text-sm text-foreground hover:bg-glass-strong focus:outline-none focus:border-foreground/50 transition-colors cursor-pointer",
           // Native option lists ignore translucency; keep them readable in both modes.
           "[&_option]:bg-popover [&_option]:text-popover-foreground [&_optgroup]:bg-popover [&_optgroup]:text-muted-foreground",

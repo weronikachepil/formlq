@@ -67,7 +67,7 @@ export function SoloOverview({ userId }: { userId: string }) {
 
   return (
     <>
-      <section className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
+      <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <SectionLabel>Твій прогрес</SectionLabel>
           {stats.attempts > 0 && (
@@ -84,7 +84,7 @@ export function SoloOverview({ userId }: { userId: string }) {
           <div className="h-16 rounded-xl bg-muted/60 animate-pulse" />
         ) : stats.attempts === 0 ? (
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
               <Trophy size={20} />
             </div>
             <p className="flex-1 text-sm text-muted-foreground">
@@ -178,7 +178,7 @@ export function SoloBoardsCard({ userId }: { userId: string }) {
   }
 
   return (
-    <section className="rounded-2xl border border-border/50 bg-card p-4 space-y-2">
+    <section className="rounded-[18px] border border-border/50 bg-card p-4 space-y-2">
       <div className="flex items-center justify-between px-1">
         <h2 className="font-semibold text-base">Мої дошки</h2>
         <button

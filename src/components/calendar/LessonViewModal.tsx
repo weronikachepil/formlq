@@ -26,7 +26,8 @@ export function LessonActions({
 }: {
   lesson: Lesson;
   now: number;
-  size?: "sm" | "md";
+  /** "icon": a round board button and a short «Увійти», for dense lists. */
+  size?: "icon" | "sm" | "md";
   className?: string;
 }) {
   const status = lessonStatus(lesson);
@@ -37,6 +38,37 @@ export function LessonActions({
   // The board stays useful after the lesson (notes); the call link doesn't.
   const showJoin = !!lesson.meetingUrl && !off && now <= end;
   if (!lesson.boardId && !showJoin) return null;
+
+  if (size === "icon") {
+    return (
+      <div className={cn("flex items-center gap-1.5", className)}>
+        {showJoin && canJoin && (
+          <a
+            href={lesson.meetingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex h-8 items-center gap-1 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-(--primary-hover)"
+          >
+            <Video size={13} /> Увійти
+          </a>
+        )}
+        {lesson.boardId && (
+          <a
+            href={`/board/${lesson.boardId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            aria-label="Відкрити дошку"
+            title="Відкрити дошку"
+            className="grid size-8 place-items-center rounded-full border border-glass-edge bg-glass text-foreground hover:bg-glass-strong"
+          >
+            <Presentation size={15} />
+          </a>
+        )}
+      </div>
+    );
+  }
 
   const h = size === "sm" ? "h-7 text-xs px-3" : "flex-1 h-10 text-sm px-4";
   return (

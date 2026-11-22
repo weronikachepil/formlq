@@ -15,8 +15,8 @@
   --color-foreground: var(--foreground);
 
   /* Fonts (next/font variables are set on <html> in the root layout). */
-  --font-sans: var(--font-manrope), system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-heading: var(--font-montserrat), var(--font-manrope), system-ui, sans-serif;
+  --font-sans: var(--font-onest), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: var(--font-onest), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, Menlo, monospace;
   --font-logo: var(--font-pinyon-script), cursive;
 
@@ -63,20 +63,23 @@
   --shadow-pill: var(--shadow-pill);
   --shadow-pill-dark: var(--shadow-pill-dark);
 
-  --radius-sm: calc(var(--radius) * 0.5);
-  --radius-md: calc(var(--radius) * 0.75);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.5);
-  --radius-2xl: calc(var(--radius) * 2);
-  --radius-3xl: calc(var(--radius) * 2.5);
-  --radius-4xl: calc(var(--radius) * 3);
+  /* Small, calm corners: chips 8, fields 12, rows 14–16, cards 18. (The old scale multiplied
+     18px, so `rounded-2xl` was 36px and lists looked like pills.) */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+  --radius-4xl: 28px;
 }
 
-/* ─── MathBoard «glass» (light) ─────────────────────────────
-   Teal-tinted pastel page, white glass cards, near-black teal ink
-   as the accent (dark pills), gold spark, lavender/mint flowers. */
+/* ─── formlq «clean» (light) ────────────────────────────────
+   Flat soft-grey page, opaque white cards with a hairline border,
+   near-black teal ink as the accent. Lavender / mint / peach / gold
+   stay available for small accents (badges, icons). */
 :root {
-  --font-sans: var(--font-manrope), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: var(--font-onest), system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --ink: #14262a;
   --gold: #e3b341;
@@ -84,20 +87,20 @@
   --mint: #bfe0dd;
   --peach: #ffddc4;
 
-  --background: #e6eeee;
+  --background: #eef0f0;
   --foreground: var(--ink);
-  --card: rgba(255, 255, 255, 0.66);
+  --card: #ffffff;
   --card-foreground: var(--ink);
-  --popover: #fbfdfd; /* opaque: menus aren't blurred, so content behind would show through */
+  --popover: #ffffff;
   --popover-foreground: var(--ink);
   --primary: var(--ink);
   --primary-foreground: #ffffff;
   --primary-hover: #274349;
-  --secondary: rgba(255, 255, 255, 0.75);
+  --secondary: #ffffff;
   --secondary-foreground: var(--ink);
-  --muted: rgba(20, 38, 42, 0.06);
+  --muted: rgba(20, 38, 42, 0.05);
   --muted-foreground: #5f777b;
-  --accent: rgba(255, 255, 255, 0.9);
+  --accent: #f1f3f3;
   --accent-foreground: var(--ink);
   --destructive: #c0264a;
   --border: rgba(20, 38, 42, 0.1);
@@ -110,92 +113,87 @@
   --chart-5: #e88f6a;
   --radius: 1.125rem;
 
-  --sidebar: rgba(255, 255, 255, 0.66);
+  --sidebar: #f7f8f8;
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--ink);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(255, 255, 255, 0.9);
+  --sidebar-accent: #e9eded;
   --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: rgba(255, 255, 255, 0.85);
+  --sidebar-border: rgba(20, 38, 42, 0.1);
   --sidebar-ring: #3d6d73;
 
-  /* Glass surfaces: fill for pills/fields, stronger fill on hover, bright edge. */
-  --glass: rgba(255, 255, 255, 0.7);
-  --glass-strong: rgba(255, 255, 255, 0.95);
-  --glass-edge: rgba(255, 255, 255, 0.85);
+  /* Former glass surfaces, now flat: white fill for pills/fields, a faint grey on hover,
+     hairline edge. Names kept so every component picks the new look up. */
+  --glass: #ffffff;
+  --glass-strong: #f6f7f7;
+  --glass-edge: rgba(20, 38, 42, 0.12);
   --backdrop: rgba(20, 38, 42, 0.32);
   --dots: rgba(20, 38, 42, 0.16);
 
-  /* Symmetric glow (no drop) + top highlight, as in MathBoard. */
-  --shadow-glass: 0 10px 40px rgba(40, 80, 90, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --shadow-glass-lg: 0 16px 56px rgba(40, 80, 90, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --shadow-pill: 0 0 10px rgba(40, 80, 90, 0.1), inset 0 1px 0 #ffffff;
-  --shadow-pill-dark: 0 0 12px rgba(20, 38, 42, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  /* No card shadow: white cards on the grey page need nothing else. */
+  --shadow-glass: none;
+  --shadow-glass-lg: 0 2px 6px rgba(20, 38, 42, 0.06), 0 18px 48px rgba(20, 38, 42, 0.12);
+  --shadow-pill: 0 1px 2px rgba(20, 38, 42, 0.05);
+  --shadow-pill-dark: 0 1px 2px rgba(20, 38, 42, 0.2);
 
-  --page-bg:
-    radial-gradient(520px 420px at 92% 8%, rgba(207, 198, 247, 0.65), transparent 70%),
-    radial-gradient(640px 520px at 6% 92%, rgba(255, 221, 196, 0.6), transparent 70%),
-    radial-gradient(700px 600px at 55% 45%, rgba(200, 232, 226, 0.7), transparent 75%),
-    linear-gradient(160deg, #dcebe8 0%, #eaeff2 48%, #f3e9ec 100%);
+  --page-bg: none;
 }
 
 /* ─── MathBoard «glass» (dark): deep teal ink, smoky glass, light pills ─── */
 .dark {
+  /* Neutral graphite (no teal tint): near-black page, slightly lighter cards,
+     rows a step lighter again; the active nav item is a soft highlight, not a white pill. */
   --gold: #e8bd55;
   --lavender: #8e82d6;
-  --mint: #3f7f79;
+  --mint: #3f8a83;
   --peach: #b98466;
 
-  --background: #0d1b1e;
-  --foreground: #e3eeed;
-  --card: rgba(34, 58, 63, 0.55);
-  --card-foreground: #e3eeed;
-  --popover: #15262a;
-  --popover-foreground: #e3eeed;
-  --primary: #e3eeed;
-  --primary-foreground: #14262a;
+  --background: #141517;
+  --foreground: #ececee;
+  --card: #1c1d20;
+  --card-foreground: #ececee;
+  --popover: #232427;
+  --popover-foreground: #ececee;
+  --primary: #ececee;
+  --primary-foreground: #141517;
   --primary-hover: #ffffff;
-  --secondary: rgba(255, 255, 255, 0.08);
-  --secondary-foreground: #e3eeed;
-  --muted: rgba(255, 255, 255, 0.06);
-  --muted-foreground: #8ea7aa;
-  --accent: rgba(255, 255, 255, 0.12);
-  --accent-foreground: #e3eeed;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: #ececee;
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: #9a9ca3;
+  --accent: rgba(255, 255, 255, 0.08);
+  --accent-foreground: #ececee;
   --destructive: #f0708c;
-  --border: rgba(255, 255, 255, 0.09);
-  --input: rgba(255, 255, 255, 0.14);
-  --ring: #9cc7c2;
-  --chart-1: #e3eeed;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #a8a9b0;
+  --chart-1: #ececee;
   --chart-2: #6fc0b6;
   --chart-3: #a99cf0;
   --chart-4: #e8bd55;
   --chart-5: #f0a07a;
 
-  --sidebar: rgba(34, 58, 63, 0.6);
-  --sidebar-foreground: #e3eeed;
-  --sidebar-primary: #e3eeed;
-  --sidebar-primary-foreground: #14262a;
-  --sidebar-accent: rgba(255, 255, 255, 0.1);
-  --sidebar-accent-foreground: #e3eeed;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #9cc7c2;
+  --sidebar: #18191b;
+  --sidebar-foreground: #d9dadd;
+  --sidebar-primary: rgba(255, 255, 255, 0.1);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-accent-foreground: #ececee;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: #a8a9b0;
 
-  --glass: rgba(255, 255, 255, 0.07);
-  --glass-strong: rgba(255, 255, 255, 0.13);
-  --glass-edge: rgba(255, 255, 255, 0.1);
-  --backdrop: rgba(3, 10, 12, 0.6);
-  --dots: rgba(227, 238, 237, 0.13);
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-strong: rgba(255, 255, 255, 0.08);
+  --glass-edge: rgba(255, 255, 255, 0.09);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --dots: rgba(236, 236, 238, 0.1);
 
-  --shadow-glass: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --shadow-glass-lg: 0 16px 56px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --shadow-pill: 0 0 10px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --shadow-pill-dark: 0 0 14px rgba(160, 220, 212, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-glass: none;
+  --shadow-glass-lg: 0 18px 48px rgba(0, 0, 0, 0.55);
+  --shadow-pill: none;
+  --shadow-pill-dark: none;
 
-  --page-bg:
-    radial-gradient(520px 420px at 92% 8%, rgba(142, 130, 214, 0.18), transparent 70%),
-    radial-gradient(640px 520px at 6% 92%, rgba(185, 132, 102, 0.12), transparent 70%),
-    radial-gradient(700px 600px at 55% 45%, rgba(63, 127, 121, 0.2), transparent 75%),
-    linear-gradient(160deg, #0b1a1d 0%, #0f1f23 48%, #18191f 100%);
+  --page-bg: none;
 
   color-scheme: dark;
 }
@@ -216,21 +214,27 @@
     background-attachment: fixed;
   }
 
-  /* MathBoard headings: heavy, wide head font. */
   h1, h2 {
     font-family: var(--font-heading);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 
-  /* Cards are white glass with a soft glow instead of a hard drop shadow. */
+  /* Cards: white with a hairline border and a barely-there shadow. */
   .bg-card {
     box-shadow: var(--shadow-glass);
   }
 }
 
-/* A neutral card border reads as a bright glass edge (unlayered so it wins over the utility). */
+/* Onest's tabular figures give "1" a full-width box ("1 7", "2 1"); keep its normal,
+   proportional digits everywhere. Timers use the mono font, which is fixed-width anyway. */
+.tabular-nums {
+  font-variant-numeric: proportional-nums;
+}
+
+/* Cards are plain white on the grey page: no outline (unlayered so it wins over the utility).
+   Coloured borders that mean something (an overdue student) are not `border-border` and stay. */
 .bg-card[class*="border-border"] {
-  border-color: var(--glass-edge);
+  border-color: transparent;
 }
 
 /* ─── MathBoard decorations ──────────────────────────────────── */
@@ -285,6 +289,11 @@
 .dark .mb-flower-mint::after {
   opacity: 0.5;
 }
+/* The clean theme drops the decorative flowers and dotted circles. */
+.mb-flower::after,
+.mb-flower-mint::after {
+  display: none;
+}
 
 /* Dotted circles floating behind the app chrome (desktop only). */
 .mb-dots::before,
@@ -308,11 +317,9 @@
   left: 9%;
   bottom: 8%;
 }
-@media (max-width: 767px) {
-  .mb-dots::before,
-  .mb-dots::after {
-    display: none;
-  }
+.mb-dots::before,
+.mb-dots::after {
+  display: none;
 }
 
 /* Site intro (SiteIntro): blurred page, «formlq» written left to right, then everything

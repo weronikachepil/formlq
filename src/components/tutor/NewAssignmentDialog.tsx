@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-field";
 import { DateTimePicker, toLocalValue } from "@/components/ui/date-time-picker";
 import { TestPicker } from "@/components/TestPicker";
+import { Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const parse = (v: string) => (v ? new Date(v) : null);
@@ -97,13 +98,18 @@ export function NewAssignmentDialog({ onClose, onCreated }: { onClose: () => voi
   const capped = !error && dur > windowMin && windowMin > 0;
 
   return (
-    <Dialog open onClose={onClose} size="md" className="rounded-[18px] p-6" closeOnBackdrop={false}>
+    <Dialog open onClose={onClose} size="md" className="max-w-xl p-6 sm:p-7" closeOnBackdrop={false} showClose>
       <form onSubmit={save} className="space-y-5">
-        <div className="space-y-1">
-          <h2 className="font-heading font-bold text-xl">Нове тестування</h2>
-          <p className="text-sm text-muted-foreground">
-            Учні відкривають тест за посиланням, вводять імʼя та прізвище й проходять його лише в заданий час.
-          </p>
+        <div className="flex items-start gap-4 pr-10">
+          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-lavender/45 text-[#14262a] dark:bg-lavender/25 dark:text-foreground">
+            <Timer size={22} />
+          </span>
+          <div className="space-y-1">
+            <h2 className="font-heading font-bold text-xl">Нове тестування</h2>
+            <p className="text-sm text-muted-foreground">
+              Учні відкривають тест за посиланням, вводять імʼя та прізвище й проходять його лише в заданий час.
+            </p>
+          </div>
         </div>
 
         <Field label="Тест">
@@ -191,10 +197,10 @@ export function NewAssignmentDialog({ onClose, onCreated }: { onClose: () => voi
         <div className="flex items-center justify-end gap-2 pt-1">
           {/* Say why «Створити» is disabled instead of leaving a grey button. */}
           {!test && tests.length > 0 && <p className="mr-auto text-xs text-muted-foreground">Оберіть тест</p>}
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" size="lg" variant="ghost" className="bg-muted hover:bg-muted/70" onClick={onClose}>
             Скасувати
           </Button>
-          <Button type="submit" disabled={!ready}>
+          <Button type="submit" size="lg" disabled={!ready}>
             {saving ? "Створюю…" : "Створити"}
           </Button>
         </div>

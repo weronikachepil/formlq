@@ -2,8 +2,8 @@ import Link from "next/link";
 
 export function LandingNav() {
   return (
-    <div className="wrap nav-wrap">
-      <nav className="nav">
+    <div className="nav-wrap">
+      <nav className="wrap nav">
         <a className="logo" href="#top">formlq</a>
         <ul>
           <li><a href="#tests">Тести</a></li>
@@ -11,7 +11,10 @@ export function LandingNav() {
           <li><a href="#how">Як це працює</a></li>
           <li><a href="#faq">Питання</a></li>
         </ul>
-        <Link className="btn sm" href="/login">Увійти</Link>
+        <div className="nav-actions">
+          <Link className="btn ghost sm" href="/login">Увійти</Link>
+          <Link className="btn sm nav-reg" href="/register">Реєстрація</Link>
+        </div>
       </nav>
     </div>
   );

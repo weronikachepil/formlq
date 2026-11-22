@@ -34,7 +34,7 @@ export function Faq() {
   return (
     <section id="faq">
       <div className="wrap">
-        <div className="center-head">
+        <div className="faq-head">
           <p className="eyebrow">Питання</p>
           <h2>Відповідаємо наперед</h2>
         </div>

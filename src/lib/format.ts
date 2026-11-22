@@ -11,9 +11,9 @@ export function formatTimer(s: number): string {
 export function formatDuration(s: number): string {
   const m = Math.floor(s / 60);
   const sec = s % 60;
-  if (m === 0) return `${sec}с`;
-  if (sec === 0) return `${m}хв`;
-  return `${m}хв ${sec}с`;
+  if (m === 0) return `${sec} с`;
+  if (sec === 0) return `${m} хв`;
+  return `${m} хв ${sec} с`;
 }
 
 /** Firestore Timestamp → localized date string */

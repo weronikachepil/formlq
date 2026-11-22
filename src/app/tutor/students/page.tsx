@@ -19,7 +19,6 @@ import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
-import { SectionLabel } from "@/components/ui/section-label";
 import { StudentCabinetCard } from "@/components/homework/StudentCabinetCard";
 import { cn } from "@/lib/utils";
 
@@ -143,7 +142,7 @@ export default function TutorStudentsPage() {
   );
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
+    <div className="max-w-6xl space-y-5">
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         {cabinets.length > 4 ? (
           <SearchInput value={search} onChange={setSearch} placeholder="Пошук учня…" wrapperClassName="sm:w-72" />
@@ -207,9 +206,12 @@ export default function TutorStudentsPage() {
           {sections.map((s) => (
             <section key={s.key} className="space-y-2">
               <div className="flex items-center gap-2 min-h-8">
-                <SectionLabel size="2xs">
-                  {s.title} ({s.group ? s.group.studentIds.length : s.items.length})
-                </SectionLabel>
+                <h2 className="px-1 font-heading text-lg font-bold">
+                  {s.title}
+                  <span className="ml-2 text-sm font-medium text-muted-foreground">
+                    {s.group ? s.group.studentIds.length : s.items.length}
+                  </span>
+                </h2>
                 {s.group && (
                   <>
                     <Button size="xs" variant="ghost" className="gap-1 text-muted-foreground" onClick={() => setEditing(s.group!)}>
@@ -282,7 +284,7 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
       onClick={onClick}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
-        active ? "bg-primary text-primary-foreground shadow-pill-dark" : "bg-glass text-foreground shadow-pill hover:bg-glass-strong",
+        active ? "bg-primary text-primary-foreground" : "bg-card text-foreground hover:bg-sidebar-accent",
       )}
     >
       {children}

@@ -7,7 +7,7 @@ interface SectionLabelProps extends React.HTMLAttributes<HTMLElement> {
   htmlFor?: string;
 }
 
-/** Small uppercase caption used above form fields and list groups. */
+/** Small muted caption used above form fields and list groups (sentence case). */
 export function SectionLabel({
   size = "xs",
   as: Tag = "p",
@@ -17,11 +17,8 @@ export function SectionLabel({
   return (
     <Tag
       className={cn(
-        "uppercase text-muted-foreground",
-        // MathBoard `.label`: small, semibold, widely tracked.
-        size === "xs"
-          ? "text-xs font-semibold tracking-[0.16em]"
-          : "text-[10px] font-semibold tracking-[0.18em] px-1",
+        "text-muted-foreground",
+        size === "xs" ? "text-[13px] font-semibold" : "text-xs font-semibold px-1",
         className,
       )}
       {...props}

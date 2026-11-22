@@ -141,7 +141,7 @@ export default function QuestionsReviewPage() {
   if (loading) return <SpinnerPage size="lg" />;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5">
+    <div className="max-w-5xl space-y-5">
       {/* Tabs + primary action */}
       <div className="flex items-center justify-between">
         <div className="flex gap-1 bg-muted/40 p-1 rounded-xl w-fit">

@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { landingFontVariables } from "@/components/landing/fonts";
 
 interface AuthCardProps {
   title: string;
+  /** One short line under the title. */
+  subtitle?: string;
   footerText: string;
   footerLinkHref: string;
   footerLinkLabel: string;
@@ -10,29 +13,43 @@ interface AuthCardProps {
   children: React.ReactNode;
 }
 
-/** MathBoard sign-in card: big-radius white glass with a lavender flower and the handwritten logo. */
-export function AuthCard({ title, footerText, footerLinkHref, footerLinkLabel, modal = false, children }: AuthCardProps) {
+/**
+ * Sign-in / sign-up card in the landing's style: plain white card, hairline
+ * border, Onest type. Fields are flattened from here (white, no shadow) so the
+ * shared Input keeps its look elsewhere in the app; the forms set their 12px corners.
+ */
+export function AuthCard({
+  title,
+  subtitle,
+  footerText,
+  footerLinkHref,
+  footerLinkLabel,
+  modal = false,
+  children,
+}: AuthCardProps) {
   const card = (
-    <div className="mb-flower relative w-full max-w-[420px] overflow-hidden rounded-[2.25rem] border border-glass-edge bg-card shadow-glass-lg backdrop-blur-xl">
-      <div className="relative z-10 px-7 pt-8 pb-7 sm:px-9 flex flex-col gap-5">
-        <div className="flex flex-col gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-            Підготовка до НМТ з математики
-          </p>
-          <span className="mb-logo text-[2.6rem] self-start">formlq</span>
+    <div
+      className={`${landingFontVariables} relative w-full max-w-[420px] overflow-hidden rounded-[18px] border border-foreground/10 bg-white text-[#14262a] shadow-[0_1px_2px_rgba(20,38,42,.04),0_18px_48px_rgba(20,38,42,.12)] [font-family:var(--lf-onest),system-ui,sans-serif] [&_input]:border-foreground/12 [&_input]:bg-white [&_input]:shadow-none`}
+    >
+      <div className="flex flex-col gap-5 px-7 pt-7 pb-7 sm:px-8">
+        <div className="flex flex-col gap-4">
+          <span className="mb-logo self-start text-[2.25rem]">formlq</span>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-[26px] font-bold leading-tight tracking-[-0.02em]">{title}</h1>
+            {subtitle && <p className="text-[15px] text-[#5f777b]">{subtitle}</p>}
+          </div>
         </div>
-        <h1 className="font-heading text-2xl font-extrabold uppercase leading-tight">{title}</h1>
         {children}
       </div>
 
-      <div className="relative z-10 px-7 py-4 border-t border-foreground/8 text-center">
-        <p className="text-sm text-muted-foreground">
+      <div className="border-t border-foreground/10 bg-[#f6f7f7] px-7 py-4 text-center">
+        <p className="text-sm text-[#5f777b]">
           {footerText}{" "}
           <Link
             href={footerLinkHref}
             // In the modal, switching login ↔ register must not add a step: closing returns to the landing.
             replace={modal}
-            className="text-foreground font-semibold underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
+            className="font-semibold text-[#14262a] underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground"
           >
             {footerLinkLabel}
           </Link>
@@ -41,5 +58,5 @@ export function AuthCard({ title, footerText, footerLinkHref, footerLinkLabel, m
     </div>
   );
   if (modal) return card;
-  return <div className="mb-dots min-h-screen flex items-center justify-center p-4">{card}</div>;
+  return <div className="flex min-h-screen items-center justify-center bg-[#f6f7f7] p-4">{card}</div>;
 }

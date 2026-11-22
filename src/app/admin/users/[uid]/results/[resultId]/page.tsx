@@ -36,7 +36,7 @@ export default function AdminResultPage() {
   const questions = result.questions ?? [];
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 pb-8">
+    <div className="max-w-2xl space-y-6 pb-8">
       <button
         onClick={() => router.push(`/admin/users/${uid}`)}
         className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"

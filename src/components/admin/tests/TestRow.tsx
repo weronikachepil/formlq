@@ -120,7 +120,7 @@ export function TestRow({
         }}
         className={cn(
           "group rounded-2xl border border-border/50 bg-card pl-3 pr-2 py-2.5 flex items-center gap-3 cursor-pointer select-none transition-colors",
-          "hover:border-border hover:bg-muted/30 outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+          "hover:shadow-[0_8px_28px_rgba(20,38,42,0.08)] outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
           isDragSrc && "opacity-40",
         )}
       >

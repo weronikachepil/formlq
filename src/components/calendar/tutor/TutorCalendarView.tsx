@@ -211,7 +211,7 @@ export function TutorCalendarView({
   return (
     <StudentColorsProvider value={colorOf}>
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-5">
-        <aside className={cn("order-2 lg:order-1 lg:w-72 shrink-0", ASIDE_FIT)}>
+        <aside className={cn("order-2 lg:order-1 lg:w-60 xl:w-64 shrink-0", ASIDE_FIT)}>
           <CalendarSidebar
             anchor={anchor}
             onPickDate={(d) => setAnchor(startOfDay(d))}

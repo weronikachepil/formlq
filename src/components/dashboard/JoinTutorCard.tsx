@@ -61,7 +61,7 @@ export function JoinTutorCard({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <section className={cn("rounded-2xl border border-border/50 bg-card space-y-3", compact ? "p-4" : "p-5")}>
+    <section className={cn("rounded-[18px] border border-border/50 bg-card space-y-3", compact ? "p-4" : "p-5")}>
       {compact ? (
         <div className="px-1">
           <h2 className="font-semibold text-sm">Маєте викладача?</h2>
@@ -71,7 +71,7 @@ export function JoinTutorCard({ compact = false }: { compact?: boolean }) {
         </div>
       ) : (
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
             <UserPlus size={19} />
           </div>
           <div>
@@ -86,7 +86,7 @@ export function JoinTutorCard({ compact = false }: { compact?: boolean }) {
       {found ? (
         <div
           className={cn(
-            "flex flex-col gap-3 rounded-2xl border border-glass-edge bg-glass px-4 py-3",
+            "flex flex-col gap-3 rounded-[12px] border border-glass-edge bg-glass px-4 py-3",
             !compact && "sm:flex-row sm:items-center",
           )}
         >

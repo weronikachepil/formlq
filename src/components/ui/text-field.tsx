@@ -3,13 +3,13 @@ import { cn } from "@/lib/utils";
 
 /** Shared look for app text inputs/textareas (MathBoard white-glass field, ink focus edge). */
 export const fieldClass = cn(
-  "w-full rounded-xl border border-glass-edge bg-glass text-sm shadow-pill outline-none transition-colors",
+  "w-full rounded-[12px] border border-glass-edge bg-glass text-sm outline-none transition-colors",
   "placeholder:text-muted-foreground/70 hover:bg-glass-strong focus:bg-glass-strong focus:border-foreground/50 focus:ring-2 focus:ring-ring/15",
   "disabled:opacity-50 disabled:cursor-not-allowed",
 );
 
-// Single-line inputs are pills; textareas keep the rounded-xl corner from fieldClass.
-const inputSizes = { sm: "h-8 px-3.5 rounded-full", md: "h-10 px-4 rounded-full" } as const;
+// Fields share one 12px corner (buttons stay round).
+const inputSizes = { sm: "h-8 px-3.5 rounded-[10px]", md: "h-10 px-4 rounded-[12px]" } as const;
 
 interface TextInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: keyof typeof inputSizes;
