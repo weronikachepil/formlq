@@ -4,12 +4,12 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
-  CalendarClock,
   ChevronRight,
   PenLine,
   Presentation,
   Repeat,
   Trash2,
+  Users,
   Video,
   X,
 } from "lucide-react";
@@ -26,7 +26,8 @@ import { useStudentColor } from "./student-colors";
 import { needsStatus } from "./lesson-utils";
 
 const POPOVER_W = 340;
-const STATUSES: LessonStatus[] = ["done", "canceled", "missed", "planned"];
+// Lifecycle order: planned → it happened / the student missed it / it was cancelled.
+const STATUSES: LessonStatus[] = ["planned", "done", "missed", "canceled"];
 const STATUS_ACTIVE: Record<LessonStatus, string> = {
   done: "bg-green-600 text-white",
   canceled: "bg-foreground/70 text-background",
@@ -110,7 +111,7 @@ function FloatingCard(props: LessonPopoverProps) {
       role="dialog"
       aria-label={props.lesson.title}
       style={{ width: POPOVER_W, visibility: "hidden" }}
-      className="fixed z-70 max-h-[calc(100dvh-16px)] overflow-y-auto rounded-[1.75rem] border border-glass-edge bg-popover shadow-glass-lg p-5 animate-in fade-in-0 zoom-in-95 duration-100"
+      className="fixed z-70 max-h-[calc(100dvh-16px)] overflow-y-auto rounded-[18px] border border-glass-edge bg-popover shadow-glass-lg p-5 animate-in fade-in-0 zoom-in-95 duration-100"
     >
       <PopoverBody {...props} />
     </div>
@@ -146,26 +147,41 @@ function PopoverBody({
 
   return (
     <div className="space-y-4">
+      {/* Who → when → what: the tutor thinks in students, so the name leads. */}
       <div className="flex items-start gap-3">
-        <span className={cn("mt-1.5 w-3.5 h-3.5 rounded-[5px] shrink-0", color.dot)} />
+        <span className={cn("mt-2 w-3 h-3 rounded-[4px] shrink-0", color.dot)} />
         <div className="flex-1 min-w-0">
-          <p className={cn("font-heading font-bold text-lg leading-snug", status === "canceled" && "line-through opacity-60")}>
-            {lesson.title}
+          <Link
+            href={group ? `/tutor/groups/${lesson.groupId}` : `/tutor/students/${lesson.studentId}`}
+            className={cn(
+              "group/name inline-flex max-w-full items-center gap-1.5 font-heading font-bold text-lg leading-snug hover:underline underline-offset-4",
+              status === "canceled" && "line-through opacity-60",
+            )}
+          >
+            {group && <Users size={16} className="shrink-0" />}
+            <span className="truncate">{group ? (groupName ?? "Група") : (lesson.studentName ?? "Учень")}</span>
+            <ChevronRight size={15} className="shrink-0 text-muted-foreground transition-transform group-hover/name:translate-x-0.5" />
+          </Link>
+          <p className="mt-0.5 text-sm font-semibold tabular-nums">
+            {formatHm(start)}–{formatHm(end)}
+            <span className="font-normal text-muted-foreground"> · {lesson.durationMin} хв</span>
           </p>
-          <p className="text-sm text-muted-foreground mt-0.5 flex items-start gap-1.5">
-            <CalendarClock size={13} className="shrink-0 mt-[3px]" />
-            <span>
-              {WEEKDAYS_FULL[weekdayIndex(start)]}, {formatDayMonth(start)} ·{" "}
-              <span className="whitespace-nowrap">
-                {formatHm(start)}–{formatHm(end)}
+          <p className="text-sm text-muted-foreground">
+            {WEEKDAYS_FULL[weekdayIndex(start)]}, {formatDayMonth(start)}
+          </p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <span className="rounded-[6px] bg-muted px-1.5 py-0.5 text-[11px] font-medium text-foreground/80">{lesson.title}</span>
+            {group && (
+              <span className="inline-flex items-center gap-1 rounded-[6px] bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+                <Users size={11} /> {group.length} уч.
               </span>
-            </span>
-          </p>
-          {lesson.seriesId && (
-            <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1">
-              <Repeat size={11} /> Щотижня
-            </p>
-          )}
+            )}
+            {lesson.seriesId && (
+              <span className="inline-flex items-center gap-1 rounded-[6px] bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <Repeat size={11} /> Щотижня
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center -mr-2 -mt-1">
           <IconButton label="Редагувати" onClick={onEdit}>
@@ -180,26 +196,17 @@ function PopoverBody({
         </div>
       </div>
 
-      <div className="space-y-1.5 text-sm">
-        <Link
-          href={group ? `/tutor/groups/${lesson.groupId}` : `/tutor/students/${lesson.studentId}`}
-          className="inline-flex items-center gap-1.5 font-semibold hover:underline underline-offset-4"
-        >
-          {group ? `👥 ${groupName ?? "Група"} · ${group.length} уч.` : (lesson.studentName ?? "Учень")}
-          <ChevronRight size={13} className="text-muted-foreground" />
-        </Link>
-        {lesson.note && (
-          <p className="text-foreground/80 border-l-2 border-border pl-2 whitespace-pre-line">{lesson.note}</p>
-        )}
-      </div>
+      {lesson.note && (
+        <p className="text-sm text-foreground/80 border-l-2 border-border pl-2.5 whitespace-pre-line">{lesson.note}</p>
+      )}
 
       {needsStatus(lesson, now) && (
-        <p className="flex items-center gap-1.5 rounded-[1rem] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs font-medium">
+        <p className="flex items-center gap-1.5 rounded-[12px] bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-2 text-xs font-medium">
           <AlertCircle size={13} /> Урок минув — позначте статус
         </p>
       )}
 
-      <div className="flex gap-0.5 rounded-full bg-muted/70 p-0.5">
+      <div role="group" aria-label="Статус уроку" className="flex gap-0.5 rounded-[12px] bg-muted/70 p-0.5">
         {STATUSES.map((s) => (
           <button
             key={s}
@@ -207,7 +214,7 @@ function PopoverBody({
             onClick={() => onStatus(s)}
             aria-pressed={status === s}
             className={cn(
-              "h-7 flex-1 rounded-full px-1.5 text-[11px] font-semibold transition-all",
+              "h-8 flex-auto whitespace-nowrap rounded-[10px] px-1 text-[11px] tracking-[-0.01em] font-semibold transition-all",
               status === s ? cn(STATUS_ACTIVE[s], "shadow-pill") : "text-muted-foreground hover:bg-glass-strong hover:text-foreground",
             )}
           >
@@ -217,7 +224,7 @@ function PopoverBody({
       </div>
 
       {group ? (
-        <div className="rounded-[1rem] border border-border/60 py-1.5 px-3 space-y-1">
+        <div className="rounded-[12px] border border-border/60 py-1.5 px-3 space-y-1">
           <p className="flex items-baseline justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Оплата
             <span className="normal-case tracking-normal text-[11px]">
@@ -238,7 +245,7 @@ function PopoverBody({
           </ul>
         </div>
       ) : (
-      <div className="flex items-center justify-between gap-3 rounded-[1rem] border border-border/60 py-1.5 pl-3 pr-1.5">
+      <div className="flex items-center justify-between gap-3 rounded-[12px] border border-border/60 py-1.5 pl-3 pr-1.5">
         <p className="flex min-w-0 items-baseline gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Ціна</span>
           <span className="text-sm font-semibold tabular-nums">
@@ -250,7 +257,7 @@ function PopoverBody({
       )}
 
       {!group && (
-      <div className="rounded-[1rem] border border-border/60 px-3 py-2 space-y-1">
+      <div className="rounded-[12px] border border-border/60 px-3 py-2 space-y-1">
         <div className="flex items-center justify-between gap-2">
           <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Домашні

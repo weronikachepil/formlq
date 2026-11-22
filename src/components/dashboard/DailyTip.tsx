@@ -20,7 +20,7 @@ export function DailyTip({ tips }: { tips: Tip[] }) {
   if (!tip) return null;
 
   return (
-    <section className="rounded-2xl border border-border/50 bg-card px-6 py-5 text-sm flex items-start gap-3">
+    <section className="rounded-[18px] border border-border/50 bg-card px-6 py-5 text-sm flex items-start gap-3">
       <span className="text-2xl mt-0.5 shrink-0">{tip.emoji}</span>
       <div>
         <SectionLabel className="mb-1">Порада дня</SectionLabel>

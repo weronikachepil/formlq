@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Repeat } from "lucide-react";
+import { Check, Repeat, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Lesson, lessonStatus } from "@/lib/lessons";
 import { MINUTE_MS, formatHm } from "@/lib/calendar";
@@ -10,7 +10,7 @@ import { needsStatus } from "./lesson-utils";
 
 /** Diagonal red hatching for missed lessons. */
 export const MISSED_HATCH =
-  "repeating-linear-gradient(135deg, transparent 0 6px, rgba(239, 68, 68, 0.16) 6px 12px)";
+  "repeating-linear-gradient(135deg, transparent 0 6px, rgba(239, 68, 68, 0.09) 6px 12px)";
 
 interface LessonBlockProps {
   lesson: Lesson;
@@ -84,31 +84,33 @@ export function LessonBlock({
           color.block,
           status === "missed" ? "border-red-500" : color.edge,
           status === "canceled" && "opacity-45",
-          hint && "outline-1 outline-dashed -outline-offset-1 outline-amber-500/70",
         )}
         style={status === "missed" ? { backgroundImage: MISSED_HATCH } : undefined}
       />
       <div
         className={cn(
-          "relative h-full pl-2 pr-1 text-[11px] leading-tight",
+          "relative h-full pl-2.5 pr-1 text-[11px] leading-tight tabular-nums",
           short ? "py-0.5 flex items-center gap-1 min-w-0" : "py-1 space-y-0.5",
           status === "canceled" && "opacity-60 line-through",
         )}
       >
         {short ? (
           <p className="truncate min-w-0">
-            <span className="font-mono text-[10px] opacity-80">{formatHm(start)}</span>{" "}
-            <span className="font-semibold">{title}</span>
+            <span className="text-[10px] font-medium opacity-75">{formatHm(start)}</span>{" "}
+            <span className="font-semibold">{lesson.groupId && <Users size={10} className="inline mr-0.5 -mt-px" aria-label="Група" />}{title}</span>
           </p>
         ) : (
           <>
-            <p className="font-mono text-[10px] opacity-80 truncate">{time}</p>
-            <p className="font-semibold truncate">{title}</p>
+            <p className="text-[10px] font-medium opacity-75 truncate">{time}</p>
+            <p className="text-xs font-semibold truncate">
+              {lesson.groupId && <Users size={11} className="inline mr-1 -mt-px opacity-80" aria-label="Група" />}
+              {title}
+            </p>
             {durationMin >= 60 && subtitle && <p className="truncate opacity-80">{subtitle}</p>}
           </>
         )}
         <span className={cn("absolute top-1 right-1 flex items-center gap-0.5", narrow && "max-sm:hidden")}>
-          {hint && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+          {hint && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 ring-2 ring-amber-500/25" aria-label="Позначте статус" />}
           {lesson.seriesId && <Repeat size={10} className="opacity-60" aria-label="Щотижня" />}
           {status === "done" && <Check size={12} strokeWidth={3} aria-label="Проведено" />}
           {unpaid && (

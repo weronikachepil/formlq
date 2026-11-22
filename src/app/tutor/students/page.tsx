@@ -26,6 +26,8 @@ import { cn } from "@/lib/utils";
 interface Cabinet {
   studentId: string;
   name: string;
+  /** Email, shown only when another student has the same name. */
+  subtitle?: string;
   summary: HomeworkSummary;
 }
 
@@ -77,9 +79,13 @@ export default function TutorStudentsPage() {
       list.push(hw);
       byStudent.set(hw.studentId, list);
     }
+    // Two students with one name can't be told apart without their email.
+    const nameCount = new Map<string, number>();
+    for (const s of students) nameCount.set(s.studentName || "Учень", (nameCount.get(s.studentName || "Учень") ?? 0) + 1);
     const out: Cabinet[] = students.map((s) => ({
       studentId: s.studentId,
       name: s.studentName || "Учень",
+      subtitle: (nameCount.get(s.studentName || "Учень") ?? 0) > 1 ? s.studentEmail || undefined : undefined,
       summary: summarizeHomework(byStudent.get(s.studentId) ?? [], now),
     }));
     // Homework of students who are no longer linked still gets a cabinet.

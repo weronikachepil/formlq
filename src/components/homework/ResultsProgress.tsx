@@ -32,7 +32,7 @@ interface ResultsProgressProps {
 
 function scoreLabel(r: TestResult): string {
   const scale = r.scaleType ?? "nmt";
-  if (isExamFailed(r.rawScore, scale)) return "не склав";
+  if (isExamFailed(r.rawScore, scale)) return "не зараховано";
   if (scale === "nmt") return `${r.nmtScore} НМТ`;
   const max = maxScaledScore(r.scoreTable ?? []);
   return max ? `${r.nmtScore} / ${max}` : `${r.nmtScore}`;
@@ -71,84 +71,117 @@ export function ResultsProgress({ homework, results, hrefOf }: ResultsProgressPr
       : null;
   const shown = points.slice(-CHART_LIMIT);
 
+  const last = shown[shown.length - 1];
+
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
+    <div className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-heading font-bold text-base leading-tight">Прогрес за результатами</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Частка набраних балів у виконаних завданнях
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">Частка набраних балів у виконаних завданнях</p>
         </div>
-        <div className="flex gap-5 text-center">
+        <div className="flex gap-6 text-center">
           <Stat value={`${average}%`} label="середній" />
           <Stat value={`${best}%`} label="найкращий" />
           {trend !== null && (
-            <div>
+            <div title={`Середнє останніх ${TREND_WINDOW} проти ${TREND_WINDOW} попередніх, у відсоткових пунктах`}>
               <p
                 className={cn(
-                  "inline-flex items-center gap-1 text-xl font-bold font-mono leading-none",
+                  "inline-flex items-center gap-1 font-heading text-2xl font-bold leading-none tabular-nums",
                   trend > 0 && "text-green-600 dark:text-green-400",
                   trend < 0 && "text-red-600 dark:text-red-400",
+                  trend === 0 && "text-muted-foreground",
                 )}
               >
                 {trend > 0 ? <TrendingUp size={16} /> : trend < 0 ? <TrendingDown size={16} /> : null}
-                {trend > 0 ? "+" : ""}
-                {trend}
+                {trend === 0 ? "=" : `${trend > 0 ? "+" : "−"}${Math.abs(trend)}`}
               </p>
-              <p
-                className="text-[11px] text-muted-foreground mt-1"
-                title={`Середнє останніх ${TREND_WINDOW} проти ${TREND_WINDOW} попередніх, у відсоткових пунктах`}
-              >
-                динаміка
+              {/* A bare "0" read as "no progress at all"; say what it measures. */}
+              <p className="text-[11px] text-muted-foreground mt-1">
+                {trend === 0 ? "без змін" : "зміна, п.п."}
               </p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="relative">
-        {/* Recessive guides at 50% and 100%. */}
-        <div className="absolute inset-x-0 top-0 border-t border-dashed border-border/60" aria-hidden />
-        <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-border/40" aria-hidden />
-        <div className="relative h-32 flex items-end gap-0.5 border-b border-border" role="list" aria-label="Результати по завданнях">
-          {shown.map((p) => (
-            <Link
-              key={p.id}
-              href={p.href}
-              role="listitem"
-              aria-label={`${p.title}: ${p.score}, ${p.pct}%`}
-              className="group relative flex-1 max-w-12 h-full flex items-end outline-none"
-            >
-              <span
-                className="w-full rounded-t-[4px] bg-primary/70 group-hover:bg-primary group-focus-visible:bg-primary transition-colors"
-                style={{ height: `${Math.max(p.pct, 2)}%` }}
-              />
-              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-10 hidden group-hover:block group-focus-visible:block w-max max-w-48 rounded-lg border border-border/60 bg-popover text-popover-foreground px-2.5 py-1.5 text-[11px] shadow-md">
-                <span className="block font-semibold truncate">{p.title}</span>
-                <span className="block text-muted-foreground">
-                  {p.score} · {p.pct}%
-                  {p.at ? ` · ${new Date(p.at).toLocaleDateString("uk", { day: "numeric", month: "short" })}` : ""}
-                </span>
-              </span>
-            </Link>
-          ))}
-        </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground mt-1.5">
-          <span>
-            {shown.length < points.length ? `Останні ${shown.length} з ${points.length}` : "Раніше"}
+      <div className="flex gap-2">
+        {/* Recessive y-axis: only the guides that carry meaning. */}
+        <div className="relative h-36 w-8 shrink-0 text-right text-[10px] text-muted-foreground tabular-nums" aria-hidden>
+          {/* Fixed ticks give way to the average when they'd collide with it. */}
+          {average < 92 && <span className="absolute right-0 top-0 -translate-y-1/2">100%</span>}
+          {Math.abs(average - 50) >= 8 && <span className="absolute right-0 top-1/2 -translate-y-1/2">50%</span>}
+          <span className="absolute right-0 translate-y-1/2 font-semibold text-foreground" style={{ bottom: `${average}%` }}>
+            сер.
           </span>
-          <span>Нещодавно</span>
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <div className="absolute inset-x-0 top-0 border-t border-dashed border-border/60" aria-hidden />
+          <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-border/40" aria-hidden />
+          {/* Average as a reference line, labelled at the right end. */}
+          <div
+            className="pointer-events-none absolute inset-x-0 z-[5] border-t border-dashed border-foreground/60"
+            style={{ bottom: `${average}%` }}
+            aria-hidden
+          />
+          <div
+            className="relative h-36 flex items-end gap-[2px] border-b border-border"
+            role="list"
+            aria-label="Результати по завданнях"
+          >
+            {shown.map((p) => {
+              const isLast = p === last;
+              return (
+                <Link
+                  key={p.id}
+                  href={p.href}
+                  role="listitem"
+                  aria-label={`${p.title}: ${p.score}, ${p.pct}%`}
+                  className="group relative flex-1 max-w-24 h-full flex items-end outline-none"
+                >
+                  <span
+                    className={cn(
+                      "relative w-full rounded-t-[4px] transition-colors group-hover:bg-primary group-focus-visible:bg-primary",
+                      isLast ? "bg-primary" : "bg-primary/55",
+                    )}
+                    style={{ height: `${Math.max(p.pct, 2)}%` }}
+                  >
+                    {/* Selective direct label: only the latest result. */}
+                    {isLast && (
+                      <span className="absolute bottom-full left-1/2 mb-1 -translate-x-1/2 text-[11px] font-semibold tabular-nums group-hover:invisible">
+                        {p.pct}%
+                      </span>
+                    )}
+                  </span>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 z-10 hidden group-hover:block group-focus-visible:block w-max max-w-48 rounded-[10px] border border-border/60 bg-popover text-popover-foreground px-2.5 py-1.5 text-[11px] shadow-md">
+                    <span className="block font-semibold truncate">{p.title}</span>
+                    <span className="block text-muted-foreground tabular-nums">
+                      {p.score} · {p.pct}%{p.at ? ` · ${shortDate(p.at)}` : ""}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1.5 tabular-nums">
+            <span>
+              {shown[0].at ? shortDate(shown[0].at) : "Раніше"}
+              {shown.length < points.length && ` · останні ${shown.length} з ${points.length}`}
+            </span>
+            <span>{last.at ? shortDate(last.at) : "Нещодавно"}</span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+const shortDate = (ms: number) => new Date(ms).toLocaleDateString("uk", { day: "numeric", month: "short" });
+
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <p className="text-xl font-bold font-mono leading-none">{value}</p>
+      <p className="font-heading text-2xl font-bold leading-none tabular-nums">{value}</p>
       <p className="text-[11px] text-muted-foreground mt-1">{label}</p>
     </div>
   );

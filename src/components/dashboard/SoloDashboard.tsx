@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import { ArrowRight, Plus, Presentation, Trophy } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { queryKeys, STALE } from "@/lib/queryKeys";
-import { getPublishedTests, getUserResults, maxScaledScore, type TestResult } from "@/lib/tests";
+import { getPublishedTests, getUserResults, isExamFailed, maxScaledScore, type TestResult } from "@/lib/tests";
 import {
   boardErrorMessage,
   createBoard,
@@ -46,7 +46,8 @@ export function SoloOverview({ userId }: { userId: string }) {
   const best = useMemo(() => bestByTest(results ?? []), [results]);
   const stats = useMemo(() => {
     const list = results ?? [];
-    const nmt = list.filter((r) => (r.scaleType ?? "nmt") === "nmt");
+    // Below-threshold attempts carry the scale's 100 but don't count.
+    const nmt = list.filter((r) => (r.scaleType ?? "nmt") === "nmt" && !isExamFailed(r.rawScore, "nmt"));
     const last = [...list].sort((a, b) => (b.completedAt?.toMillis() ?? 0) - (a.completedAt?.toMillis() ?? 0))[0];
     return {
       attempts: list.length,
@@ -112,7 +113,9 @@ export function SoloOverview({ userId }: { userId: string }) {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Останній</p>
                 <p className="text-sm font-semibold truncate">{stats.last.testTitle}</p>
                 <p className="text-[11px] text-muted-foreground truncate">
-                  {(stats.last.scaleType ?? "nmt") === "nmt"
+                  {isExamFailed(stats.last.rawScore, stats.last.scaleType ?? "nmt")
+                    ? "не зараховано"
+                    : (stats.last.scaleType ?? "nmt") === "nmt"
                     ? `${stats.last.nmtScore} / ${maxScaledScore(stats.last.scoreTable) || 200}`
                     : `${stats.last.rawScore} / ${stats.last.maxRaw}`}
                   {stats.last.completedAt && ` · ${timeAgo(stats.last.completedAt.toDate())}`}

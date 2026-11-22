@@ -9,28 +9,22 @@ const MAX_DURATION = 360;
 
 const NONE = "none";
 
-/** Title / description / grade / subject / duration fields of a test. */
+/** Description / grade / subject / duration of a test (the title is in the header). */
 export function TestMetaCard({
-  title,
-  onTitleChange,
   subtitle,
   onSubtitleChange,
   durationMinutes,
   onDurationChange,
-  totalPoints,
   descriptionRequired = false,
   grade,
   onGradeChange,
   subject,
   onSubjectChange,
 }: {
-  title: string;
-  onTitleChange: (v: string) => void;
   subtitle: string;
   onSubtitleChange: (v: string) => void;
   durationMinutes: number;
   onDurationChange: (v: number) => void;
-  totalPoints: number;
   /** Mark the description as required (a teacher publishing to the catalog). */
   descriptionRequired?: boolean;
   grade: number | null;
@@ -39,40 +33,27 @@ export function TestMetaCard({
   onSubjectChange: (v: TestSubject | null) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <SectionLabel as="label" htmlFor="test-title">
-            Назва
-          </SectionLabel>
-          <TextInput
-            id="test-title"
-            value={title}
-            onChange={(e) => onTitleChange(e.target.value)}
-            placeholder="Тест 1"
-            className="bg-background font-semibold"
-          />
-        </div>
-        <div className="space-y-1">
-          <SectionLabel as="label" htmlFor="test-subtitle">
-            Короткий опис{descriptionRequired && <span className="text-destructive"> *</span>}
-          </SectionLabel>
-          <TextInput
-            id="test-subtitle"
-            value={subtitle}
-            onChange={(e) => onSubtitleChange(e.target.value)}
-            maxLength={140}
-            placeholder="Тема, рівень, варіант — наприклад «Квадратні рівняння · базовий рівень»"
-            className="bg-background"
-          />
-        </div>
+    <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-5">
+      <div className="space-y-1.5">
+        <SectionLabel as="label" htmlFor="test-subtitle">
+          Короткий опис{descriptionRequired && <span className="text-destructive"> *</span>}
+        </SectionLabel>
+        <TextInput
+          id="test-subtitle"
+          value={subtitle}
+          onChange={(e) => onSubtitleChange(e.target.value)}
+          maxLength={140}
+          placeholder="Тема, рівень, варіант — наприклад «Квадратні рівняння · базовий рівень»"
+        />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1">
+
+      <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+        <div className="space-y-1.5">
           <SectionLabel>Клас</SectionLabel>
           <Select
             value={grade === null ? NONE : String(grade)}
             onValueChange={(v) => onGradeChange(v === NONE ? null : Number(v))}
+            className="min-w-36"
           >
             <SelectItem value={NONE}>Не вказано</SelectItem>
             {GRADES.map((g) => (
@@ -82,11 +63,12 @@ export function TestMetaCard({
             ))}
           </Select>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <SectionLabel>Розділ</SectionLabel>
           <Select
             value={subject ?? NONE}
             onValueChange={(v) => onSubjectChange(v === NONE ? null : (v as TestSubject))}
+            className="min-w-36"
           >
             <SelectItem value={NONE}>Не вказано</SelectItem>
             {(Object.keys(SUBJECT_LABEL) as TestSubject[]).map((s) => (
@@ -96,43 +78,47 @@ export function TestMetaCard({
             ))}
           </Select>
         </div>
-      </div>
-      <div className="space-y-1 w-fit">
-        <SectionLabel as="label" htmlFor="test-duration">
-          Тривалість (хв)
-        </SectionLabel>
-        <div className="flex items-center gap-2">
-          <StepButton
-            aria-label="Зменшити тривалість"
-            onClick={() => onDurationChange(Math.max(MIN_DURATION, durationMinutes - 5))}
-          >
-            −
-          </StepButton>
-          <TextInput
-            id="test-duration"
-            size="sm"
-            type="number"
-            min={MIN_DURATION}
-            max={MAX_DURATION}
-            value={durationMinutes}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              if (!isNaN(v) && v >= MIN_DURATION) onDurationChange(v);
-            }}
-            className="w-20 h-9 text-center tabular-nums bg-background"
-          />
-          <StepButton
-            aria-label="Збільшити тривалість"
-            onClick={() => onDurationChange(Math.min(MAX_DURATION, durationMinutes + 5))}
-          >
-            +
-          </StepButton>
-          <span className="text-xs text-muted-foreground">хв</span>
+        <div className="space-y-1.5">
+          <SectionLabel as="label" htmlFor="test-duration">
+            Тривалість
+          </SectionLabel>
+          <div className="flex items-center gap-1.5">
+            <StepButton
+              aria-label="Зменшити тривалість"
+              onClick={() => onDurationChange(Math.max(MIN_DURATION, durationMinutes - 5))}
+              disabled={durationMinutes <= MIN_DURATION}
+              className="w-9 h-9"
+            >
+              −
+            </StepButton>
+            <div className="relative">
+              <TextInput
+                id="test-duration"
+                type="number"
+                min={MIN_DURATION}
+                max={MAX_DURATION}
+                value={durationMinutes}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v) && v >= MIN_DURATION) onDurationChange(Math.min(MAX_DURATION, v));
+                }}
+                className="w-24 pr-9 text-center tabular-nums font-semibold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                хв
+              </span>
+            </div>
+            <StepButton
+              aria-label="Збільшити тривалість"
+              onClick={() => onDurationChange(Math.min(MAX_DURATION, durationMinutes + 5))}
+              disabled={durationMinutes >= MAX_DURATION}
+              className="w-9 h-9"
+            >
+              +
+            </StepButton>
+          </div>
         </div>
-      </div>
-      <div className="text-xs text-muted-foreground pt-1">
-        Максимум балів:{" "}
-        <span className="font-semibold text-foreground">{totalPoints}</span>
+
       </div>
     </div>
   );

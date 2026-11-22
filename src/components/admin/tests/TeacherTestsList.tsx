@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { EyeOff, FileText, Trash2, UserRound } from "lucide-react";
+import { ChevronRight, Eye, EyeOff, MoreHorizontal, Trash2 } from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
 import { queryKeys, STALE } from "@/lib/queryKeys";
 import { deleteTest, getTeacherTests, updateTest, type TestDoc } from "@/lib/tests";
 import { cn } from "@/lib/utils";
@@ -12,7 +13,9 @@ import { SearchInput } from "@/components/ui/search-input";
 import { SpinnerPage } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { IconButton } from "@/components/ui/icon-button";
+import { pluralize, PLURAL } from "@/lib/format";
+import { usePageHeader } from "@/context/HeaderContext";
+import { menuItemCls, menuPopupCls, menuTriggerCls } from "./TestRow";
 import { Highlight } from "@/components/ui/highlight";
 import { SectionLabel } from "@/components/ui/section-label";
 
@@ -50,6 +53,11 @@ export function TeacherTestsList() {
     onSettled: refresh,
   });
 
+  usePageHeader(
+    "Тести",
+    isLoading ? "" : `Тести викладачів: ${tests.length} · у каталозі ${tests.filter((t) => t.published).length}`,
+  );
+
   const q = search.trim().toLowerCase();
   const [published, drafts] = useMemo(() => {
     const updated = (t: TestDoc) => t.updatedAt?.toMillis() ?? 0;
@@ -64,71 +72,94 @@ export function TeacherTestsList() {
   }, [tests, q]);
 
   function renderRow(t: TestDoc) {
+    const href = `/admin/tests/teachers/${t.id}`;
     return (
       <div
         key={t.id}
-        className={cn(
-          "rounded-2xl border bg-card px-4 py-3 flex items-center gap-3 group",
-          t.published ? "border-border/50" : "border-border/30",
-        )}
+        className="group relative rounded-2xl border border-border/50 bg-card pl-4 pr-2 py-2.5 flex items-center gap-3 transition-colors hover:border-border hover:bg-muted/30"
       >
-        <div
-          className={cn(
-            "w-2 h-2 rounded-full shrink-0",
-            t.published ? "bg-green-500" : "bg-muted-foreground/30",
-          )}
-        />
-        <Link href={`/admin/tests/teachers/${t.id}`} className="flex-1 min-w-0 -my-3 py-3" title="Переглянути тест">
-          <p className="font-semibold text-sm truncate group-hover:underline underline-offset-2">
+        {/* The whole row opens the test (stretched link); the «⋯» sits above it. */}
+        <Link href={href} className="absolute inset-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring/40">
+          <span className="sr-only">Переглянути тест «{t.title || "Без назви"}»</span>
+        </Link>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm truncate">
             <Highlight text={t.title || "Без назви"} query={search} />
           </p>
-          {t.subtitle && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              <Highlight text={t.subtitle} query={search} />
-            </p>
-          )}
-          <p className="text-[11px] text-muted-foreground/80 mt-1 flex items-center gap-3">
-            <span className="inline-flex items-center gap-1 min-w-0 truncate">
-              <UserRound size={11} className="shrink-0" />
-              <Highlight text={t.authorName || "Без імені"} query={search} />
-            </span>
-            <span className="inline-flex items-center gap-1 shrink-0">
-              <FileText size={11} /> {t.questions?.length ?? 0}
-            </span>
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            <Highlight text={t.authorName || "Без імені"} query={search} />
+            {" · "}
+            {pluralize(t.questions?.length ?? 0, PLURAL.task)}
+            {t.subtitle && (
+              <>
+                {" · "}
+                <Highlight text={t.subtitle} query={search} />
+              </>
+            )}
           </p>
-        </Link>
-        <div className="flex items-center gap-1 shrink-0">
-          {t.published && (
-            <IconButton
-              label="Зняти з публікації"
-              onClick={() => unpublish.mutate(t.id)}
-              disabled={unpublish.isPending}
-            >
-              <EyeOff size={13} />
-            </IconButton>
-          )}
-          <IconButton
-            label="Видалити"
-            tone="danger"
-            onClick={() => setConfirmDelete(t)}
-            disabled={remove.isPending}
-          >
-            <Trash2 size={13} />
-          </IconButton>
         </div>
+        <span
+          className={cn(
+            "shrink-0 hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full",
+            t.published
+              ? "bg-green-500/12 text-green-700 dark:text-green-400"
+              : "bg-muted text-muted-foreground",
+          )}
+        >
+          {t.published ? <Eye size={12} /> : <EyeOff size={12} />}
+          {t.published ? "У каталозі" : "Чернетка"}
+        </span>
+        <ChevronRight
+          size={16}
+          className="shrink-0 hidden [@media(hover:hover)]:block text-muted-foreground/30 group-hover:text-muted-foreground transition-colors"
+          aria-hidden
+        />
+        <Menu.Root>
+          <Menu.Trigger aria-label="Дії з тестом" className={cn(menuTriggerCls, "relative z-10")}>
+            <MoreHorizontal size={17} />
+          </Menu.Trigger>
+          <Menu.Portal>
+            <Menu.Positioner sideOffset={6} align="end" className="z-50 outline-none">
+              <Menu.Popup className={menuPopupCls}>
+                <Menu.Item render={<Link href={href} />} className={menuItemCls}>
+                  <Eye size={15} className="text-muted-foreground" /> Переглянути
+                </Menu.Item>
+                {t.published && (
+                  <Menu.Item
+                    onClick={() => unpublish.mutate(t.id)}
+                    disabled={unpublish.isPending}
+                    className={menuItemCls}
+                  >
+                    <EyeOff size={15} className="text-muted-foreground" /> Зняти з каталогу
+                  </Menu.Item>
+                )}
+                <div className="my-1 h-px bg-border/60" />
+                <Menu.Item
+                  onClick={() => setConfirmDelete(t)}
+                  disabled={remove.isPending}
+                  className={cn(menuItemCls, "text-destructive data-[highlighted]:bg-destructive/10")}
+                >
+                  <Trash2 size={15} /> Видалити тест
+                </Menu.Item>
+              </Menu.Popup>
+            </Menu.Positioner>
+          </Menu.Portal>
+        </Menu.Root>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Пошук за назвою, описом чи автором"
-        className="h-9"
-      />
+    <div className="flex flex-col lg:h-[calc(100dvh-var(--app-header-h)-3rem-var(--tabs-h,0px))]">
+      <div className="sticky lg:static top-[calc(var(--app-header-h)+var(--tabs-h,0px))] z-20 py-2 bg-background lg:bg-transparent -mx-4 md:-mx-6 px-4 md:px-6 lg:mx-0 lg:px-0">
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Пошук: назва, опис чи автор"
+        />
+      </div>
 
+      <div className="pt-1 pb-4 space-y-4 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:-mx-2 lg:px-2">
       {isLoading ? (
         <SpinnerPage />
       ) : tests.length === 0 ? (
@@ -140,22 +171,24 @@ export function TeacherTestsList() {
           {published.length > 0 && (
             <div className="space-y-2">
               <SectionLabel className="px-1">У каталозі · {published.length}</SectionLabel>
-              {published.map(renderRow)}
+              <div className="grid gap-2 lg:grid-cols-2">{published.map(renderRow)}</div>
             </div>
           )}
           {drafts.length > 0 && (
             <div className="space-y-2">
               <SectionLabel className="px-1">Чернетки · {drafts.length}</SectionLabel>
-              {drafts.map(renderRow)}
+              <div className="grid gap-2 lg:grid-cols-2">{drafts.map(renderRow)}</div>
             </div>
           )}
         </>
       )}
 
+      </div>
+
       <ConfirmDialog
         open={confirmDelete !== null}
         title={`Видалити тест «${confirmDelete?.title || "Без назви"}»?`}
-        description={`Тест викладача ${confirmDelete?.authorName ?? ""} буде видалено назавжди. Домашні завдання з ним перестануть відкриватися.`}
+        description={`Тест викладача ${confirmDelete?.authorName ?? ""} зникне назавжди, і домашки з ним перестануть відкриватися.`}
         confirmLabel="Видалити"
         onConfirm={() => {
           if (confirmDelete) remove.mutate(confirmDelete.id);

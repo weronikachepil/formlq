@@ -1,4 +1,10 @@
-import { normalizeOpenAnswer, type TestQuestion, type QuestionResult } from "@/lib/tests";
+import {
+  normalizeOpenAnswer,
+  parseListAnswer,
+  scoreQuestion,
+  type TestQuestion,
+  type QuestionResult,
+} from "@/lib/tests";
 
 /** Parse a matching answer (JSON `{ leftId: rightId }`); `{}` when empty or malformed. */
 export function parseMatchingAnswer(
@@ -12,17 +18,16 @@ export function parseMatchingAnswer(
   }
 }
 
-/** Matching counts as answered only when every left item has a pair. */
+export { parseListAnswer };
+
+/** Matching counts as answered only when every left item has a pair; multi/order need a pick. */
 export function isAnswered(q: TestQuestion, answer: string | undefined): boolean {
   if (!answer) return false;
   if (q.type === "matching") {
-    try {
-      const p = JSON.parse(answer) as Record<string, string>;
-      return q.leftItems.every((item) => !!p[item.id]);
-    } catch {
-      return false;
-    }
+    const p = parseMatchingAnswer(answer);
+    return q.leftItems.every((item) => !!p[item.id]);
   }
+  if (q.type === "multi" || q.type === "order") return parseListAnswer(answer).length > 0;
   return answer.trim().length > 0;
 }
 
@@ -59,24 +64,7 @@ export function buildQuestionResults(
 ): QuestionResult[] {
   return qs.map((q) => {
     const userAnswer = ans[q.id] ?? "";
-    let correct = false;
-    if (q.type === "mcq") correct = userAnswer === q.correctOptionId;
-    if (q.type === "open")
-      correct =
-        normalizeOpenAnswer(userAnswer) ===
-        normalizeOpenAnswer(q.correctAnswer);
-    let partialScore: number | undefined;
-    if (q.type === "matching") {
-      try {
-        const p = JSON.parse(userAnswer) as Record<string, string>;
-        const m = matchingPartialScore(q.correctPairs, p, q.points);
-        correct = m.correctCount === m.totalPairs;
-        partialScore = m.score;
-      } catch {
-        correct = false;
-        partialScore = 0;
-      }
-    }
+    const { score, correct } = scoreQuestion(q, userAnswer);
     const base = {
       id: q.id,
       type: q.type,
@@ -88,19 +76,27 @@ export function buildQuestionResults(
       explanation: q.explanation ?? "",
       explanationImageUrl: q.explanationImageUrl ?? null,
     };
-    if (q.type === "mcq")
-      return {
-        ...base,
-        options: q.options,
-        correctOptionId: q.correctOptionId,
-      };
-    if (q.type === "open") return { ...base, correctAnswer: q.correctAnswer };
-    return {
-      ...base,
-      leftItems: q.leftItems,
-      rightOptions: q.rightOptions,
-      correctPairs: q.correctPairs,
-      partialScore,
-    };
+    switch (q.type) {
+      case "mcq":
+        return { ...base, options: q.options, correctOptionId: q.correctOptionId };
+      case "open":
+        return {
+          ...base,
+          correctAnswer: q.correctAnswer,
+          ...(q.tolerance ? { tolerance: q.tolerance } : {}),
+        };
+      case "matching":
+        return {
+          ...base,
+          leftItems: q.leftItems,
+          rightOptions: q.rightOptions,
+          correctPairs: q.correctPairs,
+          partialScore: score,
+        };
+      case "multi":
+        return { ...base, options: q.options, correctOptionIds: q.correctOptionIds, partialScore: score };
+      case "order":
+        return { ...base, items: q.items, partialScore: score };
+    }
   });
 }

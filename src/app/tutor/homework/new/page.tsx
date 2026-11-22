@@ -20,6 +20,7 @@ import {
   makeLinearTable,
   maxRawScore,
   TestQuestion,
+  type BankQuestion,
 } from "@/lib/tests";
 import { getAllQuestions } from "@/lib/questions";
 import { uploadPdf } from "@/lib/storage";
@@ -36,7 +37,8 @@ import { TextInput } from "@/components/ui/text-field";
 import { cn } from "@/lib/utils";
 import { FileText, Library, Check, Loader2, FileUp, X } from "lucide-react";
 
-const TYPE_LABEL: Record<TestQuestion["type"], string> = {
+/** Bank questions are НМТ-style: only these three types. */
+const TYPE_LABEL: Record<BankQuestion["type"], string> = {
   mcq: "Тест",
   open: "Відкрите",
   matching: "Відповідність",
@@ -83,7 +85,7 @@ export default function NewHomeworkPage() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [bankSearch, setBankSearch] = useState("");
   const [bankTopic, setBankTopic] = useState("all");
-  const [bankType, setBankType] = useState<"all" | TestQuestion["type"]>("all");
+  const [bankType, setBankType] = useState<"all" | BankQuestion["type"]>("all");
 
   usePageHeader("Нове домашнє завдання");
 
@@ -226,11 +228,179 @@ export default function NewHomeworkPage() {
 
   if (studentsLoading) return <SpinnerPage />;
 
+  // What still blocks "Призначити" — said in words instead of a silently grey button.
+  const hasContent = source === "test" ? !!testId : customQuestions.length > 0;
+  const hasRecipient = !!studentId || groupMembers.length > 0;
+  const missing = [
+    !hasContent && (source === "test" ? "тест" : "завдання з банку"),
+    !hasRecipient && (groups.length ? "учень або група" : "учень"),
+    !title.trim() && "назва",
+  ].filter(Boolean) as string[];
+
+  const pdfField = pdfUrl ? (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-[12px] border border-border/50 bg-card text-sm">
+      <FileText size={16} className="text-primary shrink-0" />
+      <span className="flex-1 min-w-0 truncate">{pdfName || "Конспект.pdf"}</span>
+      <IconButton
+        label="Прибрати"
+        tone="danger"
+        onClick={() => {
+          setPdfUrl("");
+          setPdfName("");
+        }}
+      >
+        <X size={15} />
+      </IconButton>
+    </div>
+  ) : (
+    <label
+      className={cn(
+        "flex h-11 items-center justify-center gap-2 px-4 rounded-[12px] border border-dashed border-foreground/20 text-sm text-muted-foreground cursor-pointer hover:border-primary/50 hover:text-foreground transition-colors",
+        pdfUploading && "pointer-events-none opacity-60",
+      )}
+    >
+      {pdfUploading ? (
+        <>
+          <Loader2 size={15} className="animate-spin" /> Завантаження...
+        </>
+      ) : (
+        <>
+          <FileUp size={15} /> Прикріпити конспект (PDF)
+        </>
+      )}
+      <input
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handlePdf(f);
+          e.target.value = "";
+        }}
+      />
+    </label>
+  );
+
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-8">
-      {/* Student */}
-      <Field label={groups.length ? "Учень або група" : "Учень"}>
-        <Select value={recipient} onValueChange={setRecipient}>
+    <div className="max-w-2xl mx-auto space-y-4 pb-6">
+      {/* 1 — the main decision comes first: what to give. */}
+      <Step n={1} done={hasContent && !!title.trim()} title="Що задати">
+        {editor && (
+          <div role="tablist" className="flex w-fit gap-1 p-1 rounded-[12px] bg-muted/60">
+            <SourceTab active={source === "test"} onClick={() => setSource("test")} Icon={FileText} label="Готовий тест" />
+            <SourceTab active={source === "custom"} onClick={() => setSource("custom")} Icon={Library} label="З банку завдань" />
+          </div>
+        )}
+
+        {source === "test" || !editor ? (
+          <Field label={editor ? "Тест (включно з імітаціями НМТ)" : "Тест"}>
+            {!editor && !testsLoading && tests.length === 0 && (
+              <p className="text-xs text-muted-foreground mb-2">
+                У вас ще немає тестів із питаннями.{" "}
+                <Link href="/tutor/tests" className="text-primary font-medium hover:underline">
+                  Створити тест
+                </Link>
+              </p>
+            )}
+            <TestPicker
+              tests={tests}
+              folders={testFolders}
+              value={testId}
+              onChange={(v) => {
+                setTestId(v);
+                const t = tests.find((x) => x.id === v);
+                if (t && !title.trim()) setTitle(t.title);
+              }}
+            />
+            {selectedTest && (
+              <p className="text-xs text-muted-foreground mt-1.5 px-1 tabular-nums">
+                {pluralize(selectedTest.questions.length, PLURAL.question)} ·{" "}
+                {pluralize(maxRawScore(selectedTest.questions), PLURAL.point)} ·{" "}
+                {(selectedTest.scaleType ?? "nmt") === "nmt" ? "шкала НМТ 100–200" : "власна шкала"}
+              </p>
+            )}
+          </Field>
+        ) : (
+          <div className="space-y-3">
+            {/* Bank filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <SearchInput value={bankSearch} onChange={setBankSearch} className="h-9.5" />
+              <Select value={bankTopic} onValueChange={setBankTopic} className="w-full">
+                <SelectItem value="all">Усі теми</SelectItem>
+                {TOPICS.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </Select>
+              <Select value={bankType} onValueChange={(v) => setBankType(v as typeof bankType)} className="w-full">
+                <SelectItem value="all">Усі типи</SelectItem>
+                {(Object.keys(TYPE_LABEL) as BankQuestion["type"][]).map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {TYPE_LABEL[t]}
+                  </SelectItem>
+                ))}
+              </Select>
+            </div>
+
+            <p className="text-xs text-muted-foreground px-1 tabular-nums">
+              Обрано: {picked.size} · {pluralize(customMaxRaw, PLURAL.point)}
+            </p>
+
+            <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
+              {filteredBank.map((q) => {
+                const isPicked = picked.has(q.id);
+                return (
+                  <button
+                    key={q.id}
+                    type="button"
+                    onClick={() => togglePick(q.id)}
+                    aria-pressed={isPicked}
+                    className={cn(
+                      "w-full text-left rounded-[12px] border px-3 py-2.5 flex items-start gap-3 transition-colors",
+                      isPicked ? "border-primary bg-primary/5" : "border-border/50 bg-card hover:border-border/80",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0",
+                        isPicked ? "bg-primary border-primary text-primary-foreground" : "border-border",
+                      )}
+                    >
+                      {isPicked && <Check size={13} />}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm line-clamp-2">
+                        <MathText text={q.text || "—"} />
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          {TYPE_LABEL[q.type]}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">Складність {q.difficulty}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredBank.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-6">Немає завдань за фільтром</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <Field label="Назва для учня">
+          <TextInput value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Напр. Домашня №3 — Похідна" />
+          {source === "test" && !testId && (
+            <p className="text-[11px] text-muted-foreground mt-1 px-1">Підставиться з назви тесту — можна змінити.</p>
+          )}
+        </Field>
+      </Step>
+
+      {/* 2 — who gets it. */}
+      <Step n={2} done={hasRecipient} title="Кому">
+        <Select value={recipient} onValueChange={setRecipient} className="w-full">
           <SelectItem value="">{groups.length ? "Оберіть учня або групу..." : "Оберіть учня..."}</SelectItem>
           {groups.map((g) => (
             <SelectItem key={g.id} value={`g:${g.id}`}>
@@ -244,214 +414,88 @@ export default function NewHomeworkPage() {
           ))}
         </Select>
         {group && (
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground px-1">
             {groupMembers.length
               ? `Кожен учень групи отримає своє завдання: ${groupMembers.map((m) => m.studentName).join(", ")}.`
               : "У групі немає учнів — додайте їх на сторінці «Учні»."}
           </p>
         )}
         {students.length === 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Немає учнів. Додайте учня на сторінці «Мої учні».
-          </p>
+          <p className="text-xs text-muted-foreground px-1">Немає учнів. Додайте учня на сторінці «Учні».</p>
         )}
-      </Field>
+      </Step>
 
-      {/* Title + note + due */}
-      <Field label="Назва завдання">
-        <TextInput
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Напр. Домашня №3 — Похідна"
-        />
-      </Field>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Дедлайн (необовʼязково)">
-          <DateTimePicker value={due} onChange={setDue} placeholder="Без дедлайну" />
-        </Field>
-        <Field label="Коментар для учня (необовʼязково)">
-          <TextInput
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Напр. Зверни увагу на №5"
-          />
-        </Field>
-      </div>
-
-      {/* Конспект PDF */}
-      <Field label="Конспект (PDF, необовʼязково)">
-        {pdfUrl ? (
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border/50 bg-card text-sm">
-            <FileText size={16} className="text-primary shrink-0" />
-            <span className="flex-1 min-w-0 truncate">{pdfName || "Конспект.pdf"}</span>
-            <IconButton
-              label="Прибрати"
-              tone="danger"
-              onClick={() => {
-                setPdfUrl("");
-                setPdfName("");
-              }}
-            >
-              <X size={15} />
-            </IconButton>
-          </div>
-        ) : (
-          <label
-            className={cn(
-              "flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-dashed border-border/60 text-sm text-muted-foreground cursor-pointer hover:border-primary/50 hover:text-foreground transition-all",
-              pdfUploading && "pointer-events-none opacity-60",
-            )}
-          >
-            {pdfUploading ? <><Loader2 size={15} className="animate-spin" /> Завантаження...</> : <><FileUp size={15} /> Прикріпити PDF</>}
-            <input
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePdf(f); e.target.value = ""; }}
-            />
-          </label>
-        )}
-      </Field>
-
-      {/* Source switch — the question bank is the platform's, editors only */}
-      {editor && (
-      <div className="flex gap-2 p-1 rounded-2xl bg-muted/50 border border-border/40">
-        <SourceTab
-          active={source === "test"}
-          onClick={() => setSource("test")}
-          Icon={FileText}
-          label="Готовий тест"
-        />
-        <SourceTab
-          active={source === "custom"}
-          onClick={() => setSource("custom")}
-          Icon={Library}
-          label="З банку завдань"
-        />
-      </div>
-      )}
-
-      {source === "test" || !editor ? (
-        <Field label={editor ? "Тест (включно з імітаціями НМТ)" : "Тест"}>
-          {!editor && !testsLoading && tests.length === 0 && (
-            <p className="text-xs text-muted-foreground mb-2">
-              У вас ще немає тестів із питаннями.{" "}
-              <Link href="/tutor/tests" className="text-primary font-medium hover:underline">
-                Створити тест
-              </Link>
-            </p>
-          )}
-          <TestPicker
-            tests={tests}
-            folders={testFolders}
-            value={testId}
-            onChange={(v) => {
-              setTestId(v);
-              const t = tests.find((x) => x.id === v);
-              if (t && !title.trim()) setTitle(t.title);
-            }}
-          />
-          {selectedTest && (
-            <p className="text-xs text-muted-foreground mt-1.5">
-              {pluralize(selectedTest.questions.length, PLURAL.question)} ·{" "}
-              {pluralize(maxRawScore(selectedTest.questions), PLURAL.point)} ·{" "}
-              {(selectedTest.scaleType ?? "nmt") === "nmt"
-                ? "шкала НМТ 100–200"
-                : "власна шкала"}
-            </p>
-          )}
-        </Field>
-      ) : (
-        <div className="space-y-3">
-          {/* Bank filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <SearchInput value={bankSearch} onChange={setBankSearch} className="h-9.5" />
-            <Select value={bankTopic} onValueChange={setBankTopic}>
-              <SelectItem value="all">Усі теми</SelectItem>
-              {TOPICS.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </Select>
-            <Select value={bankType} onValueChange={(v) => setBankType(v as typeof bankType)}>
-              <SelectItem value="all">Усі типи</SelectItem>
-              {(Object.keys(TYPE_LABEL) as TestQuestion["type"][]).map((t) => (
-                <SelectItem key={t} value={t}>
-                  {TYPE_LABEL[t]}
-                </SelectItem>
-              ))}
-            </Select>
-          </div>
-
-          <p className="text-xs text-muted-foreground px-1">
-            Обрано: {picked.size} · {pluralize(customMaxRaw, PLURAL.point)}
-          </p>
-
-          <div className="space-y-1.5 max-h-[420px] overflow-y-auto pr-1">
-            {filteredBank.map((q) => {
-              const isPicked = picked.has(q.id);
-              return (
-                <button
-                  key={q.id}
-                  onClick={() => togglePick(q.id)}
-                  className={cn(
-                    "w-full text-left rounded-xl border px-3 py-2.5 flex items-start gap-3 transition-all",
-                    isPicked
-                      ? "border-primary bg-primary/5"
-                      : "border-border/50 bg-card hover:border-border/80",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0",
-                      isPicked
-                        ? "bg-primary border-primary text-primary-foreground"
-                        : "border-border",
-                    )}
-                  >
-                    {isPicked && <Check size={13} />}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm line-clamp-2">
-                      <MathText text={q.text || "—"} />
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                        {TYPE_LABEL[q.type]}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        Складність {q.difficulty}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-            {filteredBank.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                Немає завдань за фільтром
-              </p>
-            )}
-          </div>
+      {/* 3 — optional extras, clearly separated from what's required. */}
+      <Step n={3} title="Термін і деталі" optional>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Дедлайн">
+            <DateTimePicker value={due} onChange={setDue} placeholder="Без дедлайну" />
+          </Field>
+          <Field label="Коментар для учня">
+            <TextInput value={note} onChange={(e) => setNote(e.target.value)} placeholder="Напр. Зверни увагу на №5" />
+          </Field>
         </div>
-      )}
+        {pdfField}
+      </Step>
 
-      <div className="flex justify-end gap-2 pt-2">
-        <Button variant="ghost" size="lg" onClick={() => router.back()}>
+      {/* Sticky action bar: says what's missing instead of a silent grey button. */}
+      <div className="sticky bottom-4 z-30 flex items-center gap-3 rounded-[18px] border border-glass-edge bg-glass p-2 pl-4 shadow-pill backdrop-blur-xl">
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+          {missing.length ? (
+            <>
+              Ще не вказано: <span className="font-semibold text-foreground">{missing.join(", ")}</span>
+            </>
+          ) : group ? (
+            <>
+              Отримають <span className="font-semibold text-foreground">{pluralize(groupMembers.length, PLURAL.student)}</span>
+            </>
+          ) : (
+            "Усе готово"
+          )}
+        </p>
+        <Button variant="ghost" onClick={() => router.back()}>
           Скасувати
         </Button>
-        <Button
-          size="lg"
-          disabled={!canSubmit || saving}
-          onClick={handleAssign}
-          className="gap-1.5"
-        >
+        <Button disabled={!canSubmit || saving} onClick={handleAssign} className="gap-1.5">
           <Check size={16} />
           {saving ? "Призначення..." : "Призначити"}
         </Button>
       </div>
     </div>
+  );
+}
+
+/** One numbered step of the form; the number turns into a check once it's filled. */
+function Step({
+  n,
+  title,
+  done = false,
+  optional = false,
+  children,
+}: {
+  n: number;
+  title: string;
+  done?: boolean;
+  optional?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
+      <div className="flex items-center gap-2.5">
+        <span
+          className={cn(
+            "w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold tabular-nums transition-colors",
+            done ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+          )}
+          aria-hidden
+        >
+          {done ? <Check size={13} strokeWidth={3} /> : n}
+        </span>
+        <h2 className="font-heading text-base font-bold">{title}</h2>
+        {optional && <span className="text-xs text-muted-foreground">необовʼязково</span>}
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -486,12 +530,12 @@ function SourceTab({
   return (
     <button
       type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       className={cn(
-        "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-all",
-        active
-          ? "bg-card text-foreground shadow-sm border border-border/50"
-          : "text-muted-foreground hover:text-foreground",
+        "flex items-center justify-center gap-1.5 h-8 px-3 rounded-[9px] text-sm font-medium transition-colors",
+        active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
       )}
     >
       <Icon size={15} />

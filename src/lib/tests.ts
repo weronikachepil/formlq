@@ -41,6 +41,8 @@ export interface OpenQuestion {
   text: string;
   imageUrl?: string;
   correctAnswer: string;
+  /** Numeric answers: accepted within ± this much of `correctAnswer` (absent = exact). */
+  tolerance?: number;
   explanation: string;
   explanationImageUrl?: string;
   points: number;
@@ -66,7 +68,39 @@ export interface MatchingQuestion {
   order: number;
 }
 
-export type TestQuestion = MCQQuestion | OpenQuestion | MatchingQuestion;
+/** Several correct options; answer = JSON array of option ids. */
+export interface MultiQuestion {
+  id: string;
+  type: "multi";
+  text: string;
+  imageUrl?: string;
+  options: QuestionOption[];
+  correctOptionIds: string[];
+  explanation: string;
+  explanationImageUrl?: string;
+  points: number;
+  order: number;
+}
+
+/** Put items in order; `items` are stored in the correct order. Answer = JSON array of item ids. */
+export interface OrderQuestion {
+  id: string;
+  type: "order";
+  text: string;
+  imageUrl?: string;
+  items: MatchingItem[];
+  explanation: string;
+  explanationImageUrl?: string;
+  points: number;
+  order: number;
+}
+
+export type TestQuestion =
+  | MCQQuestion
+  | OpenQuestion
+  | MatchingQuestion
+  | MultiQuestion
+  | OrderQuestion;
 
 type BankMeta = {
   topicId: string;
@@ -87,7 +121,7 @@ export type BankQuestion =
   | BankMatchingQuestion;
 
 /** Default points per question type (НМТ convention): mcq 1, open 2, matching 3. */
-export const DEFAULT_POINTS = { mcq: 1, open: 2, matching: 3 } as const;
+export const DEFAULT_POINTS = { mcq: 1, open: 2, matching: 3, multi: 2, order: 2 } as const;
 
 /** Convert a bank question into a test question (strips bank meta, adds points + order). */
 export function bankToTestQuestion(
@@ -273,10 +307,15 @@ export interface QuestionResult {
   correctOptionId?: string;
   // Open
   correctAnswer?: string;
+  tolerance?: number;
   // Matching
   leftItems?: MatchingItem[];
   rightOptions?: MatchingItem[];
   correctPairs?: Record<string, string>;
+  // Multi
+  correctOptionIds?: string[];
+  // Order (items in the correct order)
+  items?: MatchingItem[];
 }
 
 export interface TestResult {
@@ -346,34 +385,93 @@ export function normalizeOpenAnswer(s: string): string {
   return s.trim().replace(/\./g, ",");
 }
 
+/** A number typed with "," or "." and optional spaces ("1 000,5"); NaN when not a number. */
+function parseNumber(s: string): number {
+  const t = s.trim().replace(/\s+/g, "").replace(",", ".").replace(/[−–]/, "-");
+  return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(t) ? Number(t) : NaN;
+}
+
+/**
+ * Whether an open answer matches. "." and "," are the same decimal separator; numbers are
+ * compared as numbers (1,50 = 1.5 = 1,5; .5 = 0,5), within `tolerance` when set.
+ * Anything else is compared as text, ignoring case and surrounding spaces.
+ */
+export function openAnswerCorrect(answer: string, correct: string, tolerance?: number): boolean {
+  const a = parseNumber(answer);
+  const c = parseNumber(correct);
+  if (Number.isFinite(a) && Number.isFinite(c)) {
+    // A tiny epsilon so 0.1 + 0.2-style float noise doesn't reject a boundary answer.
+    return Math.abs(a - c) <= Math.max(0, tolerance ?? 0) + 1e-9;
+  }
+  return normalizeOpenAnswer(answer).toLowerCase() === normalizeOpenAnswer(correct).toLowerCase();
+}
+
+/** A JSON-array answer (multi / order); [] when empty or malformed. */
+export function parseListAnswer(answer: string | undefined): string[] {
+  if (!answer) return [];
+  try {
+    const v = JSON.parse(answer);
+    return Array.isArray(v) ? v.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Points for one answer. `correct` = full marks; partial credit for matching (share of
+ * pairs), multi (right picks minus wrong picks, over the right ones) and order (items
+ * in their place).
+ */
+export function scoreQuestion(q: TestQuestion, answer: string | undefined): { score: number; correct: boolean } {
+  const a = answer ?? "";
+  const share = (got: number, of: number) => {
+    const k = of > 0 ? Math.max(0, got) / of : 0;
+    return { score: Math.round(q.points * Math.min(1, k)), correct: of > 0 && got >= of };
+  };
+  switch (q.type) {
+    case "mcq": {
+      const ok = !!a && a === q.correctOptionId;
+      return { score: ok ? q.points : 0, correct: ok };
+    }
+    case "open": {
+      const ok = !!a.trim() && openAnswerCorrect(a, q.correctAnswer, q.tolerance);
+      return { score: ok ? q.points : 0, correct: ok };
+    }
+    case "matching": {
+      let pairs: Record<string, string> = {};
+      try {
+        pairs = a ? (JSON.parse(a) as Record<string, string>) : {};
+      } catch {
+        /* invalid json */
+      }
+      const keys = Object.keys(q.correctPairs);
+      return share(keys.filter((k) => pairs[k] === q.correctPairs[k]).length, keys.length);
+    }
+    case "multi": {
+      const picked = new Set(parseListAnswer(a));
+      const right = new Set(q.correctOptionIds);
+      let hits = 0;
+      let wrong = 0;
+      for (const id of picked) {
+        if (right.has(id)) hits++;
+        else wrong++;
+      }
+      const r = share(hits - wrong, right.size);
+      return { score: r.score, correct: r.correct && wrong === 0 };
+    }
+    case "order": {
+      const got = parseListAnswer(a);
+      if (got.length === 0) return { score: 0, correct: false };
+      return share(q.items.filter((it, i) => got[i] === it.id).length, q.items.length);
+    }
+  }
+}
+
 export function calcRawScore(
   questions: TestQuestion[],
   answers: Record<string, string>,
 ): number {
-  return questions.reduce((sum, q) => {
-    const answer = answers[q.id];
-    if (!answer) return sum;
-    if (q.type === "mcq" && answer === q.correctOptionId) return sum + q.points;
-    if (
-      q.type === "open" &&
-      normalizeOpenAnswer(answer) === normalizeOpenAnswer(q.correctAnswer)
-    )
-      return sum + q.points;
-    if (q.type === "matching") {
-      try {
-        const parsed = JSON.parse(answer) as Record<string, string>;
-        const totalPairs = Object.keys(q.correctPairs).length;
-        if (totalPairs === 0) return sum;
-        const correctCount = Object.entries(q.correctPairs).filter(
-          ([k, v]) => parsed[k] === v,
-        ).length;
-        return sum + Math.round(correctCount * (q.points / totalPairs));
-      } catch {
-        /* invalid json */
-      }
-    }
-    return sum;
-  }, 0);
+  return questions.reduce((sum, q) => sum + scoreQuestion(q, answers[q.id]).score, 0);
 }
 
 export function rawToNMT(raw: number, scoreTable: ScoreRow[]): number {
@@ -597,6 +695,59 @@ export function makeEmptyMatching(order: number): MatchingQuestion {
     correctPairs: { "1": "А", "2": "Б", "3": "В" },
     explanation: "",
     points: 3,
+    order,
+  };
+}
+
+export function makeEmptyMulti(order: number): MultiQuestion {
+  return {
+    id: crypto.randomUUID(),
+    type: "multi",
+    text: "",
+    options: [
+      { id: "А", text: "" },
+      { id: "Б", text: "" },
+      { id: "В", text: "" },
+      { id: "Г", text: "" },
+      { id: "Д", text: "" },
+    ],
+    correctOptionIds: ["А", "Б"],
+    explanation: "",
+    points: DEFAULT_POINTS.multi,
+    order,
+  };
+}
+
+export function makeEmptyOrder(order: number): OrderQuestion {
+  return {
+    id: crypto.randomUUID(),
+    type: "order",
+    text: "",
+    items: [
+      { id: "1", text: "" },
+      { id: "2", text: "" },
+      { id: "3", text: "" },
+      { id: "4", text: "" },
+    ],
+    explanation: "",
+    points: DEFAULT_POINTS.order,
+    order,
+  };
+}
+
+/** «Так / Ні»: a two-option choice question. */
+export function makeEmptyTrueFalse(order: number): MCQQuestion {
+  return {
+    id: crypto.randomUUID(),
+    type: "mcq",
+    text: "",
+    options: [
+      { id: "А", text: "Так" },
+      { id: "Б", text: "Ні" },
+    ],
+    correctOptionId: "А",
+    explanation: "",
+    points: 1,
     order,
   };
 }

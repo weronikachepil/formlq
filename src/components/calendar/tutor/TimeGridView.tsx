@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Lesson, lessonEndMs } from "@/lib/lessons";
+import { Lesson, lessonEndMs, lessonStatus } from "@/lib/lessons";
 import type { Homework } from "@/lib/tutor";
 import {
   MINUTE_MS,
@@ -25,6 +25,15 @@ import { DEFAULT_END_HOUR, DEFAULT_START_HOUR, HOUR_H, type OpenLesson } from ".
 
 const GUTTER = "w-12 sm:w-14";
 const MAX_DEADLINES = 3;
+
+/** "1 урок", "3 уроки", "5 уроків". */
+function lessonsWord(n: number): string {
+  const d = n % 10;
+  const dd = n % 100;
+  if (d === 1 && dd !== 11) return "урок";
+  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return "уроки";
+  return "уроків";
+}
 const noop = () => {};
 
 interface TimeGridViewProps {
@@ -103,6 +112,12 @@ export function TimeGridView({
     return cols.map((c) => layoutOverlaps(c));
   }, [days, inRange, preview]);
 
+  // Header load line per day: "3 уроки" (cancelled ones don't count).
+  const dayLoad = useMemo(
+    () => days.map((d) => inRange.filter((l) => lessonStatus(l) !== "canceled" && sameDay(l.start.toDate(), d)).length),
+    [days, inRange],
+  );
+
   const deadlines = useMemo(() => {
     const map = new Map<string, Homework[]>();
     for (const hw of homework) {
@@ -134,6 +149,8 @@ export function TimeGridView({
   const nowTop = ((minutesOfDay(today) - startHour * 60) / 60) * HOUR_H;
   const colTemplate = { gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` };
   const single = days.length === 1;
+  const todayIndex = days.findIndex((d) => sameDay(d, today));
+  const nowVisible = todayIndex >= 0 && nowTop >= 0 && nowTop <= hours * HOUR_H;
 
   return (
     <div ref={scrollRef} className="relative h-full overflow-y-auto overscroll-contain">
@@ -142,8 +159,9 @@ export function TimeGridView({
         <div className="flex">
           <div className={cn(GUTTER, "shrink-0")} />
           <div className="grid flex-1" style={colTemplate}>
-            {days.map((d) => {
+            {days.map((d, i) => {
               const isToday = sameDay(d, today);
+              const load = dayLoad[i];
               return (
                 <button
                   key={d.getTime()}
@@ -151,7 +169,7 @@ export function TimeGridView({
                   onClick={() => onDayClick(d)}
                   disabled={single}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 py-2 border-l border-border/60 first:border-l-0 transition-colors",
+                    "flex flex-col items-center gap-0.5 pt-2 pb-1.5 border-l border-border/60 first:border-l-0 transition-colors",
                     !single && "hover:bg-muted/60",
                     single && "items-start pl-3",
                   )}
@@ -171,6 +189,14 @@ export function TimeGridView({
                     )}
                   >
                     {d.getDate()}
+                  </span>
+                  <span className="h-3.5 text-[10px] leading-3.5 tabular-nums text-muted-foreground truncate max-w-full px-1">
+                    {load > 0 && (
+                      <>
+                        {load}
+                        <span className={single ? undefined : "max-lg:hidden"}> {lessonsWord(load)}</span>
+                      </>
+                    )}
                   </span>
                 </button>
               );
@@ -218,12 +244,20 @@ export function TimeGridView({
           {Array.from({ length: hours }, (_, i) => (
             <span
               key={i}
-              className="absolute right-1.5 -translate-y-1/2 font-mono text-[10px] text-muted-foreground"
+              className="absolute right-2 -translate-y-1/2 text-[10px] font-medium tabular-nums text-muted-foreground/90"
               style={{ top: i * HOUR_H }}
             >
               {i === 0 ? "" : `${String(startHour + i).padStart(2, "0")}:00`}
             </span>
           ))}
+          {nowVisible && (
+            <span
+              className="absolute right-1 z-10 -translate-y-1/2 rounded-[6px] bg-chart-5 px-1 py-px text-[10px] font-semibold tabular-nums text-white shadow-sm"
+              style={{ top: nowTop }}
+            >
+              {formatHm(today)}
+            </span>
+          )}
         </div>
 
         <div
@@ -245,10 +279,17 @@ export function TimeGridView({
                 className={cn(
                   "relative border-l border-border/60 first:border-l-0 touch-pan-y",
                   editable && "cursor-cell",
-                  isToday && "bg-primary/[0.03]",
                 )}
                 onPointerDown={editable ? slot.onPointerDown : undefined}
               >
+                {/* Past time recedes, so the eye goes to what's ahead. */}
+                {(d.getTime() + 86400000 <= now || isToday) && (
+                  <div
+                    aria-hidden
+                    className="absolute inset-x-0 top-0 bg-foreground/[0.025] pointer-events-none"
+                    style={{ height: isToday ? Math.max(0, Math.min(hours * HOUR_H, nowTop)) : "100%" }}
+                  />
+                )}
                 {sel && (
                   <div
                     className="absolute inset-x-1 z-20 rounded-lg border-2 border-dashed border-foreground/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] pointer-events-none"
@@ -285,10 +326,10 @@ export function TimeGridView({
                   );
                 })}
 
-                {isToday && nowTop >= 0 && nowTop <= hours * HOUR_H && (
+                {isToday && nowVisible && (
                   <div className="absolute inset-x-0 z-30 pointer-events-none" style={{ top: nowTop }}>
-                    <div className="h-0.5 bg-red-500" />
-                    <div className="absolute -left-1.5 -top-[5px] w-3 h-3 rounded-full bg-red-500" />
+                    <div className="h-[1.5px] -translate-y-1/2 bg-chart-5" />
+                    <div className="absolute -left-[5px] -top-[5px] w-2.5 h-2.5 rounded-full bg-chart-5 ring-2 ring-popover" />
                   </div>
                 )}
               </div>

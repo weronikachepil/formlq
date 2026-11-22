@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { useReferenceDrawer } from "@/context/ReferenceDrawerContext";
 import { useExamGuard } from "@/context/ExamGuardContext";
-import { buildQuestionResults, countUnanswered } from "@/lib/exam-scoring";
+import { buildQuestionResults, countUnanswered, isAnswered } from "@/lib/exam-scoring";
 import {
   TestQuestion,
   ScoreRow,
@@ -34,6 +34,7 @@ import {
   rawToNMT,
   maxRawScore,
   maxScaledScore,
+  isExamFailed,
 } from "@/lib/tests";
 
 export interface RunnerConfig {
@@ -509,11 +510,18 @@ export function ExamRunner({
                   : "opacity-0 translate-y-1 pointer-events-none",
               )}
             >
-              <span className="text-lg font-bold">{resultData.nmtScore}</span>
-              <span className="text-sm text-muted-foreground">
-                {" "}
-                / {maxScaled}
-              </span>
+              {/* Below the NMT threshold the scale still yields 100 — but nothing counts. */}
+              {isExamFailed(resultData.rawScore, resultData.scaleType ?? "nmt") ? (
+                <span className="text-sm font-semibold text-muted-foreground">Не зараховано</span>
+              ) : (
+                <>
+                  <span className="text-lg font-bold">{resultData.nmtScore}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {" "}
+                    / {maxScaled}
+                  </span>
+                </>
+              )}
             </div>
             <div className="flex flex-1 justify-end gap-3">
               {allowRestart && (
@@ -549,9 +557,24 @@ export function ExamRunner({
         {/* Sticky so the timer and "Завершити" stay in reach on long questions.
             --app-header-h is set by AppShell; 0 on the header-less public page. */}
         <div className="sticky top-[calc(var(--app-header-h,0px)+0.5rem)] z-40 flex items-center justify-between gap-3 rounded-full border border-glass-edge bg-glass py-1.5 pl-5 pr-1.5 shadow-pill backdrop-blur-xl">
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {questions.length - unanswered} / {questions.length}
-          </span>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              role="progressbar"
+              aria-label="Відповіли"
+              aria-valuemin={0}
+              aria-valuemax={questions.length}
+              aria-valuenow={questions.length - unanswered}
+              className="hidden sm:block w-20 h-1.5 rounded-full bg-muted overflow-hidden"
+            >
+              <div
+                className="h-full rounded-full bg-teal-500 transition-[width] duration-300"
+                style={{ width: `${((questions.length - unanswered) / Math.max(1, questions.length)) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm text-muted-foreground tabular-nums whitespace-nowrap">
+              <span className="font-semibold text-foreground">{questions.length - unanswered}</span> з {questions.length}
+            </span>
+          </div>
           {untimed ? (
             <span />
           ) : (
@@ -683,10 +706,14 @@ export function ExamRunner({
 
       <SubmitConfirmDialog
         open={showSubmitConfirm}
-        unanswered={unanswered}
+        unanswered={showSubmitConfirm ? questions.flatMap((q, i) => (isAnswered(q, answers[q.id]) ? [] : [i])) : []}
         total={questions.length}
         onCancel={() => setShowSubmitConfirm(false)}
         onConfirm={() => void doSubmit()}
+        onJump={(i) => {
+          setShowSubmitConfirm(false);
+          setCurrentIdx(i);
+        }}
       />
     </div>
   );

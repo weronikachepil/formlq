@@ -112,7 +112,7 @@ export default function TestsPage() {
           className="h-10"
         />
         <div className="sm:w-36">
-            <Select value={grade} onValueChange={setGrade}>
+            <Select value={grade} onValueChange={setGrade} className="w-full">
               <SelectItem value={ALL}>Усі класи</SelectItem>
               {GRADES.map((g) => (
                 <SelectItem key={g} value={String(g)}>
@@ -122,7 +122,7 @@ export default function TestsPage() {
             </Select>
           </div>
         <div className="sm:w-44">
-          <Select value={subject} onValueChange={(v) => setSubject(v as TestSubject | typeof ALL)}>
+          <Select value={subject} onValueChange={(v) => setSubject(v as TestSubject | typeof ALL)} className="w-full">
             <SelectItem value={ALL}>Усі розділи</SelectItem>
             <SelectItem value="algebra">{SUBJECT_LABEL.algebra}</SelectItem>
             <SelectItem value="geometry">{SUBJECT_LABEL.geometry}</SelectItem>

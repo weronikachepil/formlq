@@ -39,6 +39,9 @@ export function UpcomingLessons({ lessons, now, showTutor, viewer = "student", o
     <ul className="space-y-1">
       {lessons.map((l) => {
         const live = l.start.toMillis() <= now;
+        // A tutor thinks in students: the name leads; a non-default subject joins the time line.
+        const heading = isTutor ? (l.groupId ? (l.groupName ?? l.studentName ?? "Група") : (l.studentName ?? l.title)) : l.title;
+        const subject = isTutor && l.title && l.title !== "Урок" ? ` · ${l.title}` : "";
         return (
           <li key={l.id} className="rounded-xl hover:bg-glass-strong transition-colors">
             <button
@@ -49,7 +52,7 @@ export function UpcomingLessons({ lessons, now, showTutor, viewer = "student", o
             >
               <span className={cn("mt-1.5 w-2.5 h-2.5 rounded-[4px] shrink-0", colorOf(isTutor ? (l.groupId ?? l.studentId) : l.tutorId).dot)} />
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold truncate">{l.title}</span>
+                <span className="block text-sm font-semibold truncate">{heading}</span>
                 <span
                   className={cn(
                     "block text-xs truncate first-letter:uppercase",
@@ -58,9 +61,7 @@ export function UpcomingLessons({ lessons, now, showTutor, viewer = "student", o
                 >
                   {relativeLessonTime(l, now)}
                   {isTutor
-                    ? l.studentName
-                      ? ` · ${l.studentName}`
-                      : ""
+                    ? subject
                     : showTutor && l.tutorName
                       ? ` · ${l.tutorName}`
                       : ""}

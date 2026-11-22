@@ -51,12 +51,10 @@ export default function AdminResultPage() {
       {/* Questions */}
       <div className="space-y-3">
         {questions.map((q, i) => (
-          <QuestionCard
-            key={q.id ?? i}
-            q={q}
-            index={i}
-            answerLabel="Відповідь:"
-          />
+          // Anchor for the question map above.
+          <div key={q.id ?? i} id={`q-${i}`} className="scroll-mt-24">
+            <QuestionCard q={q} index={i} answerLabel="Відповідь:" />
+          </div>
         ))}
       </div>
     </div>

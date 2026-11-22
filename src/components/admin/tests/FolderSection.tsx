@@ -7,13 +7,15 @@ import {
   Folder,
   FolderOpen,
   GripVertical,
+  MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
 } from "lucide-react";
 import { FolderNameInput } from "./FolderNameInput";
 import { Highlight } from "@/components/ui/highlight";
-import { IconButton } from "@/components/ui/icon-button";
+import { Menu } from "@base-ui/react/menu";
+import { menuItemCls, menuPopupCls, menuTriggerCls } from "./TestRow";
 
 interface FolderSectionProps {
   name: string;
@@ -109,7 +111,7 @@ export function FolderSection({
             }
             if (e.key === "F2") onRenameStart();
           }}
-          className="group flex items-center gap-3 px-4 py-3 cursor-pointer select-none rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="group flex items-center gap-3 pl-4 pr-2 py-2.5 cursor-pointer select-none rounded-2xl outline-none hover:bg-muted/30 transition-colors focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           {draggable && (
             <div className="hidden [@media(hover:hover)]:flex shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors cursor-grab active:cursor-grabbing -ml-0.5">
@@ -157,52 +159,46 @@ export function FolderSection({
                     ? "Порожня папка"
                     : publishedCount === undefined
                       ? pluralize(count, PLURAL.test)
-                      : `${pluralize(count, PLURAL.test)} · активних: ${publishedCount}`}
+                      : publishedCount === 0
+                        ? `${pluralize(count, PLURAL.test)} · усі чернетки`
+                        : publishedCount === count
+                          ? `${pluralize(count, PLURAL.test)} · усі опубліковані`
+                          : `${pluralize(count, PLURAL.test)} · опубліковано ${publishedCount}`}
                 </p>
               </>
             )}
           </div>
 
           {!renaming && (
-            <div
-              className={cn(
-                "flex items-center gap-1 shrink-0 transition-all duration-150",
-                "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 group-focus-within:opacity-100 group-focus-within:scale-100",
-                "[@media(hover:none)]:opacity-100 [@media(hover:none)]:scale-100",
-              )}
-            >
-              <IconButton
-                label="Новий тест у цій папці"
-                disabled={creatingTest}
-                // Keep pointer events so a click on the disabled button doesn't toggle the folder.
-                className="disabled:pointer-events-auto disabled:cursor-default"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddTest();
-                }}
+            <Menu.Root>
+              <Menu.Trigger
+                aria-label="Дії з папкою"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                className={menuTriggerCls}
               >
-                <Plus size={14} />
-              </IconButton>
-              <IconButton
-                label="Перейменувати"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRenameStart();
-                }}
-              >
-                <Pencil size={13} />
-              </IconButton>
-              <IconButton
-                label="Видалити папку"
-                tone="danger"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-              >
-                <Trash2 size={13} />
-              </IconButton>
-            </div>
+                <MoreHorizontal size={17} />
+              </Menu.Trigger>
+              <Menu.Portal>
+                <Menu.Positioner sideOffset={6} align="end" className="z-50 outline-none">
+                  <Menu.Popup className={menuPopupCls} onClick={(e) => e.stopPropagation()}>
+                    <Menu.Item onClick={onAddTest} disabled={creatingTest} className={menuItemCls}>
+                      <Plus size={15} className="text-muted-foreground" /> Новий тест у цій папці
+                    </Menu.Item>
+                    <Menu.Item onClick={onRenameStart} className={menuItemCls}>
+                      <Pencil size={15} className="text-muted-foreground" /> Перейменувати
+                    </Menu.Item>
+                    <div className="my-1 h-px bg-border/60" />
+                    <Menu.Item
+                      onClick={onDelete}
+                      className={cn(menuItemCls, "text-destructive data-[highlighted]:bg-destructive/10")}
+                    >
+                      <Trash2 size={15} /> Видалити папку
+                    </Menu.Item>
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.Root>
           )}
         </div>
 
@@ -222,13 +218,15 @@ export function FolderSection({
                     isDropInto ? "border-primary/50 text-primary" : "border-border/50",
                   )}
                 >
-                  Перетягніть сюди тести або{" "}
+                  {/* Touch screens can't drag: don't suggest it there. */}
+                  <span className="[@media(hover:none)]:hidden">Перетягніть сюди тести або </span>
+                  <span className="hidden [@media(hover:none)]:inline">Порожня папка · </span>
                   <button
                     onClick={onAddTest}
                     disabled={creatingTest}
-                    className="text-primary font-medium hover:underline disabled:opacity-50"
+                    className="text-primary font-semibold underline-offset-4 hover:underline disabled:opacity-50 pointer-coarse:py-2"
                   >
-                    створіть новий
+                    створіть тест тут
                   </button>
                 </div>
               ) : (

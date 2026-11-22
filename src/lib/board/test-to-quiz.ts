@@ -33,6 +33,38 @@ function convert(q: TestQuestion, n: number): QuizQuestion {
   if (q.type === "open") {
     return { ...base, qt: "short", opts: [], left: [], right: [], key: { answer: q.correctAnswer.trim() } };
   }
+  // The board's cards know only choice / short / match: several correct options and ordering
+  // become a short answer typed as numbers, with the options listed in the text.
+  // Numbers, not letters: the board's answer field opens a numeric keypad on tablets.
+  if (q.type === "multi") {
+    const right = new Set(q.correctOptionIds);
+    const list = q.options.map((o, k) => `${k + 1}) ${text(o.text) || (o.imageUrl ? "(зображення)" : "")}`).join("\n");
+    const answer = q.options.flatMap((o, k) => (right.has(o.id) ? [k + 1] : [])).join("");
+    return {
+      ...base,
+      text: `${base.text}\n${list}\n(Впишіть номери всіх правильних варіантів підряд, за зростанням, напр. 13)`,
+      qt: "short",
+      opts: [],
+      left: [],
+      right: [],
+      key: { answer },
+    };
+  }
+  if (q.type === "order") {
+    // Shown shuffled (by a fixed rule, so every board shows the same), numbered 1…n.
+    const shown = [...q.items].map((it, i) => ({ it, i })).sort((x, y) => ((x.i * 7 + 3) % 11) - ((y.i * 7 + 3) % 11));
+    const num = new Map(shown.map((x, k) => [x.it.id, k + 1]));
+    const list = shown.map((x, k) => `${k + 1}) ${text(x.it.text)}`).join("\n");
+    return {
+      ...base,
+      text: `${base.text}\n${list}\n(Впишіть номери в правильному порядку підряд, напр. 3142)`,
+      qt: "short",
+      opts: [],
+      left: [],
+      right: [],
+      key: { answer: q.items.map((it) => num.get(it.id)).join("") },
+    };
+  }
   const [right, ids] = letter(q.rightOptions);
   const pairs: Record<string, string> = {};
   const left = q.leftItems.map((x, i) => {

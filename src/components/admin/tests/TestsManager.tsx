@@ -2,8 +2,9 @@
 
 import { queryKeys, STALE } from "@/lib/queryKeys";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { usePageHeader } from "@/context/HeaderContext";
 import {
   getTests,
   updateTest,
@@ -34,6 +35,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 const UNFILED = "__unfiled__";
+/** How long «Повернути» is offered after deleting a test. */
+const UNDO_MS = 6000;
 const COLLAPSED_KEY = "admin-tests-collapsed-folders"; // folder ids are unique across owners
 
 type Buckets = Record<string, TestDoc[]>;
@@ -65,6 +68,8 @@ function loadCollapsed(): Set<string> {
 }
 
 interface TestsManagerProps {
+  /** Shown in the app header, with a live summary under it. */
+  pageTitle: string;
   /** `null` = platform tests (admin); a uid = that teacher's own tests. */
   owner: TestOwner;
   /** Where the editor lives: `${basePath}/${id}`. */
@@ -75,7 +80,7 @@ interface TestsManagerProps {
  * Tests list with folders, drag & drop, publishing and sharing. Teachers get the
  * same tool for their own tests; they publish with a description and their name.
  */
-export function TestsManager({ owner, basePath }: TestsManagerProps) {
+export function TestsManager({ pageTitle, owner, basePath }: TestsManagerProps) {
   const { user, userProfile } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -84,7 +89,6 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
   const testsKey = queryKeys.tests.of(owner);
   const foldersKey = queryKeys.tests.foldersOf(owner);
 
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [shareTestId, setShareTestId] = useState<string | null>(null);
   const [confirmDeleteFolder, setConfirmDeleteFolder] =
     useState<TestFolder | null>(null);
@@ -94,14 +98,23 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Set<string>>(loadCollapsed);
   const [search, setSearch] = useState("");
+  /** Quick access: show one folder (or the unfiled tests) only; null = everything. */
+  const [folderFilterRaw, setFolderFilter] = useState<string | null>(null);
   const [drag, setDrag] = useState<DragItem | null>(null);
   const [drop, setDrop] = useState<DropTarget | null>(null);
 
-  const { data: tests = [], isLoading: testsLoading } = useQuery({
+  const { data: allTests = [], isLoading: testsLoading } = useQuery({
     queryKey: testsKey,
     queryFn: () => getTests(owner),
     staleTime: STALE.medium,
   });
+
+  // Deleting is undoable: a deleted test hides at once and is really deleted a few
+  // seconds later, unless «Повернути» is pressed (no «are you sure?» step).
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
+  // A stable map (not state: changing it never needs a render).
+  const [pendingDeletes] = useState(() => new Map<string, { timer: ReturnType<typeof setTimeout>; doc: TestDoc }>());
+  const tests = useMemo(() => allTests.filter((t) => !hiddenIds.has(t.id)), [allTests, hiddenIds]);
 
   const { data: folders = [], isLoading: foldersLoading } = useQuery({
     queryKey: foldersKey,
@@ -246,13 +259,70 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteTest(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: testsKey });
-      queryClient.invalidateQueries({ queryKey: queryKeys.tests.published });
-    },
-  });
+  const unhide = (id: string) =>
+    setHiddenIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+
+  function finalizeDelete(id: string) {
+    pendingDeletes.delete(id);
+    deleteTest(id)
+      .catch(() => toast.error("Вибачте, тест не вдалося видалити. Спробуйте ще раз"))
+      .finally(() => {
+        queryClient.invalidateQueries({ queryKey: testsKey });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tests.published });
+        unhide(id);
+      });
+  }
+
+  function deleteWithUndo(test: TestDoc) {
+    setHiddenIds((prev) => new Set(prev).add(test.id));
+    const timer = setTimeout(() => finalizeDelete(test.id), UNDO_MS);
+    pendingDeletes.set(test.id, { timer, doc: test });
+    toast(
+      (t) => (
+        <span className="flex items-center gap-3">
+          Тест «{test.title || "Без назви"}» видалено
+          <button
+            type="button"
+            className="font-semibold text-primary hover:underline"
+            onClick={() => {
+              undoDelete(test.id);
+              toast.dismiss(t.id);
+            }}
+          >
+            Повернути
+          </button>
+        </span>
+      ),
+      { duration: UNDO_MS },
+    );
+  }
+
+  function undoDelete(id: string) {
+    const pending = pendingDeletes.get(id);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingDeletes.delete(id);
+    // A layout change meanwhile may have dropped it from the cache: put it back.
+    queryClient.setQueryData<TestDoc[]>(testsKey, (prev = []) =>
+      prev.some((t) => t.id === id) ? prev : [...prev, pending.doc],
+    );
+    unhide(id);
+  }
+
+  // Leaving the page doesn't cancel a delete: pending ones go through right away.
+  useEffect(() => {
+    return () => {
+      for (const [id, { timer }] of pendingDeletes) {
+        clearTimeout(timer);
+        void deleteTest(id).catch(() => {});
+      }
+      pendingDeletes.clear();
+    };
+  }, [pendingDeletes]);
 
   /** Saves a field straight away (no draft here), updating the list optimistically. */
   async function patchTest(id: string, patch: Partial<TestDoc>) {
@@ -273,7 +343,7 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
       return;
     }
     return patchTest(test.id, { published: !test.published, authorName }).catch(() => {
-      toast.error("Не вдалося змінити публікацію");
+      toast.error("Вибачте, публікацію не вдалося змінити. Спробуйте ще раз");
       queryClient.invalidateQueries({ queryKey: testsKey });
     });
   }
@@ -319,12 +389,6 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
     });
   }
 
-  function confirmDelete() {
-    if (!confirmDeleteId) return;
-    const id = confirmDeleteId;
-    setConfirmDeleteId(null);
-    deleteMutation.mutate(id);
-  }
 
   // ── Drag & drop ────────────────────────────────────────────
 
@@ -440,7 +504,7 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
           isDragSrc={drag?.kind === "test" && drag.id === test.id}
           dropIndicator={indicator}
           highlight={search}
-          deleting={deleteMutation.isPending}
+          deleting={false}
           onDragStart={(e) => startDrag(e, { kind: "test", id: test.id })}
           onDragOver={(e) => onTestDragOver(e, test.id)}
           onDrop={handleDrop}
@@ -456,7 +520,7 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
           onTogglePublished={() => togglePublished(test)}
           onShare={() => setShareTestId(test.id)}
           onEdit={() => router.push(`${basePath}/${test.id}`)}
-          onDelete={() => setConfirmDeleteId(test.id)}
+          onDelete={() => deleteWithUndo(test)}
           onMoveTo={(folderId) => {
             moveTest(test.id, folderId ?? UNFILED, null);
             if (folderId) setFolderExpanded(folderId, true);
@@ -468,9 +532,24 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
   }
 
   const isLoading = testsLoading || foldersLoading;
+  // Header: what is here, at a glance, instead of a generic «Управління тестами».
+  const publishedTotal = tests.filter((t) => t.published).length;
+  usePageHeader(
+    pageTitle,
+    isLoading
+      ? ""
+      : `${pluralize(tests.length, PLURAL.test)} · опубліковано ${publishedTotal}`,
+  );
   const hasFolders = folders.length > 0;
-  const unfiled = visibleTests(UNFILED);
+  // A deleted folder can't stay picked.
+  const folderFilter =
+    folderFilterRaw && (folderFilterRaw === UNFILED || folders.some((f) => f.id === folderFilterRaw))
+      ? folderFilterRaw
+      : null;
+  const showUnfiled = !folderFilter || folderFilter === UNFILED;
+  const unfiled = showUnfiled ? visibleTests(UNFILED) : [];
   const visibleFolders = folders
+    .filter((f) => !folderFilter || f.id === folderFilter)
     .map((f) => ({ folder: f, list: visibleTests(f.id, f.name) }))
     .filter(
       ({ folder, list }) =>
@@ -481,41 +560,105 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
   const draggingTestFromFolder =
     drag?.kind === "test" && !buckets[UNFILED].some((t) => t.id === drag.id);
 
+  /** «Усі», each folder, «Без папки»: chips in a row, or a list in the side column. */
+  function folderNav(vertical: boolean) {
+    return (
+      <>
+        <FolderChip vertical={vertical} active={!folderFilter} onClick={() => setFolderFilter(null)} count={tests.length}>
+          {vertical ? "Усі тести" : "Усі"}
+        </FolderChip>
+        {folders.map((f) => (
+          <FolderChip
+            key={f.id}
+            vertical={vertical}
+            active={folderFilter === f.id}
+            onClick={() => setFolderFilter(folderFilter === f.id ? null : f.id)}
+            count={buckets[f.id]?.length ?? 0}
+            icon
+          >
+            {f.name}
+          </FolderChip>
+        ))}
+        {buckets[UNFILED].length > 0 && (
+          <FolderChip
+            vertical={vertical}
+            active={folderFilter === UNFILED}
+            onClick={() => setFolderFilter(folderFilter === UNFILED ? null : UNFILED)}
+            count={buckets[UNFILED].length}
+          >
+            Без папки
+          </FolderChip>
+        )}
+      </>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      {/* Toolbar */}
+    // Wide screens: folders in a side column (like a file manager), tests on the right.
+    // Wide screens: exactly the window's height; the folder column and the tests scroll on
+    // their own, everything else stays put. Narrow: the page scrolls, the toolbar sticks.
+    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6 lg:h-[calc(100dvh-var(--app-header-h)-3rem-var(--tabs-h,0px))]">
+      {!isLoading && (
+        <aside
+          aria-label="Папки"
+          className="hidden lg:flex flex-col gap-1 min-h-0 pt-2"
+        >
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Папки
+          </p>
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-0.5 -mx-1 px-1">
+            {folderNav(true)}
+          </div>
+          <button
+            onClick={() => setNewFolder({})}
+            className="mt-2 flex items-center gap-2 h-10 px-3 rounded-[12px] text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          >
+            <FolderPlus size={16} /> Нова папка
+          </button>
+        </aside>
+      )}
+
+    <div className="min-w-0 flex flex-col lg:min-h-0">
+      {/* Toolbar (and the folder chips on narrow screens): stays put; only the tests scroll. */}
+      <div className="sticky lg:static top-[calc(var(--app-header-h)+var(--tabs-h,0px))] z-20 py-2 space-y-2 bg-background lg:bg-transparent -mx-4 md:-mx-6 px-4 md:px-6 lg:mx-0 lg:px-0">
       <div className="flex flex-wrap items-center gap-2">
         <SearchInput
           value={search}
           onChange={setSearch}
           placeholder="Пошук тестів і папок"
           wrapperClassName="flex-1 min-w-48"
-          className="h-9"
         />
         <button
           onClick={() => setNewFolder({})}
-          className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl border border-border/50 bg-card text-sm font-medium hover:bg-muted transition-all"
+          className="lg:hidden flex items-center gap-1.5 h-10 pointer-coarse:h-11 px-4 rounded-full border border-glass-edge bg-glass shadow-pill text-sm font-semibold hover:bg-glass-strong transition-colors"
         >
           <FolderPlus size={15} />
           Нова папка
         </button>
         <button
-          onClick={() => user && createMutation.mutate(null)}
+          onClick={() =>
+            user && createMutation.mutate(folderFilter && folderFilter !== UNFILED ? folderFilter : null)
+          }
           disabled={createMutation.isPending}
-          className="flex items-center gap-1.5 h-9 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50"
+          className="flex items-center gap-1.5 h-10 pointer-coarse:h-11 px-4 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-pill-dark hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           <Plus size={15} />
           {createMutation.isPending ? "Створення..." : "Новий тест"}
         </button>
       </div>
 
+      {/* Quick access to folders (narrow screens): one tap shows just that folder, opened. */}
+      {!isLoading && hasFolders && <FolderStrip>{folderNav(false)}</FolderStrip>}
+      </div>
+
+      <div className="pt-1 pb-4 lg:flex-1 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:-mx-2 lg:px-2">
       {isLoading ? (
         <SpinnerPage />
       ) : tests.length === 0 && !hasFolders && !newFolder ? (
         <EmptyState
           emoji="📝"
           title="Тестів ще немає"
-          description="Створіть перший тест"
+          description="Натисніть «Новий тест» угорі — і почніть додавати завдання."
         />
       ) : nothingFound ? (
         <EmptyState
@@ -540,7 +683,7 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
                 highlight={search}
                 count={all.length}
                 publishedCount={all.filter((t) => t.published).length}
-                expanded={searching || !collapsed.has(folder.id)}
+                expanded={searching || folderFilter === folder.id || !collapsed.has(folder.id)}
                 renaming={renamingId === folder.id}
                 draggable={dragEnabled}
                 isDragSrc={drag?.kind === "folder" && drag.id === folder.id}
@@ -586,7 +729,7 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
           )}
 
           {/* Tests outside any folder */}
-          {(unfiled.length > 0 || draggingTestFromFolder) && (
+          {showUnfiled && (unfiled.length > 0 || draggingTestFromFolder || folderFilter === UNFILED) && (
             <div
               className={cn("space-y-2", hasFolders && "pt-3")}
               onDragOver={(e) => onAreaDragOver(e, UNFILED)}
@@ -621,6 +764,9 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
         </div>
       )}
 
+      </div>
+    </div>
+
       {shareTest && (
         <TestShareModal
           open
@@ -634,22 +780,103 @@ export function TestsManager({ owner, basePath }: TestsManagerProps) {
       )}
 
       <ConfirmDialog
-        open={confirmDeleteId !== null}
-        title="Видалити тест?"
-        description="Цю дію не можна скасувати. Тест буде видалено назавжди."
-        confirmLabel="Видалити"
-        onConfirm={confirmDelete}
-        onCancel={() => setConfirmDeleteId(null)}
-      />
-
-      <ConfirmDialog
         open={confirmDeleteFolder !== null}
         title={`Видалити папку «${confirmDeleteFolder?.name ?? ""}»?`}
-        description="Тести з цієї папки не видаляться — вони перемістяться в «Без папки»."
+        description="Тести з неї лишаться — у «Без папки»."
         confirmLabel="Видалити папку"
         onConfirm={handleDeleteFolder}
         onCancel={() => setConfirmDeleteFolder(null)}
       />
     </div>
+  );
+}
+
+function FolderChip({
+  active,
+  onClick,
+  count,
+  icon,
+  vertical,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  count: number;
+  icon?: boolean;
+  /** A row of the side column instead of a chip. */
+  vertical?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={typeof children === "string" ? children : undefined}
+      className={cn(
+        "inline-flex items-center gap-2 text-sm font-medium whitespace-nowrap transition-colors",
+        vertical
+          ? "w-full h-10 px-3 rounded-[12px]"
+          : "shrink-0 gap-1.5 h-9 pointer-coarse:h-10 px-3.5 rounded-full border",
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : vertical
+            ? "text-foreground/80 hover:bg-muted/60"
+            : "bg-card border-border/50 text-foreground/80 hover:bg-muted",
+      )}
+    >
+      {icon && <Folder size={15} className={cn("shrink-0", active ? "opacity-80" : "text-primary")} />}
+      <span className={cn("truncate", vertical ? "flex-1 min-w-0 text-left" : "max-w-48")}>{children}</span>
+      <span className={cn("shrink-0 text-xs tabular-nums", active ? "opacity-70" : "text-muted-foreground")}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+/**
+ * A sideways row without a scrollbar: the mouse wheel scrolls it sideways, and a soft fade
+ * on an edge shows there is more beyond it.
+ */
+function FolderStrip({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () =>
+      setEdges({ left: el.scrollLeft > 2, right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2 });
+    update();
+    // A vertical wheel turn moves the row sideways (non-passive: it replaces the page scroll).
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || el.scrollWidth <= el.clientWidth) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener("scroll", update, { passive: true });
+    el.addEventListener("wheel", onWheel, { passive: false });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      el.removeEventListener("wheel", onWheel);
+      ro.disconnect();
+    };
+  }, []);
+
+  const mask = `linear-gradient(to right, ${edges.left ? "transparent 0, black 2.5rem" : "black 0"}, ${
+    edges.right ? "black calc(100% - 2.5rem), transparent 100%" : "black 100%"
+  })`;
+
+  return (
+    <nav
+      ref={ref}
+      aria-label="Папки"
+      className="lg:hidden -mx-1 px-1 py-0.5 flex gap-1.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      style={{ maskImage: mask, WebkitMaskImage: mask }}
+    >
+      {children}
+    </nav>
   );
 }

@@ -103,7 +103,7 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
-      <div className="rounded-2xl border border-border/50 bg-card p-5 space-y-4">
+      <div className="rounded-[18px] border border-border/50 bg-card p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1 min-w-0">
             <p className="font-heading font-bold text-lg leading-tight">
@@ -233,7 +233,7 @@ export function StudentHomeworkCabinet({ homework, results, now }: StudentHomewo
 function Counter({ value, label, danger }: { value: number; label: string; danger?: boolean }) {
   return (
     <div>
-      <p className={cn("text-xl font-bold font-mono leading-none", danger && "text-red-600 dark:text-red-400")}>
+      <p className={cn("font-heading text-2xl font-bold leading-none tabular-nums", danger && "text-red-600 dark:text-red-400")}>
         {value}
       </p>
       <p className="text-[11px] text-muted-foreground mt-1">{label}</p>

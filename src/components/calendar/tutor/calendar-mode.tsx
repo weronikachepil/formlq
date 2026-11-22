@@ -29,7 +29,7 @@ export const TUTOR_MODE: CalendarMode = {
   readOnly: false,
   // Group lessons and group homework take the group's colour and name.
   colorKey: (i) => i.groupId ?? i.studentId,
-  lessonTitle: (l) => (l.groupId ? `👥 ${l.groupName ?? "Група"}` : (l.studentName ?? l.title)),
+  lessonTitle: (l) => (l.groupId ? (l.groupName ?? "Група") : (l.studentName ?? l.title)),
   lessonSubtitle: (l) => l.title,
   deadlinePrefix: (hw) => (hw.groupId ? hw.groupName : hw.studentName?.split(" ")[0]),
   deadlineOwner: (hw) => (hw.groupId ? `група «${hw.groupName ?? ""}»` : (hw.studentName ?? "учень")),

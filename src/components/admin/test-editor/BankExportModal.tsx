@@ -14,11 +14,15 @@ import { createQuestion, DuplicateQuestionError } from "@/lib/questions";
 import { queryKeys } from "@/lib/queryKeys";
 import { pluralize, PLURAL } from "@/lib/format";
 import { TOPICS } from "@/lib/topics";
-import type { TestQuestion } from "@/lib/tests";
+import type { BankQuestion, TestQuestion } from "@/lib/tests";
 import { TYPE_LABELS, type Difficulty } from "./constants";
 import { DifficultyPicker, SelectableRow, toggleInSet } from "./primitives";
 
 /** Copy selected test questions into the question bank as drafts. */
+type BankableQuestion = Extract<TestQuestion, { type: BankQuestion["type"] }>;
+const BANK_TYPES = new Set<string>(["mcq", "open", "matching"]);
+const isBankType = (q: TestQuestion): q is BankableQuestion => BANK_TYPES.has(q.type);
+
 export function BankExportModal({
   open,
   onClose,
@@ -42,7 +46,11 @@ export function BankExportModal({
   }
 
   async function submit() {
-    const toExport = questions.filter((q) => selected.has(q.id));
+    // The bank holds НМТ-style questions only; other types stay in the test.
+    const chosen = questions.filter((q) => selected.has(q.id));
+    const toExport = chosen.filter(isBankType);
+    const unsupported = chosen.length - toExport.length;
+    if (unsupported) toast(`${pluralize(unsupported, PLURAL.task)} такого типу банк не приймає — їх пропущено`);
     if (!toExport.length) return;
     setExporting(true);
     let created = 0;
