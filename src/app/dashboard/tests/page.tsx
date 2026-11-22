@@ -124,7 +124,7 @@ export default function TestsPage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-5">
+    <div className="space-y-5">
       <section className="flex items-center gap-4 rounded-[18px] bg-card p-5 sm:p-6">
         <span className="grid size-14 shrink-0 place-items-center rounded-full bg-lavender text-[#14262a]">
           <FileText size={24} />

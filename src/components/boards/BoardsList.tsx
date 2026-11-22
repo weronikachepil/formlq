@@ -117,7 +117,7 @@ export function BoardsList({ emptyHint, fallbackName }: BoardsListProps) {
   }
 
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="space-y-5">
       <form onSubmit={handleCreate} className="flex gap-2">
         <Input
           value={title}

@@ -142,7 +142,7 @@ export default function TutorStudentsPage() {
   );
 
   return (
-    <div className="max-w-6xl space-y-5">
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         {cabinets.length > 4 ? (
           <SearchInput value={search} onChange={setSearch} placeholder="Пошук учня…" wrapperClassName="sm:w-72" />

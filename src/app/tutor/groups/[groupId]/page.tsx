@@ -114,7 +114,7 @@ export default function GroupPage() {
   const done = (a: Assignment) => [...a.byStudent.values()].filter((h) => h.status === "completed").length;
 
   return (
-    <div className="max-w-6xl space-y-4">
+    <div className="space-y-4">
       <Link
         href="/tutor/students"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
