@@ -6,9 +6,12 @@ import type { MenuControl } from "./menu";
 import { ToolMenus } from "./ToolMenus";
 import { useBoard } from "./useBoard";
 
-/** Left tool column and its drop-down menus; viewers get only the hand and the laser. */
+/**
+ * Left tool column, grouped as in note apps: navigate · write · type/shapes · geometry & insert ·
+ * lesson. Viewers get only the hand and the laser.
+ */
 export function Toolbar({ mc }: { mc: MenuControl }) {
-  const { st, b } = useBoard();
+  const { st } = useBoard();
   const { menu, toggle, setTool } = mc;
   const tool = st.tool;
   const shapeActive = SHAPE_TOOLS.has(tool);
@@ -38,41 +41,33 @@ export function Toolbar({ mc }: { mc: MenuControl }) {
           name={shapeActive ? tool : "shapes"}
           title="Фігури"
           active={menu === "shapes" || (!menu && shapeActive)}
+          open={menu === "shapes"}
           onClick={() => toggle("shapes")}
         />
         <ToolBtn name="text" title="Текст (T)" active={on("text")} onClick={() => setTool("text")} />
         <ToolBtn name="formula" title="Формула (F)" active={on("formula")} onClick={() => setTool("formula")} />
         <i className="sep" />
-        <ToolBtn name="graph" title="Графіки та координатна площина" active={menu === "graph"} onClick={() => toggle("graph")} />
-        <ToolBtn name="solid" title="Об'ємні фігури" active={menu === "solid"} onClick={() => toggle("solid")} />
-        <i className="sep" />
-        <ToolBtn
-          name="image"
-          title="Зображення або PDF (також Ctrl+V чи перетягування файлу)"
-          active={false}
-          onClick={() => {
-            mc.close();
-            b()?.pickImage();
-          }}
-        />
         <ToolBtn
           name={tool === "compass" ? "compass" : "ruler"}
-          title="Лінійка, транспортир, циркуль"
+          title="Геометрія: лінійка, циркуль, побудови"
           active={menu === "instr" || on("compass")}
+          open={menu === "instr"}
           onClick={() => toggle("instr")}
         />
-        <ToolBtn name="arith" title="Дія в стовпчик, моделі дробу" active={menu === "arith"} onClick={() => toggle("arith")} />
         <ToolBtn
-          name="template"
-          title="Шаблони: числова пряма, таблиця, діаграма Венна"
-          active={menu === "tmpl"}
-          onClick={() => toggle("tmpl")}
+          name="insert"
+          title="Вставити: фото, графік, об'ємна фігура, числова пряма, діаграма (Ctrl+V — з буфера)"
+          active={menu === "insert"}
+          open={menu === "insert"}
+          onClick={() => toggle("insert")}
         />
+        <i className="sep" />
         <ToolBtn name="laser" title="Лазерна указка (B)" active={on("laser")} onClick={() => setTool("laser")} />
         <ToolBtn
           name="lesson"
           title="Урок: коментарі, таймер, голосування, завдання"
           active={menu === "lesson" || on("comment", "stamp")}
+          open={menu === "lesson"}
           onClick={() => toggle("lesson")}
         />
       </div>

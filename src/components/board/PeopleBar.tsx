@@ -5,6 +5,7 @@ import type { MenuControl } from "./menu";
 import { useBoard } from "./useBoard";
 
 const initial = (name: string) => name.trim().slice(0, 1).toUpperCase();
+const STATUS_TEXT = { online: "Зʼєднано", connecting: "Підключення…", offline: "Немає зʼєднання" } as const;
 
 /** Top-right bar: connection status, participants, students list (owner), follow, export. */
 export function PeopleBar({ mc }: { mc: MenuControl }) {
@@ -14,27 +15,41 @@ export function PeopleBar({ mc }: { mc: MenuControl }) {
 
   return (
     <div className="bd-people">
-      <span className={"bd-status " + st.status} title={st.status === "online" ? "Зʼєднано" : "Немає зʼєднання"} />
+      <span className={"bd-status " + st.status} role="status" aria-label={STATUS_TEXT[st.status]} title={STATUS_TEXT[st.status]} />
+      {/* Not just a coloured dot: a lost connection mid-lesson is said in words. */}
+      {st.status === "offline" && <span className="bd-chip warn">Немає зʼєднання</span>}
       {!st.canEdit && <span className="bd-chip">Лише перегляд</span>}
       {st.peers.slice(0, 6).map((p) => {
         const clickable = st.isOwner && !p.owner;
+        if (!clickable) {
+          return (
+            <span key={p.cid} className="bd-avatar" style={{ background: p.color }} title={p.name}>
+              {initial(p.name)}
+            </span>
+          );
+        }
         return (
-          <span
+          <button
             key={p.cid}
-            className={"bd-avatar" + (clickable ? " click" : "")}
+            className="bd-avatar click"
             style={{ background: p.color }}
-            title={clickable ? `${p.name}: клік — перейти до учня` : p.name}
-            onClick={() => {
-              if (clickable) toggle("peers");
-            }}
+            title={`${p.name}: де зараз учень`}
+            aria-label={`${p.name}: де зараз учень`}
+            onClick={() => toggle("peers")}
           >
             {initial(p.name)}
-          </span>
+          </button>
         );
       })}
+      {st.peers.length > 6 && <span className="bd-chip">+{st.peers.length - 6}</span>}
       {st.isOwner && students.length > 0 && (
         <span className="bd-drop-wrap">
-          <button className={"bd-chip-btn" + (menu === "peers" || st.followCid ? " on" : "")} onClick={() => toggle("peers")}>
+          <button
+            className={"bd-chip-btn" + (menu === "peers" || st.followCid ? " on" : "")}
+            aria-haspopup="menu"
+            aria-expanded={menu === "peers"}
+            onClick={() => toggle("peers")}
+          >
             Учні ({students.length})
           </button>
           {menu === "peers" && (
@@ -76,18 +91,18 @@ export function PeopleBar({ mc }: { mc: MenuControl }) {
           )}
         </span>
       )}
-      {st.peers.length > 6 && <span className="bd-chip">+{st.peers.length - 6}</span>}
       {!st.isOwner && (
         <button
           className={"bd-chip-btn" + (st.follow ? " on" : "")}
           title="Ваш екран повторює екран вчителя"
+          aria-pressed={st.follow}
           onClick={() => b()?.setFollow(!st.follow)}
         >
           {st.follow ? "Слідкую за вчителем" : "Слідкувати за вчителем"}
         </button>
       )}
       <span className="bd-drop-wrap">
-        <IconBtn name="download" title="Зберегти дошку (PNG / PDF)" active={menu === "export"} onClick={() => toggle("export")} />
+        <IconBtn name="download" title="Зберегти дошку (PNG / PDF)" active={menu === "export"} menu onClick={() => toggle("export")} />
         {menu === "export" && (
           <div className="bd-menu bd-drop">
             <MenuItem

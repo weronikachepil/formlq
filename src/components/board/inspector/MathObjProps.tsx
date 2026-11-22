@@ -172,7 +172,7 @@ export function CplaneProps({ o }: { o: CplaneObject }) {
       </div>
       <p className="bd-hint">
         Периметр (довжина ліній): {fmtN(stats.per)}
-        {stats.area !== null ? `, площа: ${fmtN(stats.area)}` : ""}. Двічі клікніть по площині, щоб ставити точки дотиком (Esc —
+        {stats.area !== null ? `, площа: ${fmtN(stats.area)}` : ""}. Торкніться площини двічі, щоб ставити точки (Esc —
         вийти).
       </p>
     </div>
@@ -247,7 +247,7 @@ export function FmodelProps({ o }: { o: FmodelObject }) {
           Стерти зафарбування
         </button>
       </div>
-      <p className="bd-hint">Двічі клікніть по моделі, щоб зафарбовувати частки дотиком (Esc — вийти).</p>
+      <p className="bd-hint">Торкніться моделі двічі, щоб зафарбовувати частки (Esc — вийти).</p>
     </div>
   );
 }
@@ -291,10 +291,10 @@ export function TrigProps({ o, inter }: { o: TrigObject; inter: boolean }) {
           className={"bd-chip-btn" + (inter ? " on" : "")}
           onClick={() => (inter ? b()?.exitInteractive() : b()?.enterInteractive(o.id))}
         >
-          {inter ? "Готово" : "Крутити мишкою"}
+          {inter ? "Готово" : "Крутити"}
         </button>
       </div>
-      <p className="bd-hint">Подвійний клік по колу — ведіть точку мишкою або пальцем.</p>
+      <p className="bd-hint">Торкніться кола двічі й ведіть точку.</p>
     </div>
   );
 }

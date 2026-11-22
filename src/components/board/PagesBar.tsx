@@ -24,10 +24,20 @@ export function PagesBar() {
             key={p.id}
             className={"bd-page" + (p.id === st.page ? " on" : "")}
             disabled={st.follow && !st.isOwner}
-            title={st.canEdit ? "Подвійний клік — перейменувати" : p.name}
-            onClick={() => b()?.setPage(p.id)}
-            onDoubleClick={() => {
-              if (st.isOwner) setAsk({ kind: "rename", page: p });
+            aria-current={p.id === st.page ? "page" : undefined}
+            title={
+              st.follow && !st.isOwner
+                ? "Ви слідкуєте за вчителем — вимкніть це вгорі, щоб гортати самостійно"
+                : st.isOwner
+                  ? p.id === st.page
+                    ? "Натисніть ще раз, щоб перейменувати"
+                    : p.name
+                  : p.name
+            }
+            onClick={() => {
+              // Tapping the current tab renames it: double-click is unreliable on touch screens.
+              if (st.isOwner && p.id === st.page) setAsk({ kind: "rename", page: p });
+              else b()?.setPage(p.id);
             }}
           >
             {st.donePages.includes(p.id) ? "✓ " : ""}
@@ -35,7 +45,7 @@ export function PagesBar() {
           </button>
         ))}
         {st.isOwner && (
-          <button className="bd-ibtn" title="Новий аркуш" onClick={() => b()?.addPage()}>
+          <button className="bd-ibtn" title="Новий аркуш" aria-label="Новий аркуш" onClick={() => b()?.addPage()}>
             <Icon name="plus" size={18} />
           </button>
         )}
@@ -55,7 +65,7 @@ export function PagesBar() {
           </button>
         )}
         {st.isOwner && st.page !== "p1" && (
-          <button className="bd-ibtn danger" title="Видалити аркуш" onClick={() => setAsk({ kind: "delete" })}>
+          <button className="bd-ibtn danger" title="Видалити аркуш" aria-label="Видалити аркуш" onClick={() => setAsk({ kind: "delete" })}>
             <Icon name="trash" size={17} />
           </button>
         )}

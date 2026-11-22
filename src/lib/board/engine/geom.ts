@@ -81,6 +81,12 @@ export function simplify(pts: Point[], eps: number): Point[] {
   return pts.filter((_, i) => keep[i]);
 }
 
+/** Same as simplify, but returns the kept indices (to keep per-point data such as pressure). */
+export function simplifyIdx(pts: Point[], eps: number): number[] {
+  const kept = new Set(simplify(pts, eps));
+  return pts.flatMap((p, i) => (kept.has(p) ? [i] : []));
+}
+
 // Map a point from rectangle `from` into rectangle `to`.
 export function mapPoint(p: Point, from: Bounds, to: Bounds): Point {
   const sx = from.w ? to.w / from.w : 1;

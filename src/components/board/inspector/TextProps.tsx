@@ -128,6 +128,7 @@ export function TextStyleProps({ o }: { o: TextObject | DrawStyle }) {
           К
         </button>
       </div>
+      <p className="bd-hint">{"Формула в тексті — між знаками $, напр. $x^2$ чи $\\frac{1}{2}$"}</p>
     </div>
   );
 }
@@ -146,13 +147,13 @@ export function NewSizeProps({ kind = "text" }: { kind?: "text" | "formula" }) {
   return (
     <div className="bd-sec bd-line" title={kind === "formula" ? "Розмір формули" : "Розмір тексту"}>
       <span className="bd-lbl">Розмір</span>
-      <button className="bd-ibtn" aria-label="Менший текст" disabled={fs <= TEXT_SIZES[0]} onClick={() => step(-1)}>
+      <button className="bd-ibtn" aria-label={kind === "formula" ? "Менша формула" : "Менший текст"} disabled={fs <= TEXT_SIZES[0]} onClick={() => step(-1)}>
         <Icon name="minus" size={16} />
       </button>
       <span className="bd-num">{fs}</span>
       <button
         className="bd-ibtn"
-        aria-label="Більший текст"
+        aria-label={kind === "formula" ? "Більша формула" : "Більший текст"}
         disabled={fs >= TEXT_SIZES[TEXT_SIZES.length - 1]}
         onClick={() => step(1)}
       >
@@ -175,11 +176,11 @@ export function FontProps({ o }: { o: TextObject | FormulaObject }) {
   return (
     <div className="bd-sec bd-line">
       <span className="bd-lbl">Розмір</span>
-      <button className="bd-ibtn" onClick={() => scale(0.85)}>
+      <button className="bd-ibtn" aria-label="Зменшити" title="Зменшити" onClick={() => scale(0.85)}>
         <Icon name="minus" size={16} />
       </button>
       <span className="bd-num">{Math.round(o.fs)}</span>
-      <button className="bd-ibtn" onClick={() => scale(1.18)}>
+      <button className="bd-ibtn" aria-label="Збільшити" title="Збільшити" onClick={() => scale(1.18)}>
         <Icon name="plus" size={16} />
       </button>
       {o.type === "formula" && (

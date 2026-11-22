@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { NL_COLORS, makeInterval } from "@/lib/board/engine/numline";
+import { colorName } from "../constants";
 import type { NumlineInterval } from "@/lib/board/engine/types";
 import { Icon } from "../icons";
 import { Modal } from "./Modal";
@@ -60,7 +61,8 @@ export function NumlineDialog({
           <button
             className="nl-dot"
             style={{ background: r.c }}
-            title="Змінити колір"
+            title={`Колір: ${colorName(r.c)} (натисніть, щоб змінити)`}
+            aria-label={`Колір: ${colorName(r.c)}, змінити`}
             onClick={() => patch(i, { c: NL_COLORS[(NL_COLORS.indexOf(r.c) + 1) % NL_COLORS.length] })}
           />
           <span>від</span>

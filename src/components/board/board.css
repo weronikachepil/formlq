@@ -231,6 +231,22 @@
   pointer-events: none;
   will-change: transform;
 }
+/* Text with $…$ maths (KaTeX), laid over the board like formulas; selection etc. stay on the canvas. */
+.mathboard .mb-mtext {
+  position: absolute;
+  pointer-events: none;
+  width: max-content;
+}
+.mathboard .mb-mtext .katex {
+  font-size: 1.1em;
+}
+.mathboard .mb-mtext .katex-display {
+  margin: 0.15em 0;
+}
+.mathboard .mb-mtext .mb-math-err {
+  color: #c92a2a;
+  font-family: ui-monospace, monospace;
+}
 .mathboard .mb-formula {
   position: absolute;
   pointer-events: none;
@@ -255,6 +271,13 @@
   --smart-fence-color: currentColor;
   --keyboard-toggle-display: none;
   --menu-toggle-display: none;
+}
+/* Not being edited: no caret group or selection highlight inside the formula. */
+.mathboard .mb-formula:not(.editing) math-field {
+  --selection-background-color: transparent;
+  --selection-color: inherit;
+  --contains-highlight-background-color: transparent;
+  --highlight-text: transparent;
 }
 .mathboard .mb-formula math-field::part(menu-toggle) {
   display: none;
@@ -2805,4 +2828,197 @@ html.dark .mathboard .status-pill.draft {
   user-select: text;
   -webkit-user-select: text;
   -webkit-touch-callout: default;
+}
+
+/* ================= UX: touch targets, contrast, states ================= */
+/* Fitts: on touch screens every board control is at least 44px to tap (desktop keeps its density).
+   Comes after the max-height rules, so iPad landscape no longer shrinks tool buttons to 36–40px. */
+@media (pointer: coarse) {
+  .mathboard .bd-btn,
+  .mathboard .bd .bd-ibtn {
+    width: 44px;
+    height: 44px;
+  }
+  .mathboard .bd-zoom {
+    height: 44px;
+  }
+  .mathboard .bd .bd-page,
+  .mathboard .bd .bd-chip-btn {
+    min-height: 44px;
+  }
+  .mathboard .bd .bd-sw {
+    width: 34px;
+    height: 34px;
+  }
+  .mathboard .bd .bd-avatar.click {
+    width: 36px;
+    height: 36px;
+  }
+}
+/* Avatars that open the students list are real buttons now. */
+.mathboard button.bd-avatar {
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.mathboard .bd :focus-visible {
+  outline: 2px solid var(--mb-accent);
+  outline-offset: 2px;
+}
+/* Sync: «connecting» is not «offline» (amber, not red); offline is also said in words. */
+.mathboard .bd-status.connecting {
+  background: #f08c00;
+}
+.mathboard .bd-chip.warn {
+  color: #c92a2a;
+  font-weight: 600;
+}
+.mathboard .bd-live {
+  display: contents;
+}
+.mathboard .bd-error small {
+  opacity: 0.75;
+}
+/* WCAG AA (≥4.5:1): keep the coloured badges, darken only their text / fill. */
+.mathboard .bd-score {
+  background: #2b7a3b;
+}
+.mathboard .bd-score.closed {
+  background: #5c636a;
+  box-shadow: none;
+}
+.mathboard .status-pill.draft {
+  color: #a14e00;
+}
+.mathboard .status-pill.live {
+  color: #1e6b2f;
+}
+.mathboard .warn {
+  color: #b8420a;
+}
+.mathboard .lib-count {
+  opacity: 1;
+  color: var(--mb-muted);
+}
+.mathboard,
+html.dark .mathboard :is(.mb-dom, .mb-text-edit) {
+  --mb-muted: #4f6569;
+}
+.mathboard .nl-chk {
+  color: var(--mb-ink);
+}
+html.dark .mathboard .status-pill.live {
+  color: #69db7c;
+}
+html.dark .mathboard .status-pill.draft {
+  color: #ffc078;
+}
+html.dark .mathboard .warn {
+  color: #ff8a4c;
+}
+
+/* ================= Tabbed tool menus («Вставити», «Геометрія», «Урок») ================= */
+.mathboard .bd-menu.bd-tabbed {
+  width: 320px;
+}
+.mathboard .bd-menu.bd-shapes.bd-tabbed {
+  width: 380px;
+}
+/* Tabs stay on top while the list scrolls (the menu has 12px padding and scrolls itself). */
+.mathboard .bd .bd-tabs {
+  position: sticky;
+  top: -12px;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  margin: -12px -12px 4px;
+  padding: 12px 12px 8px;
+  background: var(--mb-tabs-bg, #fafcfc);
+}
+html.dark .mathboard .bd .bd-tabs {
+  --mb-tabs-bg: #1a2226;
+}
+.mathboard .bd .bd-tab {
+  flex: 1 1 auto;
+  min-height: 34px;
+  padding: 6px 7px;
+  white-space: nowrap;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mb-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mathboard .bd .bd-tab:hover {
+  background: var(--mb-field);
+  color: var(--mb-ink);
+}
+.mathboard .bd .bd-tab.on {
+  background: var(--mb-ink);
+  color: #fff;
+}
+html.dark .mathboard .bd .bd-tab.on {
+  color: #10181a;
+}
+.mathboard .bd-tabpanel {
+  display: flex;
+  flex-direction: column;
+}
+@media (pointer: coarse) {
+  .mathboard .bd .bd-tab {
+    min-height: 44px;
+  }
+}
+
+/* ================= Inspector: actions on top, tabs for figures ================= */
+/* The action row (lock, copy, layers, delete) is always visible at the top — at the bottom it
+   floated over the last settings on a translucent background. */
+.mathboard .bd-insp .bd-actions {
+  position: sticky;
+  top: -16px;
+  bottom: auto;
+  z-index: 3;
+  order: -1;
+  margin: -16px -16px 0;
+  padding: 12px 16px 8px;
+  border-top: 0;
+  background: var(--mb-tabs-bg, #fafcfc);
+}
+html.dark .mathboard .bd-insp .bd-actions {
+  --mb-tabs-bg: #1a2226;
+}
+.mathboard .bd .bd-insp .bd-tabs {
+  position: static;
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+/* Construction letters are typed in the same italic serif they get on the drawing ("O", not "0"). */
+.mathboard .bd-cons .bd-input,
+.mathboard .bd-insp .bd-input[aria-label="Назви вершин"] {
+  font-family: "Times New Roman", serif;
+  font-style: italic;
+  font-size: 16px;
+}
+/* the first block right under the tabs needs no divider line */
+.mathboard .bd-insp .bd-tabs + .bd-sec {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}
+/* Inspector chip rows fill the panel's width (no ragged gaps on the right when they wrap):
+   every row reads as one group, like a segmented control. Labels keep their own width. */
+.mathboard .bd-insp:not(.top) .bd-line > .bd-chip-btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  text-align: center;
+}
+.mathboard .bd-insp:not(.top) .bd-line.wrap,
+.mathboard .bd-insp:not(.top) .bd-sec.bd-line {
+  gap: 6px;
 }

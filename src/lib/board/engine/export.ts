@@ -2,7 +2,9 @@
 import { T } from "./shapes";
 import { unionBounds } from "./geom";
 import type { MathBoard } from "./board";
-import type { BoardObject, DrawEnv, FormulaObject, ObjectTypeDef, Rotatable } from "./types";
+import type { BoardObject, DrawEnv, FormulaObject, ObjectTypeDef, Rotatable, TextObject } from "./types";
+import { DISPLAY_MARGIN, KATEX_EM, hasMath, katexCssForExport, mathTextCss, mathTextHtml } from "./katexText";
+import { fontCss } from "./shapes";
 
 const MAX_SIDE = 4096;
 
@@ -69,6 +71,19 @@ async function formulaImage(o: FormulaObject): Promise<{ img: HTMLImageElement; 
   return { img, w, h };
 }
 
+/** A text with KaTeX maths as an image (SVG foreignObject with the KaTeX fonts embedded). */
+async function mathTextImage(o: TextObject): Promise<HTMLImageElement> {
+  const css = await katexCssForExport();
+  const wrap = document.createElement("div");
+  wrap.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+  wrap.style.cssText = "display:inline-block;" + mathTextCss(fontCss(o, o.fs), o.c || "#1d1b2e");
+  wrap.innerHTML = `<style>${css} .katex{font-size:${KATEX_EM}em} .katex-display{margin:${DISPLAY_MARGIN} 0}</style>${mathTextHtml(o.text)}`;
+  const xhtml = new XMLSerializer().serializeToString(wrap);
+  const w = Math.max(1, Math.ceil(o.w)), h = Math.max(1, Math.ceil(o.h));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject x="0" y="0" width="${w}" height="${h}">${xhtml}</foreignObject></svg>`;
+  return loadImage("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
+}
+
 async function drawBoxed(ctx: CanvasRenderingContext2D, o: Rotatable, drawFn: () => Promise<void>): Promise<void> {
   const c = [o.x + o.w / 2, o.y + o.h / 2];
   ctx.save();
@@ -106,7 +121,20 @@ export async function renderObjects(
   }
   const env: DrawEnv = { zoom: k, repaint: () => {} };
   for (const o of list.sort((x, y) => x.z - y.z)) {
-    if (o.type === "formula") {
+    if (o.type === "text" && hasMath(o.text)) {
+      try {
+        const img = await mathTextImage(o);
+        await drawBoxed(ctx, o, async () => ctx.drawImage(img, o.x, o.y, o.w, o.h));
+      } catch (e) {
+        console.warn("[mathboard] текст із формулою не експортовано", e);
+        ctx.save();
+        ctx.font = fontCss(o, o.fs);
+        ctx.fillStyle = o.c || "#000";
+        ctx.textBaseline = "top";
+        o.text.split("\n").forEach((line, i) => ctx.fillText(line, o.x + 2, o.y + i * o.fs * 1.3));
+        ctx.restore();
+      }
+    } else if (o.type === "formula") {
       try {
         const f = await formulaImage(o);
         await drawBoxed(ctx, o, async () => ctx.drawImage(f.img, o.x, o.y, o.w || f.w, o.h || f.h));

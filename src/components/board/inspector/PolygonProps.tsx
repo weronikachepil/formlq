@@ -29,34 +29,34 @@ const LETTERS = "ABCDEFGHIJKL";
 export function PolygonProps({ o }: { o: PolygonObject }) {
   const act = useSelection();
   const hasLabs = !!o.labs;
+  const chip = (on: boolean, name: string, patch: Partial<PolygonObject>) => (
+    <button className={"bd-chip-btn" + (on ? " on" : "")} aria-pressed={on} onClick={() => act.set<PolygonObject>(patch)}>
+      {name}
+    </button>
+  );
   return (
-    <div className="bd-sec bd-line">
-      <button
-        className={"bd-chip-btn" + (hasLabs ? " on" : "")}
-        onClick={() => act.set<PolygonObject>({ labs: hasLabs ? "" : LETTERS.slice(0, o.pts.length) })}
-      >
-        Підписи вершин
-      </button>
-      <button className={"bd-chip-btn" + (o.lens ? " on" : "")} onClick={() => act.set<PolygonObject>({ lens: !o.lens })}>
-        Довжини сторін
-      </button>
-      <button className={"bd-chip-btn" + (o.angs ? " on" : "")} onClick={() => act.set<PolygonObject>({ angs: !o.angs })}>
-        Кути
-      </button>
-      <button className={"bd-chip-btn" + (o.area ? " on" : "")} onClick={() => act.set<PolygonObject>({ area: !o.area })}>
-        Площа
-      </button>
-      {hasLabs && (
-        <input
-          className="bd-input short"
-          key={o.id}
-          defaultValue={o.labs}
-          maxLength={12}
-          onChange={(e) => act.live<PolygonObject>({ labs: e.target.value }, 600)}
-          onBlur={() => act.end()}
-        />
-      )}
-    </div>
+    <>
+      {/* vertex names: the switch and the names side by side */}
+      <div className="bd-sec bd-line">
+        {chip(hasLabs, "Вершини", { labs: hasLabs ? "" : LETTERS.slice(0, o.pts.length) })}
+        {hasLabs && (
+          <input
+            className="bd-input short"
+            key={o.id}
+            aria-label="Назви вершин"
+            defaultValue={o.labs}
+            maxLength={12}
+            onChange={(e) => act.live<PolygonObject>({ labs: e.target.value }, 600)}
+            onBlur={() => act.end()}
+          />
+        )}
+      </div>
+      <div className="bd-sec bd-line">
+        {chip(!!o.lens, "Сторони", { lens: !o.lens })}
+        {chip(!!o.angs, "Кути", { angs: !o.angs })}
+        {chip(!!o.area, "Площа", { area: !o.area })}
+      </div>
+    </>
   );
 }
 
@@ -90,8 +90,8 @@ export function PolygonValues({ o }: { o: PolygonObject }) {
   return (
     <div className="bd-sec">
       <div className="bd-line">
-        <button className={"bd-chip-btn" + (open ? " on" : "")} onClick={() => setOpen(!open)}>
-          Свої довжини та кути
+        <button className={"bd-chip-btn" + (open ? " on" : "")} aria-expanded={open} onClick={() => setOpen(!open)}>
+          Свої значення
         </button>
         {open && (
           <button className="bd-chip-btn" onClick={() => act.set<PolygonObject>({ sidet: undefined, angt: undefined })}>
@@ -109,10 +109,7 @@ export function PolygonValues({ o }: { o: PolygonObject }) {
           <div className="bd-vals">
             {Array.from({ length: n }, (_, i) => field("angt", i, `∠${v(i)}`, `${Math.round(degs[i] * 10) / 10}°`))}
           </div>
-          <p className="bd-hint">
-            Те, що ви впишете, показується замість виміряного значення. Поле порожнє — підпису немає (або автоматичне значення,
-            якщо ввімкнено «Довжини сторін» / «Кути»).
-          </p>
+          <p className="bd-hint">Вписане показується замість виміряного.</p>
         </>
       )}
     </div>
@@ -126,12 +123,16 @@ function useConsLabel() {
     act.live<PolygonObject>((x) => ({ cons: (x.cons || []).map((q, n) => (n === j ? { ...q, lab } : q)) }), 600);
 }
 
-function MarksToggle({ o }: { o: PolygonObject }) {
+export function MarksToggle({ o }: { o: PolygonObject }) {
   const act = useSelection();
   return (
-    <div className="bd-line">
-      <button className={"bd-chip-btn" + (o.marks ? " on" : "")} onClick={() => act.set<PolygonObject>({ marks: !o.marks })}>
-        Позначки: рівні сторони, прямі кути
+    <div className="bd-sec bd-line">
+      <button
+        className={"bd-chip-btn" + (o.marks ? " on" : "")}
+        aria-pressed={!!o.marks}
+        onClick={() => act.set<PolygonObject>({ marks: !o.marks })}
+      >
+        Рівні сторони й прямі кути
       </button>
     </div>
   );
@@ -155,7 +156,6 @@ export function TriangleProps({ o }: { o: PolygonObject }) {
   const shown = cons.filter((c) => c.k !== "ctr" || cons.filter((x) => x.k === c.of).length === 3);
   return (
     <div className="bd-sec">
-      <span className="bd-lbl">Побудови в трикутнику</span>
       <div className="bd-line wrap">
         {CONS_KINDS.map((c) => {
           const on = cons.some((x) => x.k === c.k);
@@ -177,12 +177,12 @@ export function TriangleProps({ o }: { o: PolygonObject }) {
             <button
               key={i}
               className={"bd-chip-btn" + (cons.some((x) => x.k === open && "i" in x && x.i === i) ? " on" : "")}
-              onClick={() => set(toggleCons(cons, open, i))}
+              onClick={() => set(toggleCons(cons, open, i, o.labs))}
             >
               {text}
             </button>
           ))}
-          <button className="bd-chip-btn" onClick={() => set(addAll(cons, open))}>
+          <button className="bd-chip-btn" onClick={() => set(addAll(cons, open, o.labs))}>
             Усі
           </button>
           <button className="bd-chip-btn" onClick={() => set(clearKind(cons, open))}>
@@ -212,8 +212,6 @@ export function TriangleProps({ o }: { o: PolygonObject }) {
           </div>
         );
       })}
-      <CirclesProps o={o} />
-      <MarksToggle o={o} />
     </div>
   );
 }
@@ -252,7 +250,6 @@ export function QuadProps({ o }: { o: PolygonObject }) {
   };
   return (
     <div className="bd-sec">
-      <span className="bd-lbl">Побудови в чотирикутнику</span>
       <div className="bd-line wrap">
         {QUAD_KINDS.map(([k, name]) => {
           const on = all.some((c) => c.k === k);
@@ -261,7 +258,7 @@ export function QuadProps({ o }: { o: PolygonObject }) {
               key={k}
               className={"bd-chip-btn" + (on ? " on" : "")}
               style={on ? { background: QUAD_COLORS[k] } : undefined}
-              onClick={() => (k === "diag" ? set(toggleQuad(all, "diag", 0)) : setOpen(open === k ? null : k))}
+              onClick={() => (k === "diag" ? set(toggleQuad(all, "diag", 0, 0, o.labs)) : setOpen(open === k ? null : k))}
             >
               {name}
             </button>
@@ -274,7 +271,7 @@ export function QuadProps({ o }: { o: PolygonObject }) {
             <button
               key={`${op.i}${op.j}`}
               className={"bd-chip-btn" + (has(open, op.i, op.j) ? " on" : "")}
-              onClick={() => set(toggleQuad(all, open, op.i, op.j))}
+              onClick={() => set(toggleQuad(all, open, op.i, op.j, o.labs))}
             >
               {op.text}
             </button>
@@ -300,8 +297,6 @@ export function QuadProps({ o }: { o: PolygonObject }) {
           </div>
         );
       })}
-      <CirclesProps o={o} />
-      <MarksToggle o={o} />
     </div>
   );
 }
@@ -309,7 +304,7 @@ export function QuadProps({ o }: { o: PolygonObject }) {
 type CircleKey = "in" | "out";
 
 /** Inscribed and circumscribed circles. */
-function CirclesProps({ o }: { o: PolygonObject }) {
+export function CirclesProps({ o }: { o: PolygonObject }) {
   const act = useSelection();
   const info = circleInfo(o.pts);
   const circs = o.circs || {};
@@ -322,6 +317,8 @@ function CirclesProps({ o }: { o: PolygonObject }) {
     });
   const row = (key: CircleKey, title: string, exists: boolean) => {
     const c = circs[key];
+    // a circle this figure cannot have is not offered at all (no dead, greyed-out buttons)
+    if (!exists) return null;
     return (
       <div className="bd-line wrap" key={key}>
         <button
@@ -349,6 +346,7 @@ function CirclesProps({ o }: { o: PolygonObject }) {
       </div>
     );
   };
+  if (!info.inc && !info.out) return null;
   return (
     <div className="bd-sec">
       <span className="bd-lbl">Кола</span>

@@ -44,6 +44,23 @@ const ICONS = {
     </>
   ),
   grid: <path d="M4 4h16v16H4zM4 12h16M12 4v16M8 4v16M16 4v16M4 8h16M4 16h16" />,
+  // «Вставити»: a plus in a square (graphs, solids, pictures, numbers, data)
+  insert: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="3" />
+      <path d="M12 8v8M8 12h8" />
+    </>
+  ),
+  // Paper mode: a sheet with a folded corner
+  paper: <path d="M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" />,
+  grid_dots: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="1.5" />
+      <path d="M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" strokeWidth="2.6" />
+    </>
+  ),
+  // Stylus only: a pen tip drawing, with a finger crossed out next to it.
+  stylus: <path d="M3 21l1.2-4.2L14.5 6.5l3 3L7.2 19.8zM12.5 8.5l3 3M17 4l3 3M20 14v6M17 17h6" />,
   magnet: <path d="M6 4v8a6 6 0 0 0 12 0V4h-4v8a2 2 0 0 1-4 0V4zM6 8h4M14 8h4" />,
   pin: <path d="M12 21v-7M8 4h8l-1 6 3 3H6l3-3z" />,
   line: <path d="M5 19L19 5" />,

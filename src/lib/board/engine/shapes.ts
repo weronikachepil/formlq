@@ -5,7 +5,7 @@ import {
 } from "./geom";
 import { drawGraph } from "./graph";
 import { SOLID_TYPE } from "./solid";
-import { drawCircles, drawPolyMarks, drawQuadExtras, drawTriangleExtras } from "./triangle";
+import { drawCircles, drawPolyMarks, drawQuadExtras, drawTriangleExtras, labelSet } from "./triangle";
 import { drawLength, drawMeasures, fmtNum } from "./measure";
 import {
   COMMENT_TYPE, hiddenType, POLL_TYPE, STAMP_TYPE, TASK_TYPE, TIMER_TYPE,
@@ -19,6 +19,7 @@ import {
   ARC_TYPE, IMAGE_TYPE, PAGE_TYPE, PROTRACTOR_TYPE, RULER_TYPE, rotatePtsObj, withRotation,
 } from "./extra";
 import { marckScriptFamily, uiFont } from "./fonts";
+import { hasMath, measureMathText } from "./katexText";
 import type {
   AngleObject, Bounds, BoxFields, EllipseObject, FormulaObject, GraphObject, LineObject, ObjectTypeDef, Point,
   PolygonObject, StrokeObject, TextFontId, TextObject, TypeRegistry,
@@ -153,6 +154,69 @@ export function drawHighlight(ctx: CanvasRenderingContext2D, pts: Point[], color
   ctx.restore();
 }
 
+/** Line width at a pressure (0…1): 0.5 — the chosen width; light touch thinner, hard press wider. */
+const pressWidth = (s: number, pr: number) => s * Math.max(0.3, Math.min(1.7, 0.35 + 1.3 * pr));
+
+/**
+ * Pen with pressure: the smoothed centre line widened per point, as one filled shape (circles at
+ * the points round the joins and ends). Shared by the finished stroke and the live draft, so a
+ * line does not change when the stylus lifts.
+ */
+export function pressurePath(pts: Point[], w: number[], s: number): Path2D {
+  // Outline and round joins are separate sub-paths with opposite windings, so they are joined
+  // with addPath into one path filled by the even-odd-proof way: each piece is its own path.
+  const body = new Path2D();
+  const joins = new Path2D();
+  const path = body;
+  const n = pts.length;
+  const wid = (i: number) => pressWidth(s, w[Math.min(i, w.length - 1)] ?? 0.5) / 2;
+  if (n === 1) { path.arc(pts[0][0], pts[0][1], wid(0), 0, Math.PI * 2); return path; }
+  // centre line: quadratic curves through the midpoints (as strokePath), sampled
+  const c: Point[] = [], r: number[] = [];
+  c.push(pts[0]); r.push(wid(0));
+  for (let i = 1; i < n - 1; i++) {
+    const a: Point = [(pts[i - 1][0] + pts[i][0]) / 2, (pts[i - 1][1] + pts[i][1]) / 2];
+    const bb: Point = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2];
+    const ra = (wid(i - 1) + wid(i)) / 2, rb = (wid(i) + wid(i + 1)) / 2;
+    for (let k = i === 1 ? 0 : 1; k <= 4; k++) {
+      const t = k / 4, u = 1 - t;
+      c.push([u * u * a[0] + 2 * u * t * pts[i][0] + t * t * bb[0], u * u * a[1] + 2 * u * t * pts[i][1] + t * t * bb[1]]);
+      r.push(u * ra + t * rb);
+    }
+  }
+  c.push(pts[n - 1]); r.push(wid(n - 1));
+  const left: Point[] = [], right: Point[] = [];
+  for (let i = 0; i < c.length; i++) {
+    const a = c[Math.max(0, i - 1)], bb = c[Math.min(c.length - 1, i + 1)];
+    let nx = -(bb[1] - a[1]), ny = bb[0] - a[0];
+    const l = Math.hypot(nx, ny) || 1;
+    nx /= l; ny /= l;
+    left.push([c[i][0] + nx * r[i], c[i][1] + ny * r[i]]);
+    right.push([c[i][0] - nx * r[i], c[i][1] - ny * r[i]]);
+  }
+  // Polygon area sign tells its winding; joins are drawn the same way round, so with the
+  // nonzero rule they add up instead of punching holes.
+  let area = 0;
+  const ring = [...left, ...right.slice().reverse()];
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i], bb = ring[(i + 1) % ring.length];
+    area += a[0] * bb[1] - bb[0] * a[1];
+  }
+  const ccw = area < 0; // canvas y points down
+  body.moveTo(left[0][0], left[0][1]);
+  for (const q of left) body.lineTo(q[0], q[1]);
+  for (let i = right.length - 1; i >= 0; i--) body.lineTo(right[i][0], right[i][1]);
+  body.closePath();
+  const circle = (i: number) => {
+    joins.moveTo(c[i][0] + r[i], c[i][1]);
+    joins.arc(c[i][0], c[i][1], r[i], 0, Math.PI * 2, ccw);
+  };
+  for (let i = 0; i < c.length; i += 2) circle(i);
+  circle(c.length - 1);
+  body.addPath(joins);
+  return body;
+}
+
 function strokePath(o: StrokeObject): Path2D {
   let p = pathCache.get(o);
   if (p) return p;
@@ -201,6 +265,15 @@ const STROKE_TYPE: ObjectTypeDef<StrokeObject> = {
   bounds: ptsBounds,
   draw(ctx, o) {
     if (o.hl) { drawHighlight(ctx, o.pts, o.c, o.s, o); return; }
+    if (o.w?.length) {
+      let p = pathCache.get(o);
+      if (!p) { p = pressurePath(o.pts, o.w, o.s); pathCache.set(o, p); }
+      ctx.save();
+      ctx.fillStyle = o.c;
+      ctx.fill(p, "nonzero");
+      ctx.restore();
+      return;
+    }
     ctx.save();
     ctx.strokeStyle = o.c;
     ctx.lineWidth = o.s;
@@ -323,9 +396,12 @@ const POLYGON_TYPE: ObjectTypeDef<PolygonObject> = {
     ctx.stroke();
     ctx.restore();
     if (o.marks) { ctx.save(); drawPolyMarks(ctx, o); ctx.restore(); }
-    if (o.pts.length === 3) drawTriangleExtras(ctx, o);
-    if (o.pts.length === 4) drawQuadExtras(ctx, o);
-    if (o.circs) drawCircles(ctx, o);
+    // One label set for constructions and circles, so points they share get a single letter.
+    const lb = labelSet(o);
+    if (o.pts.length === 3) drawTriangleExtras(ctx, o, lb);
+    if (o.pts.length === 4) drawQuadExtras(ctx, o, lb);
+    if (o.circs) drawCircles(ctx, o, lb);
+    lb.flush(ctx);
     drawLabels(ctx, o);
     if (o.lens || o.angs || o.area || o.sidet || o.angt) drawMeasures(ctx, o);
   },
@@ -433,6 +509,7 @@ const TEXT_TYPE: ObjectTypeDef<TextObject> = withRotation<TextObject>({
   bounds: box,
   draw(ctx, o, env) {
     if (env.hideId === o.id) return;
+    if (hasMath(o.text)) return; // with $…$ maths it is a DOM element (dom.ts)
     ctx.save();
     ctx.font = fontCss(o, o.fs);
     ctx.fillStyle = o.c;
@@ -547,6 +624,7 @@ export function quadPoints(kind: string, b: Bounds): Point[] {
 // ---------- text measurement ----------
 let mctx: CanvasRenderingContext2D | null = null;
 export function measureText(text: string, fs: number, style?: FontStyle | null): { w: number; h: number } {
+  if (hasMath(text) && typeof document !== "undefined") return measureMathText(text, fontCss(style, fs));
   if (!mctx) mctx = document.createElement("canvas").getContext("2d");
   if (!mctx) throw new Error("2D canvas context is unavailable");
   mctx.font = fontCss(style, fs);

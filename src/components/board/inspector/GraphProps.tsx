@@ -1,63 +1,79 @@
 "use client";
 
 import type { GraphObject } from "@/lib/board/engine/types";
+import { MenuTabs, useMenuTab } from "../controls";
 import { Icon } from "../icons";
 import { useBoard, useSelection } from "../useBoard";
 
-/** Function graph: expressions, view, legend, analysis of the first function. */
+type GraphTab = "fx" | "analysis" | "view";
+const GRAPH_TABS: [GraphTab, string][] = [
+  ["fx", "Функції"],
+  ["analysis", "Аналіз"],
+  ["view", "Вигляд"],
+];
+
+/** Function graph in tabs: expressions · analysis of the first function · view. */
 export function GraphProps({ o, inter }: { o: GraphObject; inter: boolean }) {
   const { b } = useBoard();
   const act = useSelection();
+  const [tab, pick] = useMenuTab<GraphTab>("mb-insp-graph", GRAPH_TABS, "fx");
   return (
     <>
-      <div className="bd-sec">
-        <span className="bd-lbl">Вирази (кожен з нового рядка)</span>
-        <textarea
-          className="bd-input area"
-          key={o.id}
-          defaultValue={o.exprs}
-          spellCheck={false}
-          placeholder={"y = x^2 - 2\nx^2 + y^2 = 9\ny > x + 1\n(2, 3)"}
-          onChange={(e) => act.live<GraphObject>({ exprs: e.target.value }, 800)}
-          onBlur={() => act.end()}
-        />
-        <p className="bd-hint">Параметри (a, b, k…) стануть повзунками. Можна: tg, ctg, ln, lg, √, |x|, π.</p>
-      </div>
-      <div className="bd-sec bd-line">
-        <button
-          className="bd-ibtn"
-          title="Збільшити графік"
-          onClick={() => {
-            b()?.zoomGraph(o.id, 1.3);
-            act.end();
-          }}
-        >
-          <Icon name="plus" size={16} />
-        </button>
-        <button
-          className="bd-ibtn"
-          title="Зменшити графік"
-          onClick={() => {
-            b()?.zoomGraph(o.id, 0.77);
-            act.end();
-          }}
-        >
-          <Icon name="minus" size={16} />
-        </button>
-        <button className="bd-chip-btn" onClick={() => b()?.resetGraphView(o.id)}>
-          Скинути вигляд
-        </button>
-        <button
-          className={"bd-chip-btn" + (inter ? " on" : "")}
-          onClick={() => (inter ? b()?.exitInteractive() : b()?.enterInteractive(o.id))}
-        >
-          {inter ? "Готово" : "Рухати / масштаб"}
-        </button>
-        <button className={"bd-chip-btn" + (o.legend ? " on" : "")} onClick={() => act.set<GraphObject>({ legend: !o.legend })}>
-          Легенда
-        </button>
-      </div>
-      <GraphAnalysis o={o} />
+      <MenuTabs label="Налаштування графіка" tabs={GRAPH_TABS} tab={tab} onPick={pick} />
+      {tab === "fx" && (
+        <div className="bd-sec">
+          <span className="bd-lbl">Кожен вираз з нового рядка</span>
+          <textarea
+            className="bd-input area"
+            key={o.id}
+            defaultValue={o.exprs}
+            spellCheck={false}
+            placeholder={"y = x^2 - 2\nx^2 + y^2 = 9\ny > x + 1\n(2, 3)"}
+            onChange={(e) => act.live<GraphObject>({ exprs: e.target.value }, 800)}
+            onBlur={() => act.end()}
+          />
+          <p className="bd-hint">Літери a, b, k… стануть повзунками.</p>
+        </div>
+      )}
+      {tab === "view" && (
+        <div className="bd-sec bd-line">
+          <button
+            className="bd-ibtn"
+            title="Збільшити графік"
+            aria-label="Збільшити графік"
+            onClick={() => {
+              b()?.zoomGraph(o.id, 1.3);
+              act.end();
+            }}
+          >
+            <Icon name="plus" size={16} />
+          </button>
+          <button
+            className="bd-ibtn"
+            title="Зменшити графік"
+            aria-label="Зменшити графік"
+            onClick={() => {
+              b()?.zoomGraph(o.id, 0.77);
+              act.end();
+            }}
+          >
+            <Icon name="minus" size={16} />
+          </button>
+          <button className="bd-chip-btn" onClick={() => b()?.resetGraphView(o.id)}>
+            Скинути вигляд
+          </button>
+          <button
+            className={"bd-chip-btn" + (inter ? " on" : "")}
+            onClick={() => (inter ? b()?.exitInteractive() : b()?.enterInteractive(o.id))}
+          >
+            {inter ? "Готово" : "Рухати"}
+          </button>
+          <button className={"bd-chip-btn" + (o.legend ? " on" : "")} onClick={() => act.set<GraphObject>({ legend: !o.legend })}>
+            Легенда
+          </button>
+        </div>
+      )}
+      {tab === "analysis" && <GraphAnalysis o={o} />}
     </>
   );
 }
@@ -86,7 +102,7 @@ function GraphAnalysis({ o }: { o: GraphObject }) {
   );
   return (
     <div className="bd-sec">
-      <span className="bd-lbl">Аналіз першої функції</span>
+      <span className="bd-lbl">Для першої функції</span>
       <div className="bd-line wrap">
         {toggle("zeros", "Нулі")}
         {toggle("ext", "Екстремуми")}

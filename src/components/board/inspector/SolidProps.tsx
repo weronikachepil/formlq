@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SOLID_KINDS, SOLID_VIEWS, solidLabelFields } from "@/lib/board/engine/solid";
 import type { SolidKind, SolidMarks, SolidObject, SolidSection } from "@/lib/board/engine/types";
+import { MenuTabs, useMenuTab } from "../controls";
 import { Icon } from "../icons";
 import { useBoard, useSelection } from "../useBoard";
 
@@ -73,8 +74,22 @@ function Slide({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-/** 3D solid: kind, base, height, rotation, section, marks, letters, display options. */
-export function SolidProps({ o, secPick }: { o: SolidObject; secPick: boolean }) {
+type SolidTab = "shape" | "view" | "cons" | "labels";
+const SOLID_TABS: [SolidTab, string][] = [
+  ["shape", "Фігура"],
+  ["view", "Вигляд"],
+  ["cons", "Побудови"],
+  ["labels", "Підписи"],
+];
+
+/**
+ * 3D solid in tabs, as a flat figure: shape (kind, base, height, colour) · view (rotation) ·
+ * constructions (segments, section) · labels (letters).
+ */
+export function SolidProps({ o, secPick, style }: { o: SolidObject; secPick: boolean; style?: React.ReactNode }) {
+  // picking section points: stay on the «Переріз» tab
+  const [saved, pick] = useMenuTab<SolidTab>("mb-insp-solid", SOLID_TABS, "shape");
+  const tab = secPick ? "cons" : saved;
   const { b } = useBoard();
   const act = useSelection();
   const poly = o.kind === "prism" || o.kind === "pyramid";
@@ -107,173 +122,104 @@ export function SolidProps({ o, secPick }: { o: SolidObject; secPick: boolean })
   const marks = MARKS[o.kind] || [];
   const setN = (n: number) => act.set<SolidObject>({ names: undefined, n, sec: o.sec?.mode === "pts" ? null : o.sec });
 
+  const chip = (on: boolean, name: string, patch: Partial<SolidObject>) => (
+    <button className={"bd-chip-btn" + (on ? " on" : "")} aria-pressed={on} onClick={() => act.set<SolidObject>(patch)}>
+      {name}
+    </button>
+  );
+
   return (
     <>
-      <div className="bd-sec bd-line wrap">
-        {SOLID_KINDS.map((s) => (
-          <button
-            key={s.kind}
-            className={"bd-chip-btn" + (o.kind === s.kind ? " on" : "")}
-            onClick={() => act.set<SolidObject>(switchKind(s.kind))}
-          >
-            {s.name}
-          </button>
-        ))}
-      </div>
-      {poly && (
-        <div className="bd-sec bd-line">
-          <span className="bd-lbl">Кутів у основі</span>
-          <button className="bd-ibtn" onClick={() => setN(Math.max(3, (o.n || 4) - 1))}>
-            <Icon name="minus" size={16} />
-          </button>
-          <span className="bd-num">{o.n || 4}</span>
-          <button className="bd-ibtn" onClick={() => setN(Math.min(12, (o.n || 4) + 1))}>
-            <Icon name="plus" size={16} />
-          </button>
-        </div>
-      )}
-      {(poly || round) && o.kind !== "sphere" && (
-        <div className="bd-sec bd-line">
-          <span className="bd-lbl">Висота</span>
-          <input
-            type="range"
-            min="0.5"
-            max="3"
-            step="0.05"
-            value={o.hr || 1.7}
-            onChange={(e) => live({ hr: Number(e.target.value) })}
-          />
-        </div>
-      )}
-
-      <div className="bd-sec">
-        <span className="bd-lbl">Обертання (повне, 360°)</span>
-        <div className="bd-line wrap">
-          {VIEWS.map(([k, name]) => (
-            <button key={k} className="bd-chip-btn" onClick={() => act.set<SolidObject>({ ...SOLID_VIEWS[k], school: false })}>
-              {name}
-            </button>
-          ))}
-        </div>
-        <Slide label="Поворот">
-          <input
-            type="range"
-            min={-Math.PI}
-            max={Math.PI}
-            step="0.01"
-            value={wrap(o.yaw)}
-            onChange={(e) => live({ yaw: Number(e.target.value), school: false })}
-          />
-        </Slide>
-        <Slide label="Нахил">
-          <input
-            type="range"
-            min={-Math.PI}
-            max={Math.PI}
-            step="0.01"
-            value={wrap(o.pitch)}
-            onChange={(e) => live({ pitch: Number(e.target.value), school: false })}
-          />
-        </Slide>
-      </div>
-
-      <div className="bd-sec">
-        <span className="bd-lbl">Переріз</span>
-        <div className="bd-line wrap">
-          {modes.map(([k, name]) => (
-            <button
-              key={String(k)}
-              className={"bd-chip-btn" + ((sec?.mode || null) === k ? " on" : "")}
-              onClick={() => setSec(k)}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-        {sec?.mode === "pts" && (
-          <>
-            <div className="bd-line">
+      <MenuTabs label="Налаштування фігури" tabs={SOLID_TABS} tab={tab} onPick={pick} />
+      {tab === "shape" && (
+        <>
+          <div className="bd-sec bd-line wrap">
+            {SOLID_KINDS.map((s) => (
               <button
-                className={"bd-chip-btn" + (secPick ? " on" : "")}
-                onClick={() => (secPick ? b()?.stopSecPick() : b()?.startSecPick(o.id))}
+                key={s.kind}
+                className={"bd-chip-btn" + (o.kind === s.kind ? " on" : "")}
+                onClick={() => act.set<SolidObject>(switchKind(s.kind))}
               >
-                {secPick ? "Готово" : "Позначити точки"}
+                {s.name}
               </button>
-              <span className="bd-lbl">{(sec.pts || []).length}/3 точок</span>
+            ))}
+          </div>
+          {poly && (
+            <div className="bd-sec bd-line">
+              <span className="bd-lbl">Кутів у основі</span>
+              <button className="bd-ibtn" aria-label="Менше кутів" title="Менше кутів" disabled={(o.n || 4) <= 3} onClick={() => setN(Math.max(3, (o.n || 4) - 1))}>
+                <Icon name="minus" size={16} />
+              </button>
+              <span className="bd-num">{o.n || 4}</span>
+              <button className="bd-ibtn" aria-label="Більше кутів" title="Більше кутів" disabled={(o.n || 4) >= 12} onClick={() => setN(Math.min(12, (o.n || 4) + 1))}>
+                <Icon name="plus" size={16} />
+              </button>
             </div>
-            <p className="bd-hint">
-              Клікайте по ребрах фігури: точки M, N, K. Їх можна перетягувати вздовж ребер; прилипають до вершин і середин.
-            </p>
-          </>
-        )}
-        {sec?.mode === "horiz" && (
-          <Slide label="Висота">
-            <input
-              type="range"
-              min="0.03"
-              max="0.97"
-              step="0.01"
-              value={sec.t ?? 0.5}
-              onChange={(e) => liveSec({ t: Number(e.target.value) })}
-            />
-          </Slide>
-        )}
-        {sec?.mode === "axial" && (
-          <Slide label="Кут">
-            <input
-              type="range"
-              min="0"
-              max={Math.PI}
-              step="0.01"
-              value={sec.a ?? 0}
-              onChange={(e) => liveSec({ a: Number(e.target.value) })}
-            />
-          </Slide>
-        )}
-        {sec?.mode === "tilt" && (
-          <>
-            <Slide label="Напрям">
+          )}
+          {(poly || round) && o.kind !== "sphere" && (
+            <div className="bd-sec bd-line">
+              <span className="bd-lbl">Висота</span>
               <input
                 type="range"
-                min="0"
-                max={TAU}
+                min="0.5"
+                max="3"
+                step="0.05"
+                value={o.hr || 1.7}
+                onChange={(e) => live({ hr: Number(e.target.value) })}
+              />
+            </div>
+          )}
+          {style}
+          <div className="bd-sec bd-line wrap">{chip(!!o.f, "Заливка", { f: o.f ? null : "#6d3df0" })}</div>
+        </>
+      )}
+      {tab === "view" && (
+        <>
+          <div className="bd-sec">
+            <div className="bd-line wrap">
+              {VIEWS.map(([k, name]) => (
+                <button key={k} className="bd-chip-btn" onClick={() => act.set<SolidObject>({ ...SOLID_VIEWS[k], school: false })}>
+                  {name}
+                </button>
+              ))}
+            </div>
+            <Slide label="Поворот">
+              <input
+                type="range"
+                min={-Math.PI}
+                max={Math.PI}
                 step="0.01"
-                value={sec.a ?? 0}
-                onChange={(e) => liveSec({ a: Number(e.target.value) })}
+                value={wrap(o.yaw)}
+                onChange={(e) => live({ yaw: Number(e.target.value), school: false })}
               />
             </Slide>
             <Slide label="Нахил">
               <input
                 type="range"
-                min="0.05"
-                max="1.5"
+                min={-Math.PI}
+                max={Math.PI}
                 step="0.01"
-                value={sec.tilt ?? 0.6}
-                onChange={(e) => liveSec({ tilt: Number(e.target.value) })}
+                value={wrap(o.pitch)}
+                onChange={(e) => live({ pitch: Number(e.target.value), school: false })}
               />
             </Slide>
-            <Slide label="Зсув">
-              <input
-                type="range"
-                min="-1"
-                max="1"
-                step="0.01"
-                value={sec.off ?? 0}
-                onChange={(e) => liveSec({ off: Number(e.target.value) })}
-              />
-            </Slide>
-          </>
-        )}
-      </div>
-
-      {marks.length > 0 && (
+          </div>
+          <div className="bd-sec bd-line wrap">
+            {chip(!!o.school, "Шкільна проєкція", { school: !o.school })}
+            {chip(!!o.hidden, "Невидимі ребра", { hidden: !o.hidden })}
+          </div>
+          <p className="bd-hint">Подвійний дотик по фігурі — крутити в будь-який бік.</p>
+        </>
+      )}
+      {tab === "cons" && marks.length > 0 && (
         <div className="bd-sec">
-          <span className="bd-lbl">Показати</span>
+          <span className="bd-lbl">Відрізки</span>
           <div className="bd-line wrap">
             {marks.map(([k, name]) => (
               <button
                 key={k}
                 className={"bd-chip-btn" + (o.marks?.[k] ? " on" : "")}
+                aria-pressed={!!o.marks?.[k]}
                 onClick={() => act.set<SolidObject>((x) => ({ marks: { ...(x.marks || {}), [k]: !x.marks?.[k] } }))}
               >
                 {name}
@@ -282,27 +228,95 @@ export function SolidProps({ o, secPick }: { o: SolidObject; secPick: boolean })
           </div>
         </div>
       )}
-
-      <SolidNames o={o} />
-
-      <div className="bd-sec bd-line wrap">
-        <button className={"bd-chip-btn" + (o.school ? " on" : "")} onClick={() => act.set<SolidObject>({ school: !o.school })}>
-          Шкільна проєкція
-        </button>
-        <button className={"bd-chip-btn" + (o.hidden ? " on" : "")} onClick={() => act.set<SolidObject>({ hidden: !o.hidden })}>
-          Невидимі ребра
-        </button>
-        <button className={"bd-chip-btn" + (o.labs ? " on" : "")} onClick={() => act.set<SolidObject>({ labs: !o.labs })}>
-          Підписи
-        </button>
-        <button
-          className={"bd-chip-btn" + (o.f ? " on" : "")}
-          onClick={() => act.set<SolidObject>({ f: o.f ? null : "#6d3df0" })}
-        >
-          Заливка
-        </button>
-      </div>
-      <p className="bd-hint pad">Фіолетова кнопка поруч із фігурою або подвійний клік — крутити мишкою у будь-який бік.</p>
+      {tab === "cons" && (
+        <div className="bd-sec">
+          <span className="bd-lbl">Переріз</span>
+          <div className="bd-line wrap">
+            {modes.map(([k, name]) => (
+              <button
+                key={String(k)}
+                className={"bd-chip-btn" + ((sec?.mode || null) === k ? " on" : "")}
+                onClick={() => setSec(k)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          {sec?.mode === "pts" && (
+            <>
+              <div className="bd-line">
+                <button
+                  className={"bd-chip-btn" + (secPick ? " on" : "")}
+                  onClick={() => (secPick ? b()?.stopSecPick() : b()?.startSecPick(o.id))}
+                >
+                  {secPick ? "Готово" : "Позначити точки"}
+                </button>
+                <span className="bd-lbl">{(sec.pts || []).length}/3 точок</span>
+              </div>
+              <p className="bd-hint">Торкніться трьох ребер — точки M, N, K. Їх можна тягнути вздовж ребер.</p>
+            </>
+          )}
+          {sec?.mode === "horiz" && (
+            <Slide label="Висота">
+              <input
+                type="range"
+                min="0.03"
+                max="0.97"
+                step="0.01"
+                value={sec.t ?? 0.5}
+                onChange={(e) => liveSec({ t: Number(e.target.value) })}
+              />
+            </Slide>
+          )}
+          {sec?.mode === "axial" && (
+            <Slide label="Кут">
+              <input
+                type="range"
+                min="0"
+                max={Math.PI}
+                step="0.01"
+                value={sec.a ?? 0}
+                onChange={(e) => liveSec({ a: Number(e.target.value) })}
+              />
+            </Slide>
+          )}
+          {sec?.mode === "tilt" && (
+            <>
+              <Slide label="Напрям">
+                <input
+                  type="range"
+                  min="0"
+                  max={TAU}
+                  step="0.01"
+                  value={sec.a ?? 0}
+                  onChange={(e) => liveSec({ a: Number(e.target.value) })}
+                />
+              </Slide>
+              <Slide label="Нахил">
+                <input
+                  type="range"
+                  min="0.05"
+                  max="1.5"
+                  step="0.01"
+                  value={sec.tilt ?? 0.6}
+                  onChange={(e) => liveSec({ tilt: Number(e.target.value) })}
+                />
+              </Slide>
+              <Slide label="Зсув">
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.01"
+                  value={sec.off ?? 0}
+                  onChange={(e) => liveSec({ off: Number(e.target.value) })}
+                />
+              </Slide>
+            </>
+          )}
+        </div>
+      )}
+      {tab === "labels" && <SolidNames o={o} />}
     </>
   );
 }
@@ -325,8 +339,15 @@ function SolidNames({ o }: { o: SolidObject }) {
   const setT = (key: string, val: string) => act.live<SolidObject>((x) => ({ tags: { ...(x.tags || {}), [key]: val } }), 600);
   return (
     <div className="bd-sec">
-      <div className="bd-line">
-        <button className={"bd-chip-btn" + (open ? " on" : "")} onClick={() => setOpen(!open)}>
+      <div className="bd-line wrap">
+        <button
+          className={"bd-chip-btn" + (o.labs ? " on" : "")}
+          aria-pressed={!!o.labs}
+          onClick={() => act.set<SolidObject>({ labs: !o.labs })}
+        >
+          Букви вершин
+        </button>
+        <button className={"bd-chip-btn" + (open ? " on" : "")} aria-expanded={open} onClick={() => setOpen(!open)}>
           Змінити букви
         </button>
         {open && (

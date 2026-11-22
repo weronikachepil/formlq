@@ -58,7 +58,7 @@ export function AngleProps({ o }: { o: AngleObject }) {
       <span className="bd-lbl">Підпис кута</span>
       <div className="bd-line wrap">
         <button className={"bd-chip-btn" + (show ? " on" : "")} onClick={() => act.set<AngleObject>({ angs: !show })}>
-          {show ? "Показано" : "Приховано"}
+          {show ? "Показано" : "Сховано"}
         </button>
         <button
           className={"bd-chip-btn" + (show && !custom ? " on" : "")}

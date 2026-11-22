@@ -9,7 +9,9 @@ export function StatusBanners({ notice }: { notice: string }) {
   const cur = st.pages.find((p) => p.id === st.page);
   return (
     <>
-      {notice && <div className="bd-notice">{notice}</div>}
+      <div className="bd-live" role="status" aria-live="polite">
+        {notice && <div className="bd-notice">{notice}</div>}
+      </div>
       {st.viewing && (
         <div className="bd-viewing">
           <span>
@@ -36,19 +38,19 @@ export function StatusBanners({ notice }: { notice: string }) {
         </div>
       )}
       {!st.isOwner && !st.score && cur?.closed && (
-        <div className="bd-score" style={{ background: "#868e96" }}>
+        <div className="bd-score closed" role="status">
           Тест завершено вчителем
         </div>
       )}
       {st.score && !st.isOwner && (
-        <div className="bd-score">
+        <div className="bd-score" role="status">
           Ваш результат: <b>{uaNum(st.score.earned)}</b> з {uaNum(st.score.max)} (
           {Math.round((st.score.earned / (st.score.max || 1)) * 100)}%)
         </div>
       )}
       {st.mathError && (
-        <div className="bd-error">
-          Редактор формул не завантажився: {st.mathError}. Відкрийте консоль (Cmd+Option+J) і надішліть помилку.
+        <div className="bd-error" role="alert">
+          Редактор формул не завантажився. Оновіть сторінку. <small>({st.mathError})</small>
         </div>
       )}
     </>

@@ -18,13 +18,13 @@ export const CONS_KINDS: { k: TriangleConsKind; name: string; color: string; by:
 ];
 const COLOR = Object.fromEntries(CONS_KINDS.map((c) => [c.k, c.color])) as Record<TriangleConsKind, string>;
 
-// Default letters: altitudes AD, BE, CF; medians AM, BN, CK; bisectors AL…
-const LETTERS: Record<TriangleConsKind, string[]> = {
-  alt: ["D", "E", "F"],
-  med: ["M", "N", "K"],
-  bis: ["L", "L₁", "L₂"],
-  mid: ["MN", "KL", "RS"],
-  perp: ["P", "Q", "R"],
+// Default letters: altitudes AD, BE, CF; medians AM, BN, CK; bisectors AL… The first free letter
+// of the series is taken — never one already used by a vertex or another construction.
+const LETTERS: Record<Exclude<TriangleConsKind, "mid">, string[]> = {
+  alt: ["D", "E", "F", "D₁", "E₁", "F₁"],
+  med: ["M", "N", "K", "M₁", "N₁", "K₁"],
+  bis: ["L", "L₁", "L₂", "L₃"],
+  perp: ["P", "Q", "R", "P₁", "Q₁", "R₁"],
 };
 const CENTER: Record<CentreKind, string> = { alt: "H", med: "G", bis: "I", perp: "O" };
 export const CENTER_NAMES: Record<CentreKind, string> = { alt: "Ортоцентр", med: "Центр мас", bis: "Центр вписаного кола", perp: "Центр описаного кола" };
@@ -44,18 +44,74 @@ export function consTitle(c: PolygonConstruction, labs?: string | null): string 
   return `Сер. перпендикуляр до ${v(c.i)}${v((c.i + 1) % 3)}`;
 }
 
-export function toggleCons(cons: PolygonConstruction[] = [], k: TriangleConsKind, i: number): PolygonConstruction[] {
+/** Letters of a label, each with its subscript / prime: "M₁N₁" → ["M₁", "N₁"]. */
+export const splitLetters = (lab: string | undefined): string[] => lab?.match(/\p{L}[\p{N}₀-₉′'"]*/gu) || [];
+
+/** Letters already taken on this figure: vertex names and every construction label. */
+function usedLetters(cons: PolygonConstruction[], labs?: string | null): Set<string> {
+  const used = new Set<string>([...(labs || "")].filter((ch) => ch.trim()));
+  for (const c of cons) for (const l of splitLetters(c.lab)) used.add(l);
+  return used;
+}
+
+const pickLetter = (pool: string[], used: Set<string>): string => {
+  const l = pool.find((x) => !used.has(x)) ?? pool[pool.length - 1];
+  used.add(l);
+  return l;
+};
+
+// Side midpoints are shared: median i ends at the midpoint of side i+1, the perpendicular
+// bisector i stands on side i, midline i joins sides i and i+2 (side j = P[j]P[j+1]).
+// One point — one letter, whichever construction named it first.
+const midSides = (i: number): [number, number] => [i, (i + 2) % 3];
+const MID_POOL = ["M", "N", "K", "L", "P", "R", "S", "T"];
+
+function sideLetters(cons: PolygonConstruction[]): (string | undefined)[] {
+  const out: (string | undefined)[] = [];
+  for (const c of cons) {
+    const ls = splitLetters(c.lab);
+    if (c.k === "mid") {
+      const [s1, s2] = midSides(c.i);
+      out[s1] ??= ls[0];
+      out[s2] ??= ls[1];
+    } else if (c.k === "med") out[(c.i + 1) % 3] ??= ls[0];
+    else if (c.k === "perp") out[c.i] ??= ls[0];
+  }
+  return out;
+}
+
+/** Default label of a new triangle construction. */
+function newLab(cons: PolygonConstruction[], k: TriangleConsKind, i: number, labs?: string | null): string {
+  const used = usedLetters(cons, labs);
+  const sides = sideLetters(cons);
+  const atSide = (s: number, pool: string[]) => sides[s] ?? (sides[s] = pickLetter(pool, used));
+  if (k === "mid") {
+    const [s1, s2] = midSides(i);
+    return atSide(s1, MID_POOL) + atSide(s2, MID_POOL);
+  }
+  if (k === "med") return atSide((i + 1) % 3, LETTERS.med);
+  if (k === "perp") return atSide(i, LETTERS.perp);
+  return pickLetter(LETTERS[k], used);
+}
+
+export function toggleCons(
+  cons: PolygonConstruction[] = [],
+  k: TriangleConsKind,
+  i: number,
+  labs?: string | null,
+): PolygonConstruction[] {
   const has = cons.findIndex((c) => isTriCons(c) && c.k === k && c.i === i);
   if (has >= 0) return cons.filter((_, j) => j !== has);
-  const n = cons.filter((c) => c.k === k).length;
-  return [...cons, { k, i, lab: LETTERS[k][Math.min(n, 2)] }];
+  return [...cons, { k, i, lab: newLab(cons, k, i, labs) }];
 }
 
 /** Adds all three constructions of one kind plus their intersection point. */
-export function addAll(cons: PolygonConstruction[] = [], k: TriangleConsKind): PolygonConstruction[] {
+export function addAll(cons: PolygonConstruction[] = [], k: TriangleConsKind, labs?: string | null): PolygonConstruction[] {
   const out = cons.filter((c) => !(c.k === k || (c.k === "ctr" && c.of === k)));
   const old = cons.filter((c): c is TriangleConstruction => isTriCons(c) && c.k === k);
-  for (let i = 0; i < 3; i++) out.push(old.find((c) => c.i === i) || { k, i, lab: LETTERS[k][i] });
+  for (let i = 0; i < 3; i++) {
+    out.push(old.find((c) => c.i === i) || { k, i, lab: newLab(out, k, i, labs) });
+  }
   if (k !== "mid") out.push(cons.find((c) => c.k === "ctr" && c.of === k) || { k: "ctr", of: k, lab: CENTER[k] });
   return out;
 }
@@ -107,7 +163,10 @@ function centerPoint(of: CentreKind, P: Point[]): Point | null {
 
 // ---------- drawing primitives ----------
 function text(ctx: CanvasRenderingContext2D, str: string, p: Point, from: Point, color = "#1d1b2e", dist = 15) {
-  const dir = unit(sub(p, from));
+  // A point at the figure's centre (centroid, parallelogram's O) has no "outward": go up-right,
+  // never onto the dot itself.
+  const away = sub(p, from);
+  const dir: Point = len(away) < 1 ? [Math.SQRT1_2, -Math.SQRT1_2] : unit(away);
   ctx.save();
   ctx.font = 'italic 600 19px "Times New Roman", serif';
   ctx.textAlign = "center";
@@ -115,6 +174,32 @@ function text(ctx: CanvasRenderingContext2D, str: string, p: Point, from: Point,
   ctx.fillStyle = color;
   ctx.fillText(str, p[0] + dir[0] * dist, p[1] + dir[1] * dist);
   ctx.restore();
+}
+
+/**
+ * Construction labels of one figure, drawn together after all its lines: a point several
+ * constructions share (isosceles: altitude foot = median foot; right triangle: altitude feet at
+ * the vertex; equal centres) gets one letter, and none over a named vertex.
+ */
+export interface LabelSet {
+  add(str: string | undefined, p: Point, from: Point, color: string, dist?: number): void;
+  flush(ctx: CanvasRenderingContext2D): void;
+}
+
+export function labelSet(o: PolygonObject): LabelSet {
+  const items: { str: string; p: Point; from: Point; color: string; dist: number }[] = [];
+  const named = o.labs ? o.pts.filter((_, i) => o.labs![i]?.trim()) : [];
+  const taken = (p: Point) => named.some((v) => len(sub(v, p)) < 2) || items.some((q) => len(sub(q.p, p)) < 2);
+  return {
+    add(str, p, from, color, dist = 15) {
+      if (!str || !Number.isFinite(p[0]) || !Number.isFinite(p[1]) || taken(p)) return;
+      items.push({ str, p, from, color, dist });
+    },
+    flush(ctx) {
+      for (const q of items) text(ctx, q.str, q.p, q.from, q.color, q.dist);
+      items.length = 0;
+    },
+  };
 }
 
 function dotAt(ctx: CanvasRenderingContext2D, p: Point, color: string) {
@@ -186,10 +271,11 @@ function rayExit(M: Point, dir: Point, P: Point[], skip: number): number {
 }
 
 // ---------- constructions ----------
-export function drawTriangleExtras(ctx: CanvasRenderingContext2D, o: PolygonObject): void {
+export function drawTriangleExtras(ctx: CanvasRenderingContext2D, o: PolygonObject, lb?: LabelSet): void {
   const P = o.pts;
   const cons = o.cons;
   if (P.length !== 3 || !cons?.length) return;
+  const labels = lb ?? labelSet(o);
   const cen: Point = [(P[0][0] + P[1][0] + P[2][0]) / 3, (P[0][1] + P[1][1] + P[2][1]) / 3];
   const lw = Math.max(1.6, o.s * 0.75);
   const sq = (a: Point, b: Point) => Math.min(13, 0.22 * Math.min(len(a), len(b)));
@@ -214,7 +300,7 @@ export function drawTriangleExtras(ctx: CanvasRenderingContext2D, o: PolygonObje
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 1.6;
       ctx.stroke();
-      if (c.lab) text(ctx, c.lab, Q, cen, col, 14);
+      labels.add(c.lab, Q, cen, col, 14);
       continue;
     }
     if (!isTriCons(c)) continue;
@@ -234,8 +320,18 @@ export function drawTriangleExtras(ctx: CanvasRenderingContext2D, o: PolygonObje
       ctx.lineWidth = lw * 0.8;
       rightMark(ctx, H, len(sub(mid(B, C), H)) < 1e-6 ? unit(sub(C, B)) : u, v, sq(sub(V, H), sub(C, B)));
       ctx.lineWidth = lw;
+      // Obtuse triangle: the orthocentre is outside — extend the altitude (dashed) to reach it.
+      const Hc = count("alt") === 3 && cons.some((q) => q.k === "ctr" && q.of === "alt") ? centerPoint("alt", P) : null;
+      if (Hc) {
+        const d = sub(H, V);
+        const tq = dot(sub(Hc, V), d) / (dot(d, d) || 1);
+        ctx.lineWidth = lw * 0.8;
+        if (tq > 1.001) segment(ctx, H, Hc, true);
+        else if (tq < -0.001) segment(ctx, V, Hc, true);
+        ctx.lineWidth = lw;
+      }
       dotAt(ctx, H, col);
-      if (c.lab) text(ctx, c.lab, H, cen, col);
+      labels.add(c.lab, H, cen, col);
     } else if (c.k === "med") {
       const M = mid(B, C);
       segment(ctx, V, M, false);
@@ -244,7 +340,7 @@ export function drawTriangleExtras(ctx: CanvasRenderingContext2D, o: PolygonObje
       ticks(ctx, mid(M, C), sub(C, B), 1);
       ctx.lineWidth = lw;
       dotAt(ctx, M, col);
-      if (c.lab) text(ctx, c.lab, M, cen, col);
+      labels.add(c.lab, M, cen, col);
     } else if (c.k === "bis") {
       const b = len(sub(B, V)), cc = len(sub(C, V));
       const L = add(B, mul(sub(C, B), b / (b + cc || 1)));
@@ -258,16 +354,15 @@ export function drawTriangleExtras(ctx: CanvasRenderingContext2D, o: PolygonObje
       angleArc(ctx, V, aL, a2, r, 2);
       ctx.lineWidth = lw;
       dotAt(ctx, L, col);
-      if (c.lab) text(ctx, c.lab, L, cen, col);
+      labels.add(c.lab, L, cen, col);
     } else if (c.k === "mid") {
       const M1 = mid(V, B), M2 = mid(V, C);
       segment(ctx, M1, M2, false);
       dotAt(ctx, M1, col);
       dotAt(ctx, M2, col);
-      if (c.lab) {
-        text(ctx, c.lab[0] || "", M1, cen, col);
-        text(ctx, c.lab[1] || "", M2, cen, col);
-      }
+      const [l1, l2] = splitLetters(c.lab);
+      labels.add(l1, M1, cen, col);
+      labels.add(l2, M2, cen, col);
     } else {
       // side i: P[i] — P[i+1]; its perpendicular bisector
       const S0 = P[i], S1 = P[(i + 1) % 3], T3 = P[(i + 2) % 3];
@@ -277,16 +372,29 @@ export function drawTriangleExtras(ctx: CanvasRenderingContext2D, o: PolygonObje
       const tHit = rayExit(M, dir, P, i);
       const ext = 16;
       segment(ctx, add(M, mul(dir, -ext)), add(M, mul(dir, tHit + ext)), false);
+      // Obtuse triangle: the circumcentre is outside — continue the bisector (dashed) to it.
+      const O = count("perp") === 3 && cons.some((q) => q.k === "ctr" && q.of === "perp") ? circumcenter(P) : null;
+      if (O) {
+        const tO = dot(sub(O, M), dir);
+        ctx.lineWidth = lw * 0.8;
+        if (tO > tHit + ext) segment(ctx, add(M, mul(dir, tHit + ext)), O, true);
+        else if (tO < -ext) segment(ctx, add(M, mul(dir, -ext)), O, true);
+        ctx.lineWidth = lw;
+      }
       ctx.lineWidth = lw * 0.8;
       ticks(ctx, mid(S0, M), sub(S1, S0), 2);
       ticks(ctx, mid(M, S1), sub(S1, S0), 2);
       rightMark(ctx, M, unit(sub(S1, S0)), dir, Math.min(12, len(sub(S1, S0)) * 0.1));
       ctx.lineWidth = lw;
       dotAt(ctx, M, col);
-      if (c.lab) text(ctx, c.lab, M, cen, col, 17);
+      // The bisector's stub sticks out of the side right where an outward label would go:
+      // put the letter diagonally, beside the stub.
+      const side = unit(add(mul(dir, -1), mul(unit(sub(S1, S0)), 0.9)));
+      labels.add(c.lab, M, sub(M, mul(side, 10)), col, 17);
     }
   }
   ctx.restore();
+  if (!lb) labels.flush(ctx);
 }
 
 // ---------- marks: right angles, equal sides ----------
@@ -320,13 +428,24 @@ export function drawPolyMarks(ctx: CanvasRenderingContext2D, o: PolygonObject): 
 
 // ====================== quadrilaterals ======================
 export const QUAD_COLORS: Record<QuadConsKind, string> = { diag: "#e8590c", qalt: "#2f9e44", qmid: "#0c8599", qbis: "#c2255c" };
-const QLET: Record<QuadConsKind, string[]> = { diag: ["O"], qalt: ["H", "H₁", "H₂", "H₃"], qmid: ["MN", "KL"], qbis: ["L", "L₁", "L₂", "L₃"] };
+const QLET: Record<Exclude<QuadConsKind, "qmid">, string[]> = {
+  diag: ["O", "O₁"],
+  qalt: ["H", "H₁", "H₂", "H₃", "H₄"],
+  qbis: ["L", "L₁", "L₂", "L₃", "L₄"],
+};
 
-export function toggleQuad(cons: PolygonConstruction[] = [], k: QuadConsKind, i: number, j = 0): PolygonConstruction[] {
+export function toggleQuad(
+  cons: PolygonConstruction[] = [],
+  k: QuadConsKind,
+  i: number,
+  j = 0,
+  labs?: string | null,
+): PolygonConstruction[] {
   const at = cons.findIndex((c) => isQuadCons(c) && c.k === k && c.i === i && (c.j || 0) === j);
   if (at >= 0) return cons.filter((_, n) => n !== at);
-  const n = cons.filter((c) => c.k === k).length;
-  return [...cons, { k, i, j, lab: QLET[k][Math.min(n, QLET[k].length - 1)] }];
+  const used = usedLetters(cons, labs);
+  const lab = k === "qmid" ? pickLetter(MID_POOL, used) + pickLetter(MID_POOL, used) : pickLetter(QLET[k], used);
+  return [...cons, { k, i, j, lab }];
 }
 
 export function quadTitle(c: QuadConstruction, labs?: string | null): string {
@@ -363,9 +482,10 @@ function polyRayExit(M: Point, dir: Point, P: Point[], skip: number[]): number {
   return Number.isFinite(best) ? best : 0;
 }
 
-export function drawQuadExtras(ctx: CanvasRenderingContext2D, o: PolygonObject): void {
+export function drawQuadExtras(ctx: CanvasRenderingContext2D, o: PolygonObject, lb?: LabelSet): void {
   const P = o.pts;
   if (P.length !== 4 || !o.cons?.length) return;
+  const labels = lb ?? labelSet(o);
   const cen: Point = [(P[0][0] + P[1][0] + P[2][0] + P[3][0]) / 4, (P[0][1] + P[1][1] + P[2][1] + P[3][1]) / 4];
   const lw = Math.max(1.6, o.s * 0.75);
   ctx.save();
@@ -394,7 +514,7 @@ export function drawQuadExtras(ctx: CanvasRenderingContext2D, o: PolygonObject):
       if (Math.abs(dot(d1, d2)) < 0.02 * len(d1) * len(d2)) rightMark(ctx, O, unit(d1), unit(d2), 11);
       ctx.lineWidth = lw;
       dotAt(ctx, O, col);
-      if (c.lab) text(ctx, c.lab, O, cen, col, 14);
+      labels.add(c.lab, O, cen, col, 14);
     } else if (c.k === "qalt") {
       const V = P[i];
       const t = c.j ? (i + 1) % 4 : (i + 2) % 4;
@@ -409,16 +529,15 @@ export function drawQuadExtras(ctx: CanvasRenderingContext2D, o: PolygonObject):
       rightMark(ctx, H, uu, unit(sub(V, H)), Math.min(13, 0.2 * len(sub(V, H))));
       ctx.lineWidth = lw;
       dotAt(ctx, H, col);
-      if (c.lab) text(ctx, c.lab, H, cen, col);
+      labels.add(c.lab, H, cen, col);
     } else if (c.k === "qmid") {
       const M1 = mid(P[i], P[(i + 1) % 4]), M2 = mid(P[(i + 2) % 4], P[(i + 3) % 4]);
       segment(ctx, M1, M2, false);
       dotAt(ctx, M1, col);
       dotAt(ctx, M2, col);
-      if (c.lab) {
-        text(ctx, c.lab[0] || "", M1, cen, col);
-        text(ctx, c.lab[1] || "", M2, cen, col);
-      }
+      const [l1, l2] = splitLetters(c.lab);
+      labels.add(l1, M1, cen, col);
+      labels.add(l2, M2, cen, col);
     } else {
       const V = P[i];
       const u = unit(sub(P[(i + 1) % 4], V)), v = unit(sub(P[(i + 3) % 4], V));
@@ -434,10 +553,11 @@ export function drawQuadExtras(ctx: CanvasRenderingContext2D, o: PolygonObject):
       angleArc(ctx, V, aM, a2, r, 2);
       ctx.lineWidth = lw;
       dotAt(ctx, E, col);
-      if (c.lab) text(ctx, c.lab, E, cen, col);
+      labels.add(c.lab, E, cen, col);
     }
   }
   ctx.restore();
+  if (!lb) labels.flush(ctx);
 }
 
 // ====================== inscribed and circumscribed circles ======================
@@ -497,10 +617,11 @@ export function circleInfo(P: Point[]): { inc: Circle | null; out: Circle | null
   return { inc, out };
 }
 
-export function drawCircles(ctx: CanvasRenderingContext2D, o: PolygonObject): void {
+export function drawCircles(ctx: CanvasRenderingContext2D, o: PolygonObject, lb?: LabelSet): void {
   const P = o.pts;
   const circs = o.circs;
   if (!circs || (P.length !== 3 && P.length !== 4)) return;
+  const labels = lb ?? labelSet(o);
   const info = circleInfo(P);
   ctx.save();
   ctx.lineCap = "round";
@@ -524,7 +645,9 @@ export function drawCircles(ctx: CanvasRenderingContext2D, o: PolygonObject): vo
       rightMark(ctx, end, foot(circ.c, P[0], P[1]).t > 0.5 ? mul(u, -1) : u, v, Math.min(11, circ.r * 0.25));
     }
     dotAt(ctx, circ.c, col);
-    if (cfg.lab) text(ctx, cfg.lab, circ.c, add(circ.c, [0, 1]), col, 15);
+    // Away from the radius line; skipped when the same centre is already named (I of the
+    // bisectors, O of the perpendicular bisectors, or the other circle in a square / equilateral).
+    labels.add(cfg.lab, circ.c, len(sub(end, circ.c)) < 1 ? add(circ.c, [0, 1]) : end, col, 15);
     if (cfg.rad !== false) {
       const mp = mid(circ.c, end);
       const nrm = unit(perp(sub(end, circ.c)));
@@ -545,4 +668,5 @@ export function drawCircles(ctx: CanvasRenderingContext2D, o: PolygonObject): vo
     }
   }
   ctx.restore();
+  if (!lb) labels.flush(ctx);
 }
