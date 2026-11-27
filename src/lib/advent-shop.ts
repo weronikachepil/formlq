@@ -12,8 +12,5 @@ export function teacherCodePrice(qty: number): number {
   return qty >= 20 ? 79 : 99;
 }
 
-/**
- * TODO(owner): where buyers write to get a code, e.g. an Instagram or Telegram link.
- * Until it is set, the buy cards say to ask the teacher or formlq instead of showing a button.
- */
-export const ORDER_CONTACT = { href: "", label: "Написати нам" };
+/** Where buyers go to get a code: formlq's Telegram channel. Empty href = a plain hint instead. */
+export const ORDER_CONTACT = { href: "https://t.me/+QKzVYue4pR41YzE6", label: "Перейти в Telegram-канал" };

@@ -192,7 +192,7 @@ export function AdventSharePanel({ canCreate = false }: { canCreate?: boolean })
           {!canCreate && ORDER_CONTACT.href && (
             <a href={ORDER_CONTACT.href} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" className="h-11 rounded-xl">
-                <MessageCircle size={16} /> Потрібно більше кодів
+                <MessageCircle size={16} /> Більше кодів — у Telegram
               </Button>
             </a>
           )}

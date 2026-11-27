@@ -60,7 +60,7 @@ export function useAdventAccess(): AdventAccess {
 
 /* ---------- getting a code ---------- */
 
-/** «Напиши нам» when a contact is set, otherwise a plain hint. */
+/** The Telegram channel button when a contact is set, otherwise a plain hint. */
 function ContactButton({ text }: { text: string }) {
   if (!ORDER_CONTACT.href) return <p className="adv-access-note">{text}</p>;
   return (
@@ -81,7 +81,7 @@ export function AdventBuy({ kind }: { kind: "self" | "pack" }) {
         <h2 className="adv-h2">Календар — {PRICE_STUDENT} грн</h2>
         <p className="adv-access-lead">
           24 віконця з задачами в стилі НМТ і міні-іграми, Ігротека, конспект від Миколая і 5 імітацій НМТ у подарунок.
-          Напиши нам — після оплати отримаєш особистий код.
+          Як купити й отримати особистий код — у нашому Telegram-каналі.
         </p>
         <ContactButton text="Щоб отримати код, напиши formlq або попроси свого викладача." />
         <ZsuNote />
@@ -93,8 +93,8 @@ export function AdventBuy({ kind }: { kind: "self" | "pack" }) {
       <h2 className="adv-h2">Коди для учнів</h2>
       <p className="adv-access-lead">
         Кожен код відкриває календар одному учневі: 99 грн за код, від 20 кодів — 79 грн. Календар відкриється
-        і для вас, щойно перший учень введе свій код. Напишіть нам, скільки кодів потрібно, — після оплати вони
-        з’являться тут.
+        і для вас, щойно перший учень введе свій код. Як замовити коди — у нашому Telegram-каналі; після оплати
+        вони з’являться тут.
       </p>
       <ContactButton text="Щоб отримати коди, напишіть formlq." />
       <ZsuNote />
@@ -193,7 +193,7 @@ export function AdventGuestSteps() {
       <h2 className="adv-h2">Як отримати доступ</h2>
       <ol className="adv-steps">
         <li><b>Увійди або зареєструйся</b> на formlq — це безкоштовно.</li>
-        <li><b>Отримай код:</b> напиши нам (календар — {PRICE_STUDENT} грн) або попроси свого викладача.</li>
+        <li><b>Отримай код:</b> як купити (календар — {PRICE_STUDENT} грн) — у нашому Telegram-каналі, або попроси свого викладача.</li>
         <li><b>Розв&apos;язуй щодня</b> з 1 до 24 грудня — і забирай подарунки.</li>
       </ol>
       <p className="adv-access-note">Викладачі можуть купити коди для всього класу дешевше.</p>
@@ -201,6 +201,9 @@ export function AdventGuestSteps() {
       <div className="cta">
         <Link className="btn" href={withNext("/login", "/dashboard/advent")}>Увійти</Link>
         <Link className="btn ghost" href={withNext("/register", "/dashboard/advent")}>Зареєструватися</Link>
+        {ORDER_CONTACT.href && (
+          <a className="btn ghost" href={ORDER_CONTACT.href} target="_blank" rel="noopener noreferrer">Telegram-канал</a>
+        )}
       </div>
     </div>
   );
