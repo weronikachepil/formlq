@@ -145,20 +145,43 @@ export function AdventPreview() {
       </section>
 
       {/* 4. Teachers */}
-      <section>
-        <h2 className="adv-h2">Для вчителів</h2>
+      <section className="card adv-teach-card">
+        <p className="adv-demo-tag">Для вчителів</p>
+        <h2 className="adv-h2">Календар для всього класу</h2>
         <ol className="adv-teach">
-          <li><b>Замовляєте коди</b> — по одному на учня: 99 грн, від 20 кодів — 79 грн (учень окремо платить {PRICE_STUDENT} грн).</li>
-          <li><b>Роздаєте учням.</b> У кабінеті біля кожного коду є кнопка з готовим повідомленням для учня.</li>
-          <li><b>Бачите, хто активував код</b> — ім&apos;я учня й дату. Кожен код працює лише для одного акаунта.</li>
-          <li><b>Отримуєте календар і {GIFT_TESTS.length} імітацій НМТ</b>, щойно перший учень введе код. Імітації можна задати класу як домашнє з автоперевіркою.</li>
+          <li style={{ ["--c" as string]: "var(--lav)" }}>
+            <span className="n">1</span>
+            <b>Замовляєте коди</b>
+            <span>По одному на кожного учня — у нашому Telegram-каналі.</span>
+          </li>
+          <li style={{ ["--c" as string]: "var(--mint)" }}>
+            <span className="n">2</span>
+            <b>Роздаєте учням</b>
+            <span>Біля кожного коду в кабінеті — кнопка з готовим повідомленням.</span>
+          </li>
+          <li style={{ ["--c" as string]: "var(--peach)" }}>
+            <span className="n">3</span>
+            <b>Бачите, хто долучився</b>
+            <span>Ім&apos;я учня й дату активації. Один код — один акаунт.</span>
+          </li>
+          <li style={{ ["--c" as string]: "#f4c430" }}>
+            <span className="n">4</span>
+            <b>Отримуєте календар і {GIFT_TESTS.length} імітацій</b>
+            <span>Щойно перший учень введе код. Імітації можна задати як домашнє.</span>
+          </li>
         </ol>
+        <div className="adv-prices">
+          <div><b>99 грн</b><span>за код</span></div>
+          <div><b>79 грн</b><span>за код, від 20 кодів</span></div>
+          <div><b>0 грн</b><span>ваш власний доступ</span></div>
+          <div className="muted"><b>{PRICE_STUDENT} грн</b><span>якщо учень купує сам</span></div>
+        </div>
       </section>
 
       {/* 5. FAQ */}
       <section>
         <h2 className="adv-h2">Питання</h2>
-        <div className="adv-faq">
+        <div className="adv-faq card">
           <details>
             <summary>Що, якщо я пропущу день?</summary>
             <p>Нічого страшного: відкриті віконця залишаються відкритими, наздогнати можна будь-коли.</p>
