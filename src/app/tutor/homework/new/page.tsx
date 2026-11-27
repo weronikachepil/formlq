@@ -36,6 +36,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { TextInput } from "@/components/ui/text-field";
 import { cn } from "@/lib/utils";
 import { FileText, Library, Check, Loader2, FileUp, X } from "lucide-react";
+import { useTeacherGiftTests } from "@/components/advent/AdventGiftTests";
 
 /** Bank questions are НМТ-style: only these three types. */
 const TYPE_LABEL: Record<BankQuestion["type"], string> = {
@@ -64,7 +65,8 @@ export default function NewHomeworkPage() {
   const [note, setNote] = useState("");
   const [due, setDue] = useState(""); // datetime-local string
   const [source, setSource] = useState<"test" | "custom">("test");
-  const [testId, setTestId] = useState("");
+  // «Задати як домашнє» from a test card opens the form with that test (?test=<id>).
+  const [testId, setTestId] = useState(() => params.get("test") ?? "");
   const [pdfUrl, setPdfUrl] = useState("");
   const [pdfName, setPdfName] = useState("");
   const [pdfUploading, setPdfUploading] = useState(false);
@@ -100,7 +102,9 @@ export default function NewHomeworkPage() {
     enabled: !!user,
   });
 
-  const { data: tests = [], isLoading: testsLoading } = useQuery({
+  // A teacher whose advent calendar is open may also set the gift imitations (not their own tests).
+  const giftTests = useTeacherGiftTests();
+  const { data: ownTests = [], isLoading: testsLoading } = useQuery({
     queryKey: queryKeys.tests.of(owner),
     queryFn: () => getTests(owner),
     enabled: !!user && !!userProfile,
@@ -111,6 +115,14 @@ export default function NewHomeworkPage() {
         .filter((t) => (t.questions?.length ?? 0) > 0)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
   });
+
+  const tests = useMemo(
+    () => [
+      ...ownTests,
+      ...giftTests.filter((g) => !ownTests.some((t) => t.id === g.id)).map((g) => ({ ...g, folderId: null })),
+    ],
+    [ownTests, giftTests],
+  );
 
   const { data: testFolders = [] } = useQuery({
     queryKey: queryKeys.tests.foldersOf(owner),
