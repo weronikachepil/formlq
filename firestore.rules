@@ -240,9 +240,9 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentName"]);
     }
 
-    // Advent calendar personal codes (lib/advent-codes.ts). Only editors create them (when
-    // confirming a paid order); a teacher hands them out; a signed-in student claims one for
-    // their own account — one code, one student.
+    // Advent calendar personal codes (lib/advent-codes.ts). Only editors create them (sold
+    // outside the site), for themselves or into a teacher's panel; a teacher hands them out;
+    // a signed-in student claims one for their own account — one code, one student.
     match /adventCodes/{code} {
       // Any signed-in user may look up a typed code (codes are random, 8 chars);
       // lists are limited to a teacher's own codes or the code a student claimed.
@@ -259,16 +259,6 @@ service cloud.firestore {
       allow delete: if isEditor();
     }
 
-    // Advent calendar orders (lib/advent-shop.ts): the buyer files one after paying into the
-    // Monobank jar; an editor checks the payment and confirms or rejects it.
-    match /adventOrders/{orderId} {
-      allow read: if isAuth() && (resource.data.uid == request.auth.uid || isEditor());
-      allow create: if isAuth()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.status == "pending"
-        && request.resource.data.kind in ["self", "pack"];
-      allow update, delete: if isEditor();
-    }
 
     // Tutor's student groups. Homework and lessons for a group are copied to each member,
     // so students need no access here; a tutor sees and edits only their own groups.

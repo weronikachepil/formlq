@@ -17,9 +17,10 @@ import { docsOf } from "@/lib/firestore-helpers";
 
 /**
  * Personal access codes for the advent calendar (`adventCodes/{code}`, see firestore.rules).
- * Codes are created only by editors: when a teacher's paid order is confirmed (lib/advent-shop.ts)
- * or by hand. A teacher hands one to each student; a signed-in student claims a code for their
- * account, and from then on nobody else can use it. A teacher who owns codes has access too.
+ * Codes are sold outside the site and created only by editors, for themselves or straight into
+ * a teacher's panel. A teacher hands one to each student; a signed-in student claims a code for
+ * their account, and from then on nobody else can use it. A teacher's calendar opens once a
+ * student has used one of their codes.
  */
 
 export interface AdventCode {
@@ -111,4 +112,19 @@ export async function claimAdventCode(raw: string, uid: string, name: string): P
   } catch {
     return "used";
   }
+}
+
+/**
+ * Editor: the teacher (tutor) with this email, to put codes into their panel.
+ * Emails are matched case-insensitively.
+ */
+export async function findTeacherByEmail(raw: string): Promise<{ uid: string; name: string } | null> {
+  const email = raw.trim().toLowerCase();
+  if (!email) return null;
+  const users = collection(db, "users");
+  let docs = (await getDocs(query(users, where("email", "==", email)))).docs;
+  // Some emails are stored with their original casing: fall back to a scan.
+  if (!docs.length) docs = (await getDocs(users)).docs.filter((d) => String(d.data().email ?? "").toLowerCase() === email);
+  const d = docs.find((x) => ["tutor", "editor"].includes(x.data().role));
+  return d ? { uid: d.id, name: String(d.data().displayName || email) } : null;
 }

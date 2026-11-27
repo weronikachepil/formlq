@@ -569,19 +569,6 @@
 /* ---------- buying ---------- */
 .landing .adv-locked-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
 .landing .adv-locked-grid .adv-access { max-width: none; }
-.landing .adv-buy .adv-qty { margin: 0 0 8px; }
-.landing .adv-qty .lbl { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
-.landing .adv-qty-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 16px; }
-.landing .adv-qty-row input { width: 96px; min-height: 48px; padding: 0 12px; border-radius: var(--r-in); border: 1px solid rgba(20,38,42,.22); font: 700 18px var(--body); color: var(--ink); }
-.landing .adv-qty-row input:focus { outline: 3px solid var(--lav); border-color: var(--ink); }
-.landing .adv-buy .err { margin: 12px 0 0; font-size: 14px; font-weight: 600; color: #c2410c; }
-.landing .adv-buy .btn:disabled { opacity: .45; cursor: default; }
-.landing .adv-pay-steps { gap: 18px; }
-.landing .adv-pay-steps .cta { margin-top: 10px; align-items: center; }
-.landing .adv-ref { padding: 2px 8px; border-radius: 6px; background: #fdf3d3; font-family: ui-monospace, Menlo, monospace; letter-spacing: .04em; }
-.landing .adv-buy .link { min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer; font: 600 15px var(--body); color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-.landing.adv-embed-buy { background: transparent; }
-.landing.adv-embed-buy .adv-access { max-width: 640px; }
 @media (max-width: 900px) {
   .landing .adv-locked-grid { grid-template-columns: 1fr; }
 }

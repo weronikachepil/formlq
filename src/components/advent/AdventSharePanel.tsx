@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import QRCode from "qrcode";
 import toast from "react-hot-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Download, KeyRound, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { Check, Copy, Download, KeyRound, MessageCircle, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/context/AuthContext";
@@ -17,7 +17,8 @@ import {
   getMyAdventCodes,
   type AdventCode,
 } from "@/lib/advent-codes";
-import { AdventBuy } from "./AdventAccess";
+import { ORDER_CONTACT } from "@/lib/advent-shop";
+import { findTeacherByEmail } from "@/lib/advent-codes";
 
 // Dark-on-white in both themes: scanners need the contrast.
 const QR_OPTIONS = { margin: 2, errorCorrectionLevel: "M" as const, color: { dark: "#000000", light: "#ffffff" } };
@@ -63,8 +64,8 @@ function usedLabel(c: AdventCode) {
 
 /**
  * A teacher's (or editor's) personal codes for students — one code, one student — plus the
- * link and a printable QR. Teachers get codes by buying a pack; editors may also create free
- * codes by hand (`canCreate`).
+ * link and a printable QR. Codes are sold outside the site; an editor (`canCreate`) creates
+ * them for themselves or straight into a teacher's panel by the teacher's email.
  */
 export function AdventSharePanel({ canCreate = false }: { canCreate?: boolean }) {
   const { user } = useAuth();
@@ -74,7 +75,8 @@ export function AdventSharePanel({ canCreate = false }: { canCreate?: boolean })
   const [count, setCount] = useState(5);
   const [toDelete, setToDelete] = useState<AdventCode | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [buying, setBuying] = useState(false);
+  const [forTeacher, setForTeacher] = useState(false);
+  const [teacherEmail, setTeacherEmail] = useState("");
   const link = useCopyToClipboard();
   const all = useCopyToClipboard();
 
@@ -87,12 +89,22 @@ export function AdventSharePanel({ canCreate = false }: { canCreate?: boolean })
   const used = codes.length - free.length;
 
   const create = useMutation({
-    mutationFn: (n: number) => createAdventCodes(user!.uid, n),
-    onSuccess: (made) => {
-      toast.success(`Створено ${made.length} ${made.length === 1 ? "код" : made.length < 5 ? "коди" : "кодів"}`);
+    mutationFn: async (n: number) => {
+      if (!forTeacher) return { made: await createAdventCodes(user!.uid, n), who: null as string | null };
+      const t = await findTeacherByEmail(teacherEmail);
+      if (!t) throw new Error("no-teacher");
+      return { made: await createAdventCodes(t.uid, n), who: t.name };
+    },
+    onSuccess: ({ made, who }) => {
+      const word = made.length === 1 ? "код" : made.length < 5 ? "коди" : "кодів";
+      toast.success(who ? `${made.length} ${word} додано викладачу ${who}` : `Створено ${made.length} ${word}`);
+      if (who) setTeacherEmail("");
       qc.invalidateQueries({ queryKey: codesKey(user?.uid) });
     },
-    onError: () => toast.error("Не вдалося створити коди"),
+    onError: (e) =>
+      toast.error(e instanceof Error && e.message === "no-teacher"
+        ? "Викладача з таким email не знайдено"
+        : "Не вдалося створити коди"),
   });
   const remove = useMutation({
     mutationFn: (code: string) => deleteAdventCode(code),
@@ -177,16 +189,38 @@ export function AdventSharePanel({ canCreate = false }: { canCreate?: boolean })
               {codes.length ? `Усього ${codes.length}: вільних ${free.length}, використано ${used}` : "По коду на кожного учня"}
             </p>
           </div>
-          {!canCreate && (
-            <Button variant="outline" onClick={() => setBuying(!buying)} className="h-11 rounded-xl">
-              <ShoppingBag size={16} /> {buying ? "Сховати" : "Купити ще коди"}
-            </Button>
+          {!canCreate && ORDER_CONTACT.href && (
+            <a href={ORDER_CONTACT.href} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="h-11 rounded-xl">
+                <MessageCircle size={16} /> Потрібно більше кодів
+              </Button>
+            </a>
           )}
           {canCreate && (
           <form
-            className="flex items-center gap-2"
+            className="flex flex-wrap items-center gap-2"
             onSubmit={(e) => { e.preventDefault(); create.mutate(count); }}
           >
+            <select
+              value={forTeacher ? "teacher" : "me"}
+              onChange={(e) => setForTeacher(e.target.value === "teacher")}
+              aria-label="Для кого коди"
+              className="h-11 rounded-xl border border-border bg-background px-3 text-sm"
+            >
+              <option value="me">Мені — роздам сама</option>
+              <option value="teacher">Викладачу</option>
+            </select>
+            {forTeacher && (
+              <input
+                type="email"
+                required
+                value={teacherEmail}
+                onChange={(e) => setTeacherEmail(e.target.value)}
+                placeholder="email викладача"
+                aria-label="Email викладача"
+                className="h-11 w-56 rounded-xl border border-border bg-background px-3 text-sm"
+              />
+            )}
             <label htmlFor="adv-count" className="text-sm text-muted-foreground">Кількість</label>
             <input
               id="adv-count"
@@ -197,18 +231,13 @@ export function AdventSharePanel({ canCreate = false }: { canCreate?: boolean })
               onChange={(e) => setCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
               className="h-11 w-20 rounded-xl border border-border bg-background px-3 text-sm"
             />
-            <Button type="submit" disabled={create.isPending || !user} className="h-11 rounded-xl">
-              <Plus size={16} /> {create.isPending ? "Створюю…" : "Створити безкоштовні коди"}
+            <Button type="submit" disabled={create.isPending || !user || (forTeacher && !teacherEmail.trim())} className="h-11 rounded-xl">
+              <Plus size={16} /> {create.isPending ? "Створюю…" : "Створити коди"}
             </Button>
           </form>
           )}
         </div>
 
-        {buying && (
-          <div className="landing adv-embed adv-embed-buy">
-            <AdventBuy kind="pack" onDone={() => setBuying(false)} />
-          </div>
-        )}
 
         {isLoading ? (
           <div className="h-24 animate-pulse rounded-xl bg-muted/60" />
