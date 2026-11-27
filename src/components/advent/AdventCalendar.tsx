@@ -10,6 +10,7 @@ import { ZSU_SHARE } from "@/lib/advent";
 import { markAdventFinished } from "@/lib/advent-gift";
 import { AdventMap } from "./AdventMap";
 import { AdventCase } from "./AdventCase";
+import { SCENES } from "@/lib/advent-scenes";
 import {
   ADVENT_DAYS, ADVENT_YEAR, BONUS, DAYS, type Bonus, GIFT_TESTS, NICHOLAS_GIFT, PHRASE, PHRASE_LETTERS,
   daysUntilStart, isCorrect, openedDays, parseAnswer, type AdventDay, type ProblemDay,
@@ -466,6 +467,13 @@ function DayDialog({ p, state, hasNext, allDone, onUpdate, onNext, onClose }: {
           </button>
         </header>
 
+        {SCENES[p.day] && (
+          <div className="adv-scene">
+            <p className="k">🔍 Справа дня · {SCENES[p.day].title}</p>
+            <p>{SCENES[p.day].setup}</p>
+          </div>
+        )}
+
         <div className="problem"><MathText text={p.text} /></div>
 
         {p.gift && !(done && !replaying) && (
@@ -488,6 +496,13 @@ function DayDialog({ p, state, hasNext, allDone, onUpdate, onNext, onClose }: {
           )
         ) : (
           <ProblemBody p={p} state={state} onUpdate={onUpdate} />
+        )}
+
+        {done && !replaying && SCENES[p.day] && (
+          <div className="adv-scene reveal" role="status">
+            <p className="k">Розгадка дня</p>
+            <p>{SCENES[p.day].reveal}</p>
+          </div>
         )}
 
         {done && !replaying && (allDone || hasNext) && (

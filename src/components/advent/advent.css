@@ -768,3 +768,10 @@
   .landing .adv-case { padding: 20px; }
   .landing .adv-accuse .answer-row { flex-direction: column; }
 }
+
+/* «Справа дня»: the scene above the problem and the reveal after it */
+.landing .adv-scene { margin: 16px 0 0; padding: 12px 14px; border-radius: var(--r-in); background: #fdf3d3; }
+.landing .adv-scene p { margin: 0; font-size: 15px; line-height: 1.55; }
+.landing .adv-scene .k { margin-bottom: 4px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #8a6a1f; }
+.landing .adv-scene.reveal { margin-top: 14px; background: var(--lav-soft); }
+.landing .adv-scene.reveal .k { color: #5b4bb5; }
