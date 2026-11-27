@@ -123,7 +123,10 @@ export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
   const snowOn = snowChoice ?? !reducedMotion;
 
   const ready = progress !== null && opened !== null;
-  const solvedCount = ready ? DAYS.filter((p) => isDone(progress[p.day])).length : 0;
+  // Only windows that have already opened count: stale or edited progress from the browser
+  // can't unlock the gift or «Ігротека» before their days.
+  const solvedCount = ready ? DAYS.filter((p) => p.day <= opened && isDone(progress[p.day])).length : 0;
+  const started = ready && opened > 0;
   const finished = solvedCount === ADVENT_DAYS;
   const today = opened && opened <= ADVENT_DAYS ? opened : null;
   // The hero's one main action: today's window, or the earliest open day still unsolved.
@@ -180,7 +183,7 @@ export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
       <section className="adv-cipher-sec soft" aria-labelledby="cipher-title">
         <div className="wrap">
           <h2 id="cipher-title" className="adv-h2">Фраза‑ключ до подарунка</h2>
-          <Cipher progress={progress ?? {}} />
+          <Cipher progress={progress ?? {}} opened={opened ?? 0} />
           <Gift ready={ready} solved={solvedCount} />
         </div>
       </section>
@@ -224,7 +227,7 @@ export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
           </div>
           <ul className="adv-arcade">
             {BONUS.map((b) => {
-              const locked = !ready || solvedCount < b.unlockAt;
+              const locked = !started || solvedCount < b.unlockAt;
               const won = !!progress?.[`bonus-${b.id}`]?.solved;
               const left = b.unlockAt - solvedCount;
               return (
@@ -236,7 +239,9 @@ export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
                       <b>{b.title}</b>
                       <span>
                         {!ready ? "\u00a0" : locked
-                          ? `Відкриється після ${b.unlockAt} розв'язаних віконець (ще ${left})`
+                          ? !started
+                            ? "Відкриється 1 грудня, разом із календарем"
+                            : `Відкриється після ${b.unlockAt} розв'язаних віконець (ще ${left})`
                           : won ? "Пройдено ✓ · зіграти ще" : b.text}
                       </span>
                     </span>
@@ -298,7 +303,7 @@ function Status({ ready, opened, solved }: { ready: boolean; opened: number | nu
   );
 }
 
-function Cipher({ progress }: { progress: Progress }) {
+function Cipher({ progress, opened }: { progress: Progress; opened: number }) {
   let i = 0;
   return (
     <div className="adv-cipher" aria-label="Відкриті літери фрази">
@@ -306,7 +311,7 @@ function Cipher({ progress }: { progress: Progress }) {
         <span className="word" key={w}>
           {[...word].map(() => {
             const day = ++i;
-            const shown = isDone(progress[day]);
+            const shown = day <= opened && isDone(progress[day]);
             return (
               <span key={day} className={`cell${shown ? " shown" : ""}`} aria-label={shown ? `День ${day}: ${PHRASE_LETTERS[day - 1]}` : `День ${day}: ще не відкрито`}>
                 <b>{shown ? PHRASE_LETTERS[day - 1] : ""}</b>
