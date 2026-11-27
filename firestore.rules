@@ -240,8 +240,9 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["studentName"]);
     }
 
-    // Advent calendar personal codes (lib/advent-codes.ts). A teacher creates codes; a
-    // signed-in student claims one for their own account — one code, one student.
+    // Advent calendar personal codes (lib/advent-codes.ts). Only editors create them (when
+    // confirming a paid order); a teacher hands them out; a signed-in student claims one for
+    // their own account — one code, one student.
     match /adventCodes/{code} {
       // Any signed-in user may look up a typed code (codes are random, 8 chars);
       // lists are limited to a teacher's own codes or the code a student claimed.
@@ -249,17 +250,24 @@ service cloud.firestore {
       allow list: if isAuth() && (
         resource.data.tutorId == request.auth.uid || resource.data.usedBy == request.auth.uid
       );
-      allow create: if isTutor()
-        && request.resource.data.tutorId == request.auth.uid
-        && request.resource.data.usedBy == null
-        && request.resource.data.keys().hasOnly(["tutorId", "createdAt", "usedBy"]);
+      allow create: if isEditor();
       // Claim: only an unused code, only for yourself, only the claim fields.
       allow update: if isAuth()
         && resource.data.usedBy == null
         && request.resource.data.usedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["usedBy", "usedName", "usedAt"]);
-      // The teacher removes a code (a used one too: that takes the student's access away).
-      allow delete: if isAuth() && (resource.data.tutorId == request.auth.uid || isEditor());
+      allow delete: if isEditor();
+    }
+
+    // Advent calendar orders (lib/advent-shop.ts): the buyer files one after paying into the
+    // Monobank jar; an editor checks the payment and confirms or rejects it.
+    match /adventOrders/{orderId} {
+      allow read: if isAuth() && (resource.data.uid == request.auth.uid || isEditor());
+      allow create: if isAuth()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.kind in ["self", "pack"];
+      allow update, delete: if isEditor();
     }
 
     // Tutor's student groups. Homework and lessons for a group are copied to each member,

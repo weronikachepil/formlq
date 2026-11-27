@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import QRCode from "qrcode";
 import toast from "react-hot-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Copy, Download, KeyRound, Plus, Trash2 } from "lucide-react";
+import { Check, Copy, Download, KeyRound, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/context/AuthContext";
@@ -17,6 +17,7 @@ import {
   getMyAdventCodes,
   type AdventCode,
 } from "@/lib/advent-codes";
+import { AdventBuy } from "./AdventAccess";
 
 // Dark-on-white in both themes: scanners need the contrast.
 const QR_OPTIONS = { margin: 2, errorCorrectionLevel: "M" as const, color: { dark: "#000000", light: "#ffffff" } };
@@ -61,10 +62,11 @@ function usedLabel(c: AdventCode) {
 }
 
 /**
- * Teachers and editors: personal codes for their students (one code — one student),
- * plus the link and a printable QR to the calendar.
+ * A teacher's (or editor's) personal codes for students — one code, one student — plus the
+ * link and a printable QR. Teachers get codes by buying a pack; editors may also create free
+ * codes by hand (`canCreate`).
  */
-export function AdventSharePanel() {
+export function AdventSharePanel({ canCreate = false }: { canCreate?: boolean }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const url = useSyncExternalStore(noop, () => `${window.location.origin}/advent`, () => "");
@@ -72,6 +74,7 @@ export function AdventSharePanel() {
   const [count, setCount] = useState(5);
   const [toDelete, setToDelete] = useState<AdventCode | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [buying, setBuying] = useState(false);
   const link = useCopyToClipboard();
   const all = useCopyToClipboard();
 
@@ -128,7 +131,7 @@ export function AdventSharePanel() {
           <div>
             <h2 className="font-heading text-xl font-bold">Доступ для учнів</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Календар відкривається лише за особистим кодом. Кожен код — для одного учня: після введення він
+              Учень входить на formlq і вводить свій особистий код. Кожен код — для одного учня: після введення він
               прив&apos;язується до акаунта учня, і ніхто інший ним не скористається.
             </p>
           </div>
@@ -171,9 +174,15 @@ export function AdventSharePanel() {
           <div>
             <h3 className="font-heading text-lg font-bold">Особисті коди</h3>
             <p className="text-sm text-muted-foreground">
-              {codes.length ? `Усього ${codes.length}: вільних ${free.length}, використано ${used}` : "Створіть по коду на кожного учня"}
+              {codes.length ? `Усього ${codes.length}: вільних ${free.length}, використано ${used}` : "По коду на кожного учня"}
             </p>
           </div>
+          {!canCreate && (
+            <Button variant="outline" onClick={() => setBuying(!buying)} className="h-11 rounded-xl">
+              <ShoppingBag size={16} /> {buying ? "Сховати" : "Купити ще коди"}
+            </Button>
+          )}
+          {canCreate && (
           <form
             className="flex items-center gap-2"
             onSubmit={(e) => { e.preventDefault(); create.mutate(count); }}
@@ -189,17 +198,24 @@ export function AdventSharePanel() {
               className="h-11 w-20 rounded-xl border border-border bg-background px-3 text-sm"
             />
             <Button type="submit" disabled={create.isPending || !user} className="h-11 rounded-xl">
-              <Plus size={16} /> {create.isPending ? "Створюю…" : "Створити коди"}
+              <Plus size={16} /> {create.isPending ? "Створюю…" : "Створити безкоштовні коди"}
             </Button>
           </form>
+          )}
         </div>
+
+        {buying && (
+          <div className="landing adv-embed adv-embed-buy">
+            <AdventBuy kind="pack" onDone={() => setBuying(false)} />
+          </div>
+        )}
 
         {isLoading ? (
           <div className="h-24 animate-pulse rounded-xl bg-muted/60" />
         ) : codes.length === 0 ? (
           <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
             <KeyRound size={18} className="shrink-0" />
-            Кодів ще немає. Створіть стільки, скільки у вас учнів, і надішліть кожному свій.
+            Кодів ще немає.
           </div>
         ) : (
           <>
@@ -232,14 +248,16 @@ export function AdventSharePanel() {
                         {copiedCode === c.id ? "Скопійовано" : "Повідомлення з кодом"}
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      className="h-10 rounded-xl text-muted-foreground"
-                      aria-label={`Видалити код ${formatAdventCode(c.id)}`}
-                      onClick={() => setToDelete(c)}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
+                    {canCreate && (
+                      <Button
+                        variant="ghost"
+                        className="h-10 rounded-xl text-muted-foreground"
+                        aria-label={`Видалити код ${formatAdventCode(c.id)}`}
+                        onClick={() => setToDelete(c)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    )}
                   </span>
                 </li>
               ))}

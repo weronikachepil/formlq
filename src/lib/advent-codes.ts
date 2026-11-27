@@ -17,9 +17,9 @@ import { docsOf } from "@/lib/firestore-helpers";
 
 /**
  * Personal access codes for the advent calendar (`adventCodes/{code}`, see firestore.rules).
- * A teacher creates codes and hands one to each student; a signed-in student claims a code
- * for their account, and from then on nobody else can use it. Teachers and editors always
- * have access. Deleting a code (even a used one) takes the access away.
+ * Codes are created only by editors: when a teacher's paid order is confirmed (lib/advent-shop.ts)
+ * or by hand. A teacher hands one to each student; a signed-in student claims a code for their
+ * account, and from then on nobody else can use it. A teacher who owns codes has access too.
  */
 
 export interface AdventCode {
@@ -29,6 +29,7 @@ export interface AdventCode {
   usedBy: string | null;
   usedName?: string;
   usedAt?: Timestamp | null;
+  orderId?: string;
 }
 
 // No 0/O, 1/I/L — codes are typed by hand (same alphabet as teacher invite codes).
@@ -51,14 +52,14 @@ export function formatAdventCode(code: string): string {
   return code.length === LENGTH ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
 }
 
-/** Teacher: `count` new unused codes. */
-export async function createAdventCodes(tutorId: string, count: number): Promise<string[]> {
+/** Editor: `count` new unused codes owned by `tutorId` (a teacher, or the editor themselves). */
+export async function createAdventCodes(tutorId: string, count: number, orderId?: string): Promise<string[]> {
   const made: string[] = [];
   while (made.length < count) {
     const code = randomCode();
     // A collision with an existing code is astronomically unlikely; check anyway.
     if ((await getDoc(doc(col, code))).exists()) continue;
-    await setDoc(doc(col, code), { tutorId, createdAt: serverTimestamp(), usedBy: null });
+    await setDoc(doc(col, code), { tutorId, createdAt: serverTimestamp(), usedBy: null, ...(orderId ? { orderId } : {}) });
     made.push(code);
   }
   return made;
@@ -70,9 +71,15 @@ export async function getMyAdventCodes(tutorId: string): Promise<AdventCode[]> {
   return list.sort((a, b) => (b.createdAt?.toMillis() ?? Infinity) - (a.createdAt?.toMillis() ?? Infinity));
 }
 
-/** Teacher: remove a code; if a student used it, they lose access. */
+/** Editor: remove a code; if a student used it, they lose access. */
 export async function deleteAdventCode(code: string): Promise<void> {
   await deleteDoc(doc(col, code));
+}
+
+/** Teacher: whether they own any codes (bought a pack), which also opens the calendar for them. */
+export async function ownsAdventCodes(uid: string): Promise<boolean> {
+  const snap = await getDocs(query(col, where("tutorId", "==", uid), limit(1)));
+  return !snap.empty;
 }
 
 /** Student: whether they have claimed a code. */
