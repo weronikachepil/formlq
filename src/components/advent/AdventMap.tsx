@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { HEROES, heroDays, type Hero } from "@/lib/advent-map";
+import { CLUES } from "@/lib/advent-case";
 
 /**
  * «Мапа пригод»: a snowy road through twelve stops, one Ukrainian mathematician each.
@@ -130,6 +131,10 @@ function HeroDialog({ h, onClose }: { h: Hero; onClose: () => void }) {
         <div className="adv-hero-fact today">
           <p className="k">А сьогодні</p>
           <p>{h.today}</p>
+        </div>
+        <div className="adv-hero-fact clue">
+          <p className="k">🔍 Доказ №{h.n} у Різдвяній справі</p>
+          <p>{CLUES[h.n - 1].text}</p>
         </div>
       </div>
     </dialog>

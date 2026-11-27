@@ -719,3 +719,52 @@
 /* The duckling stands on the side away from the stop's label. */
 .landing .adv-stop.below .adv-map-duck { top: -48px; }
 .landing .adv-stop:not(.below) .adv-map-duck { top: 18px; left: 30px; }
+
+/* ---------- «Різдвяна справа» (AdventCase) ---------- */
+.landing .adv-hero-fact.clue { background: #fdf3d3; }
+.landing .adv-case { margin-top: 28px; padding: 32px; }
+.landing .adv-case .adv-h2 { margin: 6px 0 0; }
+.landing .adv-case-intro { margin: 10px 0 0; max-width: 760px; color: var(--muted); }
+.landing .adv-case-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 28px; margin-top: 24px; align-items: start; }
+.landing .adv-case h3 { margin-bottom: 10px; }
+.landing .adv-clues { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.landing .adv-clues li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: var(--r-in); background: var(--soft); font-size: 14px; line-height: 1.45; }
+.landing .adv-clues li.have { background: #fdf3d3; }
+.landing .adv-clues .cn { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: #fff; font: 800 13px/1 var(--head); }
+.landing .adv-clues .muted { color: var(--muted); }
+.landing .adv-case-hint { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.landing .adv-suspects { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; list-style: none; margin: 0; padding: 0; }
+.landing .adv-suspects .sus {
+  position: relative; display: grid; gap: 4px; width: 100%; height: 100%; padding: 12px; border-radius: var(--r-in); cursor: pointer; text-align: left;
+  border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; transition: opacity .15s, border-color .15s;
+}
+.landing .adv-suspects .sus:hover { border-color: rgba(20,38,42,.35); }
+.landing .adv-suspects .sus:focus-visible { outline: 3px solid var(--lav); outline-offset: 2px; }
+.landing .adv-suspects .em { font-size: 26px; line-height: 1; }
+.landing .adv-suspects b { font: 700 14px/1.25 var(--head); }
+.landing .adv-suspects .attrs { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 12px; color: var(--muted); }
+.landing .adv-suspects .sus.crossed { opacity: .4; background: var(--soft); }
+.landing .adv-suspects .sus.crossed b { text-decoration: line-through; }
+.landing .adv-suspects .sus.crossed::after { content: "✕"; position: absolute; top: 8px; right: 10px; font-weight: 800; color: #c2410c; }
+.landing .adv-suspects .sus.culprit { opacity: 1; border: 2px solid #f4c430; box-shadow: 0 0 0 4px rgba(244,196,48,.25); background: #fff; }
+.landing .adv-suspects .sus.culprit b { text-decoration: none; }
+.landing .adv-suspects .sus.culprit::after { content: "🌟"; color: inherit; }
+.landing .adv-accuse { margin-top: 24px; max-width: 560px; }
+.landing .adv-accuse .lbl { display: block; margin-bottom: 8px; font-weight: 700; }
+.landing .adv-accuse .answer-row { display: flex; gap: 8px; }
+.landing .adv-accuse select { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border-radius: var(--r-in); border: 1px solid rgba(20,38,42,.22); font: 600 16px var(--body); color: var(--ink); background: #fff; }
+.landing .adv-accuse .btn { min-height: 48px; border-radius: var(--r-in); }
+.landing .adv-accuse .btn:disabled { opacity: .45; }
+.landing .adv-accuse .err { margin: 10px 0 0; font-size: 14px; font-weight: 600; color: #c2410c; }
+.landing .adv-case-end { margin-top: 24px; padding: 18px 20px; border-radius: var(--r-in); background: var(--mint-soft); border: 1px solid var(--mint); }
+.landing .adv-case-end p { margin: 0; }
+.landing .adv-case-end .res-title { font-weight: 800; font-size: 18px; }
+.landing .adv-case-end .res-sol { margin-top: 6px; }
+@media (max-width: 900px) {
+  .landing .adv-case-grid { grid-template-columns: 1fr; }
+  .landing .adv-suspects { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 620px) {
+  .landing .adv-case { padding: 20px; }
+  .landing .adv-accuse .answer-row { flex-direction: column; }
+}
