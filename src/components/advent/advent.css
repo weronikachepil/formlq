@@ -531,3 +531,13 @@
   .landing .adv-gift.open .gift-box, .landing .sl-sleigh.ok, .landing .sl-sleigh.no, .landing .house.won .win.on,
   .landing .sky.hit, .landing .sky.miss, .landing .lamp.shake .bulb, .landing .ice.crack, .landing .tree-svg .hung circle, .landing .tree-stage.solved .tree-star { animation: none; }
 }
+
+/* ---------- inside the cabinet (/dashboard/advent) ---------- */
+/* The cabinet already loads Onest and Pinyon Script globally; reuse them instead of the
+   landing's own next/font variables. The calendar sits in a rounded card. */
+.landing.adv-embed {
+  --lf-onest: var(--font-onest); --lf-pinyon: var(--font-pinyon-script);
+  min-height: 0; overflow: hidden; border-radius: 18px; background: #fff;
+}
+.landing.adv-embed .advent .adv-hero { padding-top: 96px; }
+.landing.adv-embed .adv-snow-toggle { right: 16px; }

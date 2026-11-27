@@ -138,7 +138,7 @@ export function AdventCalendar() {
   }
 
   return (
-    <main className="advent" id="top">
+    <div className="advent" id="top">
       <section className="adv-hero">
         <Snowfall on={snowOn} />
         <Garland />
@@ -261,7 +261,7 @@ export function AdventCalendar() {
           onClose={() => setOpenDay(null)}
         />
       )}
-    </main>
+    </div>
   );
 }
 

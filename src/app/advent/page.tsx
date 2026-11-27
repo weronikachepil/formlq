@@ -4,6 +4,7 @@ import "@/components/landing/landing.css";
 import "@/components/advent/advent.css";
 import { landingFontVariables } from "@/components/landing/fonts";
 import { AdventCalendar } from "@/components/advent/AdventCalendar";
+import { AdventNavActions } from "@/components/advent/AdventPromo";
 
 export const metadata: Metadata = {
   title: { absolute: "Відлік до НМТ — адвент-календар з математики | formlq" },
@@ -23,13 +24,10 @@ export default function AdventPage() {
       <div className="nav-wrap">
         <nav className="wrap nav">
           <Link className="logo" href="/">formlq</Link>
-          <div className="nav-actions adv-nav-actions">
-            <Link className="btn ghost sm" href="/login">Увійти</Link>
-            <Link className="btn sm nav-reg" href="/register">Реєстрація</Link>
-          </div>
+          <AdventNavActions />
         </nav>
       </div>
-      <AdventCalendar />
+      <main><AdventCalendar /></main>
       <footer>
         <div className="wrap">
           <Link className="logo" href="/">formlq</Link>
