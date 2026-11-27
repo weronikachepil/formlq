@@ -6,10 +6,13 @@ import { adventPromoActive } from "@/lib/advent";
 import "./site-winter.css";
 
 /**
- * Seasonal winter look for the whole site (until 7 Jan, with the advent promo): a garland
- * along the top edge and light snow. Off where it would get in the way (exams, the board)
- * and on the advent pages, which have their own snow. The snow can be switched off and is
- * off by default with «reduce motion».
+ * Seasonal winter look for the whole site (until 7 Jan, with the advent promo).
+ * - `html.winter` turns on the CSS touches in site-winter.css (Santa-hat duck, snow caps…);
+ * - light snow over the page, with a switch; off by default with «reduce motion»;
+ * - `SeasonGarland` is placed in the page flow by the landing hero and the cabinet header,
+ *   so it never covers text.
+ * Snow is off where it would get in the way (exams, the board) and on the advent pages,
+ * which have their own.
  */
 
 const OFF_PREFIXES = ["/board", "/dashboard/exam", "/t/", "/a/", "/advent", "/dashboard/advent", "/admin/questions"];
@@ -36,14 +39,22 @@ function writeSnow(on: boolean) {
 
 const noop = () => () => {};
 
+function useSeason() {
+  return useSyncExternalStore(noop, () => adventPromoActive(), () => false);
+}
+
 export function SiteWinter() {
   const pathname = usePathname() ?? "";
-  const active = useSyncExternalStore(noop, () => adventPromoActive(), () => false);
+  const active = useSeason();
   const snow = useSyncExternalStore(subscribe, readSnow, () => false);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("winter", active);
+  }, [active]);
+
   if (!active || OFF_PREFIXES.some((p) => pathname.startsWith(p))) return null;
   return (
     <>
-      <SiteGarland />
       {snow && <SiteSnow />}
       <button
         type="button"
@@ -63,11 +74,13 @@ export function SiteWinter() {
 
 const BULBS = ["#f4c430", "#cfc6f7", "#bfe0dd", "#ffb48a"];
 
-function SiteGarland() {
+/** A string of lights for the top of a block; renders nothing out of season. */
+export function SeasonGarland({ className = "" }: { className?: string }) {
+  if (!useSeason()) return null;
   const swags = 16, W = 1600, seg = W / swags;
   const d = Array.from({ length: swags }, (_, i) => `Q ${i * seg + seg / 2} 20 ${(i + 1) * seg} 2`).join(" ");
   return (
-    <svg className="site-garland" viewBox="0 0 1600 34" preserveAspectRatio="none" aria-hidden>
+    <svg className={`season-garland ${className}`} viewBox="0 0 1600 34" preserveAspectRatio="none" aria-hidden>
       <path d={`M0 2 ${d}`} />
       {Array.from({ length: swags * 2 }, (_, i) => {
         const t = i % 2 ? 2 / 3 : 1 / 3;
