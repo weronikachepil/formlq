@@ -12,6 +12,9 @@
 export const ADVENT_YEAR = 2026;
 export const ADVENT_DAYS = 24;
 
+/** Share of the calendar's revenue donated to the Armed Forces of Ukraine (shown on the page and buy cards). */
+export const ZSU_SHARE = 20;
+
 /** 24 letters, one per day. Spaces only group the reveal into words. */
 /** «Веселого Різдва, вдачі на НМТ» — the calendar ends on Святвечір. */
 export const PHRASE = "ВЕСЕЛОГО РІЗДВА ВДАЧІ НА НМТ";

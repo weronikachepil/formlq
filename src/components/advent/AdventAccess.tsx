@@ -19,6 +19,17 @@ import {
   teacherCodePrice,
   type OrderKind,
 } from "@/lib/advent-shop";
+import { ZSU_SHARE } from "@/lib/advent";
+
+/** «20% доходу — на ЗСУ» with the flag; styled by advent.css. */
+export function ZsuNote({ className = "" }: { className?: string }) {
+  return (
+    <p className={`adv-zsu ${className}`}>
+      <span className="adv-flag" aria-hidden><i /><i /></span>
+      {ZSU_SHARE}% доходу від календаря — на ЗСУ
+    </p>
+  );
+}
 
 /**
  * Who may open the advent calendar:
@@ -162,6 +173,8 @@ export function AdventBuy({ kind, onDone }: { kind: OrderKind; onDone?: () => vo
         </>
       )}
 
+      <ZsuNote />
+
       {rejected && step === "choose" && (
         <p className="err" role="alert">
           Оплату за замовленням {rejected.ref} не знайшли. Якщо ви платили, напишіть нам — розберемося.
@@ -294,6 +307,7 @@ export function AdventGuestSteps() {
         <li><b>Розв&apos;язуй щодня</b> з 1 до 24 грудня — і забирай подарунки.</li>
       </ol>
       <p className="adv-access-note">Викладачі можуть купити коди для всього класу дешевше.</p>
+      <ZsuNote />
       <div className="cta">
         <Link className="btn" href={withNext("/login", "/dashboard/advent")}>Увійти</Link>
         <Link className="btn ghost" href={withNext("/register", "/dashboard/advent")}>Зареєструватися</Link>

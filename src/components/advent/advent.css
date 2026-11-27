@@ -585,3 +585,14 @@
 @media (max-width: 900px) {
   .landing .adv-locked-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- 20% to the Armed Forces of Ukraine ---------- */
+.landing .adv-flag { display: inline-flex; flex-direction: column; flex: none; width: 24px; height: 16px; border-radius: 4px; overflow: hidden; }
+.landing .adv-flag i { flex: 1; }
+.landing .adv-flag i:first-child { background: #0057b7; }
+.landing .adv-flag i:last-child { background: #ffd700; }
+.landing .adv-zsu { display: inline-flex; align-items: center; gap: 10px; margin: 16px 0 0; font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.landing .adv-zsu-hero {
+  display: inline-flex; align-items: center; gap: 10px; margin: 18px 0 0; padding: 8px 14px 8px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); font-size: 14px; font-weight: 700; color: #fff;
+}

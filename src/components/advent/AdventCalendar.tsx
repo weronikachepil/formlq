@@ -6,6 +6,7 @@ import confetti from "canvas-confetti";
 import { MathText } from "@/components/MathText";
 import { publicTestPath, studentTestPath } from "@/lib/tests";
 import { useAuth } from "@/context/AuthContext";
+import { ZSU_SHARE } from "@/lib/advent";
 import { markAdventFinished } from "@/lib/advent-gift";
 import {
   ADVENT_DAYS, ADVENT_YEAR, BONUS, DAYS, type Bonus, GIFT_TESTS, NICHOLAS_GIFT, PHRASE, PHRASE_LETTERS,
@@ -167,6 +168,10 @@ export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
         <div className="wrap">
           <p className="eyebrow">Адвент-календар · 1–24 грудня</p>
           <h1>Відлік до <em>НМТ</em></h1>
+          <p className="adv-zsu-hero">
+            <span className="adv-flag" aria-hidden><i /><i /></span>
+            {ZSU_SHARE}% доходу — на ЗСУ
+          </p>
           <p className="lead">
             24 віконця, по одному на день: задачі в стилі НМТ, а на вихідних міні-ігри.
             Кожна перемога відкриває літеру фрази‑ключа. Збери всю фразу — і відкриєш подарунок: {GIFT_TESTS.length} {plural(GIFT_TESTS.length, "імітацію", "імітації", "імітацій")} НМТ.
