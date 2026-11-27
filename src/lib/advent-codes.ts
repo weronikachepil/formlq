@@ -76,10 +76,14 @@ export async function deleteAdventCode(code: string): Promise<void> {
   await deleteDoc(doc(col, code));
 }
 
-/** Teacher: whether they own any codes (bought a pack), which also opens the calendar for them. */
-export async function ownsAdventCodes(uid: string): Promise<boolean> {
-  const snap = await getDocs(query(col, where("tutorId", "==", uid), limit(1)));
-  return !snap.empty;
+/**
+ * Teacher: whether they own codes (bought a pack) and whether a student has used one.
+ * The calendar opens for the teacher only once a student uses one of their codes, so a
+ * single cheaper teacher code can't stand in for a student's own purchase.
+ */
+export async function teacherCodeStatus(uid: string): Promise<{ owns: boolean; used: boolean }> {
+  const snap = await getDocs(query(col, where("tutorId", "==", uid)));
+  return { owns: !snap.empty, used: snap.docs.some((d) => !!d.data().usedBy) };
 }
 
 /** Student: whether they have claimed a code. */

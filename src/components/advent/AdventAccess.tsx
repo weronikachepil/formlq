@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { canTutor, isEditor } from "@/lib/roles";
 import { withNext } from "@/lib/utils";
-import { claimAdventCode, hasAdventCode, ownsAdventCodes, type ClaimResult } from "@/lib/advent-codes";
+import { claimAdventCode, hasAdventCode, teacherCodeStatus, type ClaimResult } from "@/lib/advent-codes";
 import {
   JAR_URL,
   PRICE_STUDENT,
@@ -23,11 +23,13 @@ import {
 /**
  * Who may open the advent calendar:
  * - admin: editors, always (they confirm orders and may create codes);
- * - teacher: a tutor who owns codes (bought a pack) — calendar + their codes;
+ * - teacher: a tutor whose bought code a student has used — calendar + their codes;
+ * - teacher-waiting: a tutor who bought codes, none used yet — their codes, calendar still closed;
  * - granted: a student who bought access or claimed a teacher's code;
  * - teacher-none / none: signed in without access — they see how to buy.
  */
-export type AdventAccess = "loading" | "signed-out" | "admin" | "teacher" | "teacher-none" | "granted" | "none";
+export type AdventAccess =
+  | "loading" | "signed-out" | "admin" | "teacher" | "teacher-waiting" | "teacher-none" | "granted" | "none";
 
 export const accessKey = (uid?: string) => ["adventAccess", uid] as const;
 export const ordersKey = (uid?: string) => ["adventOrders", uid] as const;
@@ -39,7 +41,11 @@ export function useAdventAccess(): AdventAccess {
   const tutor = canTutor(role) && !editor;
   const { data, isError } = useQuery({
     queryKey: accessKey(user?.uid),
-    queryFn: () => (tutor ? ownsAdventCodes(user!.uid) : hasAdventCode(user!.uid)),
+    queryFn: async () => {
+      if (!tutor) return (await hasAdventCode(user!.uid)) ? "granted" : "none";
+      const s = await teacherCodeStatus(user!.uid);
+      return s.used ? "teacher" : s.owns ? "teacher-waiting" : "teacher-none";
+    },
     enabled: !!user && !!userProfile && !editor,
     staleTime: 60 * 1000,
     retry: 1,
@@ -49,8 +55,8 @@ export function useAdventAccess(): AdventAccess {
   if (editor) return "admin";
   // A failed check (offline, rules not published) means no access, not an endless skeleton.
   if (data === undefined && !isError) return "loading";
-  if (tutor) return data ? "teacher" : "teacher-none";
-  return data ? "granted" : "none";
+  if (data) return data;
+  return tutor ? "teacher-none" : "none";
 }
 
 /* ---------- buying ---------- */
@@ -249,6 +255,19 @@ export function AdventCodeEntry() {
         </div>
         {error && <p id="adv-code-err" className="err" role="alert">{error}</p>}
       </form>
+    </div>
+  );
+}
+
+/** A teacher who bought codes, before any student has used one. */
+export function AdventTeacherWaiting() {
+  return (
+    <div className="adv-access card">
+      <h2 className="adv-h2">Календар відкриється, щойно учень введе код</h2>
+      <p className="adv-access-lead">
+        Ваші коди — у блоці вище. Надішліть кожному учневі його код: коли перший учень активує свій,
+        календар відкриється і для вас.
+      </p>
     </div>
   );
 }
