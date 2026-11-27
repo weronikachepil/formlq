@@ -32,8 +32,8 @@ export function AdventNavLink() {
   return <li><Link href="/advent">Адвент 🎄</Link></li>;
 }
 
-/** Card in the student cabinet. */
-export function AdventDashboardCard() {
+/** Card in the cabinet: students play, teachers and editors share it with students. */
+export function AdventDashboardCard({ forTutor = false }: { forTutor?: boolean }) {
   if (!usePromo()) return null;
   return (
     <Link
@@ -44,7 +44,9 @@ export function AdventDashboardCard() {
       <span className="min-w-0 flex-1">
         <span className="block font-heading text-lg font-bold leading-tight">Адвент-календар «Відлік до НМТ»</span>
         <span className="mt-0.5 block text-sm text-white/75">
-          Задача або міні-гра щодня до Святвечора. Збери фразу — і відкриєш 5 імітацій НМТ.
+          {forTutor
+            ? "Поділіться з учнями: задача або міні-гра щодня до Святвечора, а в кінці 5 імітацій НМТ у подарунок."
+            : "Задача або міні-гра щодня до Святвечора. Збери фразу — і відкриєш 5 імітацій НМТ."}
         </span>
       </span>
       <span className="hidden shrink-0 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#14262a] sm:block">Відкрити</span>
