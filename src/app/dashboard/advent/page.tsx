@@ -27,13 +27,20 @@ export default function CabinetAdventPage() {
   return (
     <div className="space-y-6">
       {teacherSide && <AdventSharePanel canCreate={access === "admin"} />}
-      {(access === "admin" || access === "teacher") && (
+      {access === "admin" && (
+        <p className="text-sm text-muted-foreground">
+          Режим редактора: усі 24 віконця й Ігротека відкриті вже зараз, щоб перевірити задачі та ігри. Учні отримують
+          віконця по днях. Прогрес зберігається лише у вашому браузері.
+        </p>
+      )}
+      {access === "teacher" && (
         <p className="text-sm text-muted-foreground">
           Так календар бачать учні з доступом. Можете розв&apos;язувати й грати теж — прогрес зберігається лише у вашому браузері.
         </p>
       )}
       <div className="landing adv-embed">
         <AdventCalendar
+          allOpen={access === "admin"}
           locked={
             access === "teacher-waiting" ? <AdventTeacherWaiting />
             : locked ? <AdventLocked access={access} />

@@ -116,10 +116,15 @@ function celebrate(big = false) {
  * The whole calendar. With `locked`, only the hero is shown and `locked` replaces the rest
  * (the code entry for a student without access, or how to get access for a guest).
  */
-export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
+export function AdventCalendar({ locked, allOpen = false }: {
+  locked?: React.ReactNode;
+  /** Editors: every window open now, whatever the date, to check problems and games. */
+  allOpen?: boolean;
+} = {}) {
   const progress = useProgress();
   useDevSolved();
-  const opened = useOpened();
+  const datedOpened = useOpened();
+  const opened = allOpen && datedOpened !== null ? ADVENT_DAYS : datedOpened;
   const [openDay, setOpenDay] = useState<number | null>(null);
   const [openBonus, setOpenBonus] = useState<Bonus | null>(null);
   const reducedMotion = useReducedMotion();
