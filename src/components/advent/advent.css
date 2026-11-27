@@ -644,3 +644,78 @@
   .landing .adv-teach { grid-template-columns: 1fr; }
   .landing .adv-faq { padding: 0 20px; }
 }
+
+/* ---------- «Мапа пригод» (AdventMap) ---------- */
+.landing .advent .adv-map-sec { padding: 56px 0 24px; border-top: 0; }
+.landing .adv-map-lead { margin: 8px 0 0; max-width: 680px; color: var(--muted); }
+.landing .adv-map {
+  position: relative; height: 440px; margin-top: 24px; border-radius: var(--r-card); overflow: visible;
+  background:
+    radial-gradient(ellipse 30% 22% at 20% 80%, rgba(191,224,221,.55), transparent 70%),
+    radial-gradient(ellipse 26% 20% at 72% 18%, rgba(207,198,247,.5), transparent 70%),
+    radial-gradient(ellipse 24% 22% at 60% 92%, rgba(255,221,196,.6), transparent 70%),
+    linear-gradient(180deg, #f2f7f9, #ffffff);
+  border: 1px solid var(--line);
+}
+.landing .adv-map-bg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.landing .adv-map-bg path { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.landing .adv-map-bg .road-shadow { stroke: rgba(20,38,42,.06); stroke-width: 22; }
+.landing .adv-map-bg .road { stroke: #fff; stroke-width: 14; }
+.landing .adv-map-bg .road-done { stroke: #f4c430; stroke-width: 5; stroke-dasharray: 2 10; }
+.landing .adv-map-start { position: absolute; translate: 0 -150%; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.landing .adv-stop { position: absolute; translate: -50% -50%; display: grid; justify-items: center; z-index: 1; }
+.landing .adv-stop .pin {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+  background: var(--soft); color: rgba(20,38,42,.45); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(20,38,42,.12);
+  font: 800 17px/1 var(--head);
+}
+.landing .adv-stop .pin .lock, .landing .adv-route .lock { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.landing .adv-stop.open .pin { background: linear-gradient(160deg, #24474e, #14262a); color: #f4c430; box-shadow: 0 0 0 4px rgba(244,196,48,.35), 0 4px 12px rgba(20,38,42,.2); }
+.landing .adv-stop.open .pin:hover { transform: scale(1.08); }
+.landing .adv-stop .pin:disabled { cursor: default; }
+.landing .adv-stop .pin:focus-visible { outline: 3px solid var(--lav); outline-offset: 3px; }
+.landing .adv-stop .label { position: absolute; top: 52px; display: grid; justify-items: center; white-space: nowrap; text-align: center; }
+.landing .adv-stop.below .label { top: 52px; }
+.landing .adv-stop:not(.below) .label { top: auto; bottom: 52px; }
+.landing .adv-stop .label b { font: 700 14px/1.2 var(--head); color: var(--ink); }
+.landing .adv-stop .label small { font-size: 12px; color: var(--muted); }
+.landing .adv-stop:not(.open) .label b { color: var(--muted); font-weight: 600; }
+.landing .adv-map-duck { position: absolute; width: 54px; height: 54px; left: 26px; top: -40px; filter: drop-shadow(0 3px 4px rgba(20,38,42,.25)); animation: adv-bob 2.4s ease-in-out infinite; pointer-events: none; }
+.landing .adv-map-duck.at-start { left: 1%; translate: 0 -100%; }
+.landing .adv-map-duck svg, .landing .route-duck svg { width: 100%; height: 100%; }
+@keyframes adv-bob { 50% { transform: translateY(-5px); } }
+
+/* small screens: a vertical route */
+.landing .adv-route { display: none; list-style: none; margin: 20px 0 0; padding: 0 0 0 22px; border-left: 3px dashed rgba(20,38,42,.15); }
+.landing .adv-route li { position: relative; margin: 0 0 10px; }
+.landing .adv-route button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 60px; padding: 8px 12px 8px 0; border: 0; background: none; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+.landing .adv-route button:disabled { cursor: default; }
+.landing .adv-route .dot { flex: none; display: grid; place-items: center; width: 40px; height: 40px; margin-left: -44px; border-radius: 50%; border: 3px solid #fff; background: var(--soft); color: rgba(20,38,42,.45); font: 800 15px/1 var(--head); box-shadow: 0 2px 6px rgba(20,38,42,.12); }
+.landing .adv-route li.open .dot { background: #14262a; color: #f4c430; }
+.landing .adv-route .txt { display: grid; gap: 2px; }
+.landing .adv-route .txt b { font: 700 16px/1.25 var(--head); }
+.landing .adv-route li:not(.open) .txt b { color: var(--muted); }
+.landing .adv-route .txt small { font-size: 13px; color: var(--muted); }
+.landing .adv-route .route-duck { flex: none; width: 40px; height: 40px; margin-left: auto; }
+@media (max-width: 900px) {
+  .landing .adv-map { display: none; }
+  .landing .adv-route { display: block; }
+}
+
+/* hero dialog */
+.landing .adv-hero-dlg .adv-hero-sub { margin: 4px 0 0; font-size: 15px; color: var(--muted); }
+.landing .adv-hero-story { margin: 18px 0; font-size: 17px; line-height: 1.6; }
+.landing .adv-hero-fact { margin-top: 12px; padding: 14px 16px; border-radius: var(--r-in); background: var(--lav-soft); }
+.landing .adv-hero-fact.today { background: var(--mint-soft); }
+.landing .adv-hero-fact p { margin: 0; font-size: 15px; line-height: 1.5; }
+.landing .adv-hero-fact .k { margin-bottom: 4px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .landing .adv-map-duck { animation: none; }
+}
+.landing .adv-map-deco { position: absolute; translate: -50% -50%; pointer-events: none; }
+.landing .adv-map-deco.pine { width: 30px; height: 42px; }
+.landing .adv-map-deco.house { width: 40px; height: 36px; }
+.landing .adv-map-deco svg { width: 100%; height: 100%; }
+/* The duckling stands on the side away from the stop's label. */
+.landing .adv-stop.below .adv-map-duck { top: -48px; }
+.landing .adv-stop:not(.below) .adv-map-duck { top: 18px; left: 30px; }

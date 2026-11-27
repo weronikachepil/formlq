@@ -6,6 +6,7 @@ import { PRICE_STUDENT } from "@/lib/advent-shop";
 import { ProblemBody, type DayState } from "./AdventCalendar";
 import { BonusGame } from "./arcade";
 import { TileIcon, DAY_ICONS } from "./Winter";
+import { HEROES } from "@/lib/advent-map";
 
 /**
  * What the calendar is, for people who don't have it yet: try one problem and one game,
@@ -105,6 +106,18 @@ export function AdventPreview() {
             <h3>бонусні ігри в Ігротеці</h3>
             <p>Грай скільки хочеш; нові відкриваються, коли розв&apos;язуєш віконця.</p>
             <p className="adv-in-topics">{BONUS.map((b) => `«${b.title}»`).join(", ")}.</p>
+          </div>
+          <div className="card adv-in adv-in-gift">
+            <span className="adv-in-icon" aria-hidden><TileIcon name="star" /></span>
+            <div>
+              <p className="adv-in-when">Мапа пригод</p>
+              <h3>{HEROES.length} українських математиків</h3>
+              <p>
+                Каченя мандрує крізь час: кожні два розв&apos;язані віконця відкривають зупинку з історією героя
+                й цікавим фактом.
+              </p>
+              <p className="adv-in-topics">{HEROES.map((h) => h.name).join(", ")}.</p>
+            </div>
           </div>
           <div className="card adv-in adv-in-gift">
             {/* eslint-disable-next-line @next/next/no-img-element */}

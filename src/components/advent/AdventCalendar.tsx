@@ -8,6 +8,7 @@ import { publicTestPath, studentTestPath } from "@/lib/tests";
 import { useAuth } from "@/context/AuthContext";
 import { ZSU_SHARE } from "@/lib/advent";
 import { markAdventFinished } from "@/lib/advent-gift";
+import { AdventMap } from "./AdventMap";
 import {
   ADVENT_DAYS, ADVENT_YEAR, BONUS, DAYS, type Bonus, GIFT_TESTS, NICHOLAS_GIFT, PHRASE, PHRASE_LETTERS,
   daysUntilStart, isCorrect, openedDays, parseAnswer, type AdventDay, type ProblemDay,
@@ -201,6 +202,12 @@ export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
           <h2 id="cipher-title" className="adv-h2">Фраза‑ключ до подарунка</h2>
           <Cipher progress={progress ?? {}} opened={opened ?? 0} />
           <Gift ready={ready} solved={solvedCount} />
+        </div>
+      </section>
+
+      <section className="adv-map-sec" aria-labelledby="map-title">
+        <div className="wrap">
+          <AdventMap isSolved={(day) => !!opened && day <= opened && isDone(progress?.[day])} />
         </div>
       </section>
 
