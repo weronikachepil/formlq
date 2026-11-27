@@ -5,6 +5,8 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 import { MathText } from "@/components/MathText";
 import { publicTestPath, studentTestPath } from "@/lib/tests";
+import { useAuth } from "@/context/AuthContext";
+import { markAdventFinished } from "@/lib/advent-gift";
 import {
   ADVENT_DAYS, ADVENT_YEAR, BONUS, DAYS, type Bonus, GIFT_TESTS, NICHOLAS_GIFT, PHRASE, PHRASE_LETTERS,
   daysUntilStart, isCorrect, openedDays, parseAnswer, type AdventDay, type ProblemDay,
@@ -128,6 +130,15 @@ export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
   const solvedCount = ready ? DAYS.filter((p) => p.day <= opened && isDone(progress[p.day])).length : 0;
   const started = ready && opened > 0;
   const finished = solvedCount === ADVENT_DAYS;
+
+  // All 24 solved by someone signed in (the calendar only opens with access): remember it on
+  // their account, so the gift imitations show in «Тести» on every device.
+  const { user, userProfile, refreshProfile } = useAuth();
+  const giftSaved = !!userProfile?.adventGiftAt;
+  useEffect(() => {
+    if (!finished || locked || !user || giftSaved) return;
+    markAdventFinished(user.uid).then(refreshProfile).catch(() => { /* retried on the next visit */ });
+  }, [finished, locked, user, giftSaved, refreshProfile]);
   const today = opened && opened <= ADVENT_DAYS ? opened : null;
   // The hero's one main action: today's window, or the earliest open day still unsolved.
   const target = !ready || !opened ? null
@@ -338,7 +349,7 @@ function Gift({ ready, solved }: { ready: boolean; solved: number }) {
           <h3>{open ? `Подарунок відкрито: ${n}` : `Подарунок за всі 24 віконця: ${n}`}</h3>
           <p>
             {open
-              ? "Фразу зібрано! Пройди імітації в повному форматі НМТ: з таймером, балом за шкалою 100–200 і розбором помилок."
+              ? "Фразу зібрано! Пройди імітації в повному форматі НМТ: з таймером, балом за шкалою 100–200 і розбором помилок. Вони також з’явилися в розділі «Тести» твого кабінету."
               : ready
                 ? `Збери всю фразу, і відкриються повні імітації НМТ від formlq. Залишилось ${left} ${plural(left, "віконце", "віконця", "віконець")}.`
                 : "Збери всю фразу, і відкриються повні імітації НМТ від formlq."}
