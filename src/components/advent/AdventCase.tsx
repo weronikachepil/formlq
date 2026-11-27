@@ -105,14 +105,24 @@ export function AdventCase({ isSolved }: { isSolved: (day: number) => boolean })
         </div>
       ) : all ? (
         <div className="adv-accuse">
-          <label htmlFor="adv-accuse" className="lbl">Усі докази зібрано. Хто сховав зірку?</label>
-          <div className="answer-row">
-            <select id="adv-accuse" value={pick} onChange={(e) => { setPick(e.target.value); setVerdict(null); }}>
-              <option value="">Обери підозрюваного</option>
-              {SUSPECTS.map((s) => <option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
-            </select>
-            <button type="button" className="btn" disabled={!pick} onClick={accuse}>Звинуватити</button>
+          <p id="adv-accuse-label" className="lbl">Усі докази зібрано. Хто сховав зірку?</p>
+          <div className="adv-pick" role="radiogroup" aria-labelledby="adv-accuse-label">
+            {SUSPECTS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                role="radio"
+                aria-checked={pick === s.id}
+                className={`pick${pick === s.id ? " on" : ""}${state.crossed.includes(s.id) ? " crossed" : ""}`}
+                onClick={() => { setPick(s.id); setVerdict(null); }}
+              >
+                <span aria-hidden>{s.emoji}</span> {s.name}
+              </button>
+            ))}
           </div>
+          <button type="button" className="btn adv-accuse-btn" disabled={!pick} onClick={accuse}>
+            {pick ? `Звинуватити: ${SUSPECTS.find((x) => x.id === pick)!.name}` : "Обери підозрюваного"}
+          </button>
           {verdict && <p className="err" role="alert">{verdict}</p>}
         </div>
       ) : (

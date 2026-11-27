@@ -749,11 +749,19 @@
 .landing .adv-suspects .sus.culprit { opacity: 1; border: 2px solid #f4c430; box-shadow: 0 0 0 4px rgba(244,196,48,.25); background: #fff; }
 .landing .adv-suspects .sus.culprit b { text-decoration: none; }
 .landing .adv-suspects .sus.culprit::after { content: "🌟"; color: inherit; }
-.landing .adv-accuse { margin-top: 24px; max-width: 560px; }
 .landing .adv-accuse .lbl { display: block; margin-bottom: 8px; font-weight: 700; }
-.landing .adv-accuse .answer-row { display: flex; gap: 8px; }
-.landing .adv-accuse select { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border-radius: var(--r-in); border: 1px solid rgba(20,38,42,.22); font: 600 16px var(--body); color: var(--ink); background: #fff; }
-.landing .adv-accuse .btn { min-height: 48px; border-radius: var(--r-in); }
+.landing .adv-accuse { margin-top: 24px; }
+.landing .adv-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.landing .adv-pick .pick {
+  display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 8px 12px; border-radius: var(--r-in); cursor: pointer; text-align: left;
+  border: 1px solid var(--line); background: #fff; color: var(--ink); font: 600 14px/1.2 var(--body); transition: border-color .15s, background .15s;
+}
+.landing .adv-pick .pick span { font-size: 20px; }
+.landing .adv-pick .pick:hover { border-color: rgba(20,38,42,.35); }
+.landing .adv-pick .pick.crossed { color: var(--muted); }
+.landing .adv-pick .pick.on { border: 2px solid var(--ink); background: #fdf3d3; color: var(--ink); }
+.landing .adv-pick .pick:focus-visible { outline: 3px solid var(--lav); outline-offset: 2px; }
+.landing .adv-accuse-btn { margin-top: 14px; min-height: 48px; border-radius: var(--r-in); }
 .landing .adv-accuse .btn:disabled { opacity: .45; }
 .landing .adv-accuse .err { margin: 10px 0 0; font-size: 14px; font-weight: 600; color: #c2410c; }
 .landing .adv-case-end { margin-top: 24px; padding: 18px 20px; border-radius: var(--r-in); background: var(--mint-soft); border: 1px solid var(--mint); }
@@ -762,11 +770,13 @@
 .landing .adv-case-end .res-sol { margin-top: 6px; }
 @media (max-width: 900px) {
   .landing .adv-case-grid { grid-template-columns: 1fr; }
+  .landing .adv-pick { grid-template-columns: repeat(3, 1fr); }
   .landing .adv-suspects { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 620px) {
   .landing .adv-case { padding: 20px; }
-  .landing .adv-accuse .answer-row { flex-direction: column; }
+  .landing .adv-pick { grid-template-columns: 1fr 1fr; }
+  .landing .adv-accuse-btn { width: 100%; }
 }
 
 /* «Справа дня»: the scene above the problem and the reveal after it */
