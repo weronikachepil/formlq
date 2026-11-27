@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdventNavLink } from "../advent/AdventPromo";
 
 export function LandingNav() {
   return (
@@ -10,6 +11,7 @@ export function LandingNav() {
           <li><a href="#board">Дошка</a></li>
           <li><a href="#how">Як це працює</a></li>
           <li><a href="#faq">Питання</a></li>
+          <AdventNavLink />
         </ul>
         <div className="nav-actions">
           <Link className="btn ghost sm" href="/login">Увійти</Link>

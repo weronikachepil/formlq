@@ -1,0 +1,13 @@
+/* Landing entry point to /advent. Scoped under .landing like the rest of the landing styles. */
+.landing .adv-bar-promo {
+  display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 8px 16px;
+  background: linear-gradient(90deg, #14262a, #1d3a40); color: #fff; font-size: 14px; text-align: center;
+}
+.landing .adv-bar-promo b { color: #f4c430; }
+.landing .adv-bar-promo .sub { color: rgba(255,255,255,.85); }
+.landing .adv-bar-promo .go { font-weight: 700; transition: transform .15s; }
+.landing .adv-bar-promo:hover .go { transform: translateX(3px); }
+.landing .adv-bar-promo:focus-visible { outline: 3px solid var(--lav); outline-offset: -3px; }
+@media (max-width: 620px) {
+  .landing .adv-bar-promo .sub { display: none; }
+}

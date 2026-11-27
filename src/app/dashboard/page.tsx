@@ -14,6 +14,7 @@ import { TutorLessonsWidget, TutorOverview } from "@/components/dashboard/TutorD
 import { SoloBoardsCard, SoloOverview } from "@/components/dashboard/SoloDashboard";
 import { useHasTutor } from "@/hooks/useHasTutor";
 import { StudentActions } from "@/components/dashboard/QuickAction";
+import { AdventDashboardCard } from "@/components/advent/AdventPromo";
 
 export default function DashboardPage() {
   const { user, userProfile } = useAuth();
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
       <div className="space-y-6">
+        {(solo || withTutor) && <AdventDashboardCard />}
         {(solo || withTutor) && <StudentActions withTutor={withTutor} />}
         {/* The tip and the daily task are for students; teachers and editors see their own work. */}
         {!tutor && <DailyTip tips={tips} />}
