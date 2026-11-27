@@ -9,6 +9,7 @@ import { withNext } from "@/lib/utils";
 import { claimAdventCode, hasAdventCode, teacherCodeStatus, type ClaimResult } from "@/lib/advent-codes";
 import { ORDER_CONTACT, PRICE_STUDENT } from "@/lib/advent-shop";
 import { ZSU_SHARE } from "@/lib/advent";
+import { AdventPreview } from "./AdventPreview";
 
 /** «20% доходу — на ЗСУ» with the flag; styled by advent.css. */
 export function ZsuNote({ className = "" }: { className?: string }) {
@@ -175,14 +176,20 @@ export function AdventTeacherWaiting() {
   );
 }
 
-/** What a signed-in visitor without access sees under the hero. */
+/** What a signed-in visitor without access sees under the hero: how to get in, then what's inside. */
 export function AdventLocked({ access }: { access: "none" | "teacher-none" }) {
-  if (access === "teacher-none") return <AdventBuy kind="pack" />;
   return (
-    <div className="adv-locked-grid">
-      <AdventBuy kind="self" />
-      <AdventCodeEntry />
-    </div>
+    <>
+      {access === "teacher-none" ? (
+        <AdventBuy kind="pack" />
+      ) : (
+        <div className="adv-locked-grid">
+          <AdventBuy kind="self" />
+          <AdventCodeEntry />
+        </div>
+      )}
+      <AdventPreview />
+    </>
   );
 }
 

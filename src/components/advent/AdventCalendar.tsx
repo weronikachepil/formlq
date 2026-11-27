@@ -18,7 +18,7 @@ import { DAY_ICONS, Garland, Hills, Snowfall, TileBow, TileIcon } from "./Winter
 
 /* ---------- progress in localStorage ---------- */
 
-interface DayState { solved?: boolean; gaveUp?: boolean; attempts?: number; /** Game result, e.g. «Усі пари за 9 ходів». */ note?: string }
+export interface DayState { solved?: boolean; gaveUp?: boolean; attempts?: number; /** Game result, e.g. «Усі пари за 9 ходів». */ note?: string }
 /** Keyed by day number, plus `bonus-<id>` for «Ігротека» wins. */
 type Progress = Record<string, DayState>;
 
@@ -547,7 +547,10 @@ function BonusDialog({ b, state, onWin, onClose }: {
   );
 }
 
-function ProblemBody({ p, state, onUpdate }: { p: ProblemDay; state: DayState; onUpdate: (patch: DayState) => void }) {
+/** A problem with an answer field, hint and solution. `demo`: the free sample, no letter of the phrase. */
+export function ProblemBody({ p, state, onUpdate, demo = false }: {
+  p: ProblemDay; state: DayState; onUpdate: (patch: DayState) => void; demo?: boolean;
+}) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showHint, setShowHint] = useState(false);
@@ -569,7 +572,7 @@ function ProblemBody({ p, state, onUpdate }: { p: ProblemDay; state: DayState; o
           {state.solved ? "Правильно!" : "Розв'язок"} Відповідь: <strong>{String(p.answer).replace(".", ",")}</strong>
         </p>
         <p className="res-sol"><MathText text={p.solution} /></p>
-        <p className="res-letter">Літера дня: <b>{PHRASE_LETTERS[p.day - 1]}</b></p>
+        {!demo && <p className="res-letter">Літера дня: <b>{PHRASE_LETTERS[p.day - 1]}</b></p>}
       </div>
     );
   }

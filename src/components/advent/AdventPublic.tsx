@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { AdventCalendar } from "./AdventCalendar";
 import { AdventGuestSteps } from "./AdventAccess";
+import { AdventPreview } from "./AdventPreview";
 
 /**
  * Public /advent: a teaser for guests (how to get a code). Signed-in visitors are sent to
@@ -16,5 +17,5 @@ export function AdventPublic() {
   useEffect(() => {
     if (!loading && user) router.replace("/dashboard/advent");
   }, [loading, user, router]);
-  return <AdventCalendar locked={<AdventGuestSteps />} />;
+  return <AdventCalendar locked={<><AdventGuestSteps /><AdventPreview /></>} />;
 }
