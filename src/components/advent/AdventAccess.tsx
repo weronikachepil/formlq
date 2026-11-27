@@ -37,16 +37,18 @@ export function useAdventAccess(): AdventAccess {
   const role = userProfile?.role;
   const editor = isEditor(role);
   const tutor = canTutor(role) && !editor;
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: accessKey(user?.uid),
     queryFn: () => (tutor ? ownsAdventCodes(user!.uid) : hasAdventCode(user!.uid)),
     enabled: !!user && !!userProfile && !editor,
     staleTime: 60 * 1000,
+    retry: 1,
   });
   if (loading || (user && !userProfile)) return "loading";
   if (!user) return "signed-out";
   if (editor) return "admin";
-  if (data === undefined) return "loading";
+  // A failed check (offline, rules not published) means no access, not an endless skeleton.
+  if (data === undefined && !isError) return "loading";
   if (tutor) return data ? "teacher" : "teacher-none";
   return data ? "granted" : "none";
 }
