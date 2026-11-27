@@ -3,7 +3,7 @@ import Link from "next/link";
 import "@/components/landing/landing.css";
 import "@/components/advent/advent.css";
 import { landingFontVariables } from "@/components/landing/fonts";
-import { AdventCalendar } from "@/components/advent/AdventCalendar";
+import { AdventPublic } from "@/components/advent/AdventPublic";
 import { AdventNavActions } from "@/components/advent/AdventPromo";
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export default function AdventPage() {
           <AdventNavActions />
         </nav>
       </div>
-      <main><AdventCalendar /></main>
+      <main><AdventPublic /></main>
       <footer>
         <div className="wrap">
           <Link className="logo" href="/">formlq</Link>

@@ -2,9 +2,21 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import QRCode from "qrcode";
-import { Check, Copy, Download, ExternalLink, Share2 } from "lucide-react";
+import toast from "react-hot-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, Copy, Download, KeyRound, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useAuth } from "@/context/AuthContext";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
+import { cn } from "@/lib/utils";
+import {
+  createAdventCodes,
+  deleteAdventCode,
+  formatAdventCode,
+  getMyAdventCodes,
+  type AdventCode,
+} from "@/lib/advent-codes";
 
 // Dark-on-white in both themes: scanners need the contrast.
 const QR_OPTIONS = { margin: 2, errorCorrectionLevel: "M" as const, color: { dark: "#000000", light: "#ffffff" } };
@@ -27,31 +39,80 @@ async function renderPrintable(url: string): Promise<string> {
   ctx.fillText("Адвент-календар «Відлік до НМТ»", size / 2, size + 40, size - 60);
   ctx.fillStyle = "#555555";
   ctx.font = "28px system-ui, -apple-system, sans-serif";
-  ctx.fillText("Задача або гра щодня, 1–24 грудня", size / 2, size + 90, size - 60);
+  ctx.fillText("Увійди й введи свій особистий код", size / 2, size + 90, size - 60);
   return canvas.toDataURL("image/png");
 }
 
-const MESSAGE =
-  "Адвент-календар з математики «Відлік до НМТ»: щодня з 1 до 24 грудня — задача в стилі НМТ або міні-гра. " +
-  "Збери всю фразу, і відкриєш 5 імітацій НМТ у подарунок 🎄";
-
 const noop = () => () => {};
+const codesKey = (uid?: string) => ["adventCodes", uid] as const;
 
-/** Teachers and editors: hand the calendar to students by link, message or printed QR. */
+function messageFor(code: string, url: string) {
+  return (
+    `Адвент-календар з математики «Відлік до НМТ»: щодня з 1 до 24 грудня — задача в стилі НМТ або міні-гра, ` +
+    `а в кінці 5 імітацій НМТ у подарунок 🎄\n` +
+    `Твій особистий код: ${formatAdventCode(code)}\n` +
+    `Увійди на formlq (${url}) і введи код. Він працює лише для одного акаунта, тож нікому його не передавай.`
+  );
+}
+
+function usedLabel(c: AdventCode) {
+  const date = c.usedAt?.toDate().toLocaleDateString("uk-UA", { day: "numeric", month: "short" });
+  return `${c.usedName || "Учень"}${date ? ` · ${date}` : ""}`;
+}
+
+/**
+ * Teachers and editors: personal codes for their students (one code — one student),
+ * plus the link and a printable QR to the calendar.
+ */
 export function AdventSharePanel() {
-  // The public page works without an account; signed-in students are offered their cabinet.
+  const { user } = useAuth();
+  const qc = useQueryClient();
   const url = useSyncExternalStore(noop, () => `${window.location.origin}/advent`, () => "");
-  const canShare = useSyncExternalStore(noop, () => typeof navigator.share === "function", () => false);
   const [qr, setQr] = useState<{ url: string; image: string } | null>(null);
+  const [count, setCount] = useState(5);
+  const [toDelete, setToDelete] = useState<AdventCode | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const link = useCopyToClipboard();
-  const message = useCopyToClipboard();
+  const all = useCopyToClipboard();
+
+  const { data: codes = [], isLoading } = useQuery({
+    queryKey: codesKey(user?.uid),
+    queryFn: () => getMyAdventCodes(user!.uid),
+    enabled: !!user,
+  });
+  const free = codes.filter((c) => !c.usedBy);
+  const used = codes.length - free.length;
+
+  const create = useMutation({
+    mutationFn: (n: number) => createAdventCodes(user!.uid, n),
+    onSuccess: (made) => {
+      toast.success(`Створено ${made.length} ${made.length === 1 ? "код" : made.length < 5 ? "коди" : "кодів"}`);
+      qc.invalidateQueries({ queryKey: codesKey(user?.uid) });
+    },
+    onError: () => toast.error("Не вдалося створити коди"),
+  });
+  const remove = useMutation({
+    mutationFn: (code: string) => deleteAdventCode(code),
+    onSuccess: () => qc.invalidateQueries({ queryKey: codesKey(user?.uid) }),
+    onError: () => toast.error("Не вдалося видалити код"),
+  });
 
   useEffect(() => {
     if (!url) return;
     let cancelled = false;
-    QRCode.toDataURL(url, { ...QR_OPTIONS, width: 360 }).then((image) => { if (!cancelled) setQr({ url, image }); });
+    QRCode.toDataURL(url, { ...QR_OPTIONS, width: 320 }).then((image) => { if (!cancelled) setQr({ url, image }); });
     return () => { cancelled = true; };
   }, [url]);
+
+  async function copyMessage(code: string) {
+    try {
+      await navigator.clipboard.writeText(messageFor(code, url));
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode((c) => (c === code ? null : c)), 1500);
+    } catch {
+      toast.error("Не вдалося скопіювати");
+    }
+  }
 
   async function downloadQr() {
     const a = document.createElement("a");
@@ -60,23 +121,20 @@ export function AdventSharePanel() {
     a.click();
   }
 
-  async function share() {
-    try { await navigator.share({ title: "Відлік до НМТ", text: MESSAGE, url }); } catch { /* cancelled */ }
-  }
-
   return (
-    <section className="rounded-[18px] bg-card p-5 sm:p-6">
+    <section className="rounded-[18px] bg-card p-5 sm:p-6 space-y-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
         <div className="min-w-0 flex-1 space-y-4">
           <div>
-            <h2 className="font-heading text-xl font-bold">Поділіться з учнями</h2>
+            <h2 className="font-heading text-xl font-bold">Доступ для учнів</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Календар відкривається без акаунта. Учні, які увійшли, бачать його у своєму кабінеті. Прогрес кожного учня зберігається в його браузері.
+              Календар відкривається лише за особистим кодом. Кожен код — для одного учня: після введення він
+              прив&apos;язується до акаунта учня, і ніхто інший ним не скористається.
             </p>
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium">Посилання</p>
+            <p className="text-sm font-medium">Посилання на календар</p>
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 readOnly
@@ -85,48 +143,122 @@ export function AdventSharePanel() {
                 aria-label="Посилання на календар"
                 className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm"
               />
-              <Button onClick={() => link.copy(url)} disabled={!url} className="h-11 rounded-xl">
+              <Button variant="outline" onClick={() => link.copy(url)} disabled={!url} className="h-11 rounded-xl">
                 {link.copied ? <Check size={16} /> : <Copy size={16} />}
                 {link.copied ? "Скопійовано" : "Скопіювати"}
               </Button>
             </div>
           </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Повідомлення для учнів</p>
-            <p className="rounded-xl bg-muted/60 p-3 text-sm">{MESSAGE} {url}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => message.copy(`${MESSAGE} ${url}`)} disabled={!url} className="h-11 rounded-xl">
-                {message.copied ? <Check size={16} /> : <Copy size={16} />}
-                {message.copied ? "Скопійовано" : "Скопіювати повідомлення"}
-              </Button>
-              {canShare && (
-                <Button variant="outline" onClick={share} className="h-11 rounded-xl">
-                  <Share2 size={16} /> Надіслати…
-                </Button>
-              )}
-              <Button variant="outline" onClick={() => window.open("/advent", "_blank")} className="h-11 rounded-xl">
-                <ExternalLink size={16} /> Відкрити як учень
-              </Button>
-            </div>
-          </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-center gap-2 md:w-[200px]">
-          <div className="grid size-[180px] place-items-center overflow-hidden rounded-xl border border-border bg-white">
+        <div className="flex shrink-0 flex-col items-center gap-2 md:w-[180px]">
+          <div className="grid size-[160px] place-items-center overflow-hidden rounded-xl border border-border bg-white">
             {qr?.url === url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={qr.image} alt="QR-код календаря" width={180} height={180} />
+              <img src={qr.image} alt="QR-код календаря" width={160} height={160} />
             ) : (
               <div className="size-full animate-pulse bg-muted" />
             )}
           </div>
           <Button variant="outline" onClick={downloadQr} disabled={!url} className="h-11 w-full rounded-xl">
-            <Download size={16} /> Завантажити QR
+            <Download size={16} /> QR для друку
           </Button>
-          <p className="text-center text-xs text-muted-foreground">Для класу чи друку</p>
         </div>
       </div>
+
+      <div className="space-y-3 border-t border-border/50 pt-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="font-heading text-lg font-bold">Особисті коди</h3>
+            <p className="text-sm text-muted-foreground">
+              {codes.length ? `Усього ${codes.length}: вільних ${free.length}, використано ${used}` : "Створіть по коду на кожного учня"}
+            </p>
+          </div>
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(e) => { e.preventDefault(); create.mutate(count); }}
+          >
+            <label htmlFor="adv-count" className="text-sm text-muted-foreground">Кількість</label>
+            <input
+              id="adv-count"
+              type="number"
+              min={1}
+              max={50}
+              value={count}
+              onChange={(e) => setCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+              className="h-11 w-20 rounded-xl border border-border bg-background px-3 text-sm"
+            />
+            <Button type="submit" disabled={create.isPending || !user} className="h-11 rounded-xl">
+              <Plus size={16} /> {create.isPending ? "Створюю…" : "Створити коди"}
+            </Button>
+          </form>
+        </div>
+
+        {isLoading ? (
+          <div className="h-24 animate-pulse rounded-xl bg-muted/60" />
+        ) : codes.length === 0 ? (
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+            <KeyRound size={18} className="shrink-0" />
+            Кодів ще немає. Створіть стільки, скільки у вас учнів, і надішліть кожному свій.
+          </div>
+        ) : (
+          <>
+            {free.length > 1 && (
+              <Button
+                variant="outline"
+                className="h-10 rounded-xl"
+                onClick={() => all.copy(free.map((c) => formatAdventCode(c.id)).join("\n"))}
+              >
+                {all.copied ? <Check size={16} /> : <Copy size={16} />}
+                {all.copied ? "Скопійовано" : `Скопіювати всі вільні (${free.length})`}
+              </Button>
+            )}
+            <ul className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/50">
+              {codes.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+                  <span className="font-mono text-base font-bold tracking-wider">{formatAdventCode(c.id)}</span>
+                  <span
+                    className={cn(
+                      "rounded-md px-2 py-0.5 text-xs font-semibold",
+                      c.usedBy ? "bg-mint/60 text-[#14262a]" : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {c.usedBy ? usedLabel(c) : "вільний"}
+                  </span>
+                  <span className="ml-auto flex gap-1">
+                    {!c.usedBy && (
+                      <Button variant="ghost" className="h-10 rounded-xl" onClick={() => copyMessage(c.id)}>
+                        {copiedCode === c.id ? <Check size={16} /> : <Copy size={16} />}
+                        {copiedCode === c.id ? "Скопійовано" : "Повідомлення з кодом"}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      className="h-10 rounded-xl text-muted-foreground"
+                      aria-label={`Видалити код ${formatAdventCode(c.id)}`}
+                      onClick={() => setToDelete(c)}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        title={`Видалити код ${toDelete ? formatAdventCode(toDelete.id) : ""}?`}
+        description={
+          toDelete?.usedBy
+            ? `${toDelete.usedName || "Учень"} втратить доступ до календаря.`
+            : "Код перестане працювати."
+        }
+        onConfirm={() => { if (toDelete) remove.mutate(toDelete.id); setToDelete(null); }}
+        onCancel={() => setToDelete(null)}
+      />
     </section>
   );
 }

@@ -108,7 +108,11 @@ function celebrate(big = false) {
 
 /* ---------- page ---------- */
 
-export function AdventCalendar() {
+/**
+ * The whole calendar. With `locked`, only the hero is shown and `locked` replaces the rest
+ * (the code entry for a student without access, or how to get access for a guest).
+ */
+export function AdventCalendar({ locked }: { locked?: React.ReactNode } = {}) {
   const progress = useProgress();
   useDevSolved();
   const opened = useOpened();
@@ -153,8 +157,8 @@ export function AdventCalendar() {
             24 віконця, по одному на день: задачі в стилі НМТ, а на вихідних міні-ігри.
             Кожна перемога відкриває літеру фрази‑ключа. Збери всю фразу — і відкриєш подарунок: {GIFT_TESTS.length} {plural(GIFT_TESTS.length, "імітацію", "імітації", "імітацій")} НМТ.
           </p>
-          <Status ready={ready} opened={opened} solved={solvedCount} />
-          {target !== null && (
+          {!locked && <Status ready={ready} opened={opened} solved={solvedCount} />}
+          {!locked && target !== null && (
             <div className="cta">
               <button type="button" className="btn lg adv-cta" onClick={() => setOpenDay(target)}>
                 {target === today
@@ -168,6 +172,11 @@ export function AdventCalendar() {
         <Hills />
       </section>
 
+      {locked ? (
+        <section className="adv-cipher-sec soft adv-locked-sec">
+          <div className="wrap">{locked}</div>
+        </section>
+      ) : (<>
       <section className="adv-cipher-sec soft" aria-labelledby="cipher-title">
         <div className="wrap">
           <h2 id="cipher-title" className="adv-h2">Фраза‑ключ до подарунка</h2>
@@ -261,6 +270,7 @@ export function AdventCalendar() {
           onClose={() => setOpenDay(null)}
         />
       )}
+      </>)}
     </div>
   );
 }

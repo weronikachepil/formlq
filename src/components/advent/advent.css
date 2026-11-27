@@ -541,3 +541,27 @@
 }
 .landing.adv-embed .advent .adv-hero { padding-top: 96px; }
 .landing.adv-embed .adv-snow-toggle { right: 16px; }
+
+/* ---------- access: code entry / how to get access ---------- */
+.landing .adv-locked-sec { padding: 24px 0 64px; }
+.landing .adv-access { max-width: 620px; }
+.landing .adv-access-lead { margin: 8px 0 20px; color: var(--muted); }
+.landing .adv-access-note { margin: 16px 0 0; font-size: 14px; color: var(--muted); }
+.landing .adv-code-form .lbl { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.landing .adv-code-form .answer-row { display: flex; gap: 8px; }
+.landing .adv-code-form input {
+  flex: 1; min-width: 0; min-height: 48px; padding: 0 14px; border-radius: var(--r-in);
+  border: 1px solid rgba(20,38,42,.22); font: 700 20px var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: #fff;
+}
+.landing .adv-code-form input::placeholder { color: rgba(20,38,42,.3); }
+.landing .adv-code-form input:focus { outline: 3px solid var(--lav); outline-offset: 0; border-color: var(--ink); }
+.landing .adv-code-form input[aria-invalid="true"] { border-color: #c2410c; }
+.landing .adv-code-form .btn { min-height: 48px; border-radius: var(--r-in); }
+.landing .adv-code-form .btn:disabled { opacity: .45; cursor: default; }
+.landing .adv-code-form .err { margin: 8px 0 0; font-size: 14px; font-weight: 600; color: #c2410c; }
+.landing .adv-steps { list-style: decimal; margin: 14px 0 0; padding-left: 22px; display: grid; gap: 10px; color: var(--ink-2); }
+.landing .adv-access .cta { margin-top: 22px; }
+@media (max-width: 620px) {
+  .landing .adv-code-form .answer-row { flex-direction: column; }
+  .landing .adv-code-form .btn { width: 100%; }
+}
