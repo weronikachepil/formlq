@@ -567,7 +567,13 @@
 }
 
 /* ---------- buying ---------- */
-.landing .adv-locked-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: start; }
+.landing .adv-locked-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+/* Same size side by side: both cards fill the row, their actions sit on the bottom edge. */
+.landing .adv-locked-grid .adv-access { display: flex; flex-direction: column; }
+.landing .adv-locked-grid .adv-access .adv-zsu { margin: 0 0 20px; }
+.landing .adv-locked-grid .adv-access .cta,
+.landing .adv-locked-grid .adv-access > .adv-access-note:last-child,
+.landing .adv-locked-grid .adv-access .adv-code-form { margin-top: auto; }
 .landing .adv-locked-grid .adv-access { max-width: none; }
 @media (max-width: 900px) {
   .landing .adv-locked-grid { grid-template-columns: 1fr; }

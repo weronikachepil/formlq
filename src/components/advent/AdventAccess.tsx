@@ -84,8 +84,8 @@ export function AdventBuy({ kind }: { kind: "self" | "pack" }) {
           24 віконця з задачами в стилі НМТ і міні-іграми, Ігротека, конспект від Миколая і 5 імітацій НМТ у подарунок.
           Як купити й отримати особистий код — у нашому Telegram-каналі.
         </p>
-        <ContactButton text="Щоб отримати код, напиши formlq або попроси свого викладача." />
         <ZsuNote />
+        <ContactButton text="Щоб отримати код, напиши formlq або попроси свого викладача." />
       </div>
     );
   }
@@ -97,8 +97,8 @@ export function AdventBuy({ kind }: { kind: "self" | "pack" }) {
         і для вас, щойно перший учень введе свій код. Як замовити коди — у нашому Telegram-каналі; після оплати
         вони з’являться тут.
       </p>
-      <ContactButton text="Щоб отримати коди, напишіть formlq." />
       <ZsuNote />
+      <ContactButton text="Щоб отримати коди, напишіть formlq." />
     </div>
   );
 }
