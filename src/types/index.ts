@@ -13,6 +13,8 @@ export interface UserProfile {
   role: UserRole;
   /** A teacher's invite code for students (src/lib/invites.ts). */
   inviteCode?: string;
+  /** When they solved all 24 advent windows: the gift imitations show in «Тести» (lib/advent-gift.ts). */
+  adventGiftAt?: Timestamp | null;
 }
 
 export interface Topic {

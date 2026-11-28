@@ -1,0 +1,71 @@
+/* Seasonal winter layer (SiteWinter.tsx). Everything here is on only while `html.winter` is set
+   (until 7 Jan) or is rendered only in season. */
+
+/* ---------- garland (placed in the page flow by its parent) ---------- */
+.season-garland { display: block; width: 100%; height: 30px; overflow: visible; pointer-events: none; }
+.season-garland path { fill: none; stroke: rgba(20, 38, 42, .3); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.dark .season-garland path { stroke: rgba(255, 255, 255, .3); }
+.season-garland ellipse { animation: site-twinkle 2.4s ease-in-out infinite; filter: drop-shadow(0 0 4px currentColor); }
+@keyframes site-twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+/* Landing: along the top of the hero, which scrolls away with it. */
+.landing .hero-garland { position: absolute; top: 0; left: 0; right: 0; }
+/* Cabinet: in the empty band above the page title (large screens only; small headers are too tight). */
+.app-garland { position: absolute; top: 0; left: 0; right: 0; height: 24px; display: none; }
+@media (min-width: 1024px) { .app-garland { display: block; } }
+
+/* ---------- snow + switch ---------- */
+.site-snow { position: fixed; inset: 0; z-index: 65; width: 100vw; height: 100vh; pointer-events: none; }
+.site-snow-toggle {
+  position: fixed; right: 16px; bottom: 16px; z-index: 70; display: grid; place-items: center; width: 44px; height: 44px;
+  border-radius: 999px; border: 1px solid rgba(20, 38, 42, .12); background: rgba(255, 255, 255, .9); color: #14262a; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(20, 38, 42, .12); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.site-snow-toggle[aria-pressed="false"] { opacity: .6; }
+.site-snow-toggle:hover { opacity: 1; }
+.site-snow-toggle:focus-visible { outline: 3px solid #cfc6f7; outline-offset: 2px; }
+.site-snow-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.dark .site-snow-toggle { background: rgba(20, 38, 42, .85); color: #fff; border-color: rgba(255, 255, 255, .15); }
+@media (max-width: 767px) {
+  .site-snow-toggle { bottom: calc(88px + env(safe-area-inset-bottom)); }
+}
+
+/* ---------- the duck in a winter hat and scarf, like on the advent page (landing + cabinet logo) ---------- */
+html.winter .mb-logo::after,
+html.winter .landing .logo::after {
+  top: -0.4em; height: 0.95em;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 -8 32 40'><path d='M2 16c0-4 6-5 11-3 3 1 5 0 7-1l2 2c0 7-6 12-13 11-4-1-7-4-7-9z' fill='%23f4c430'/><circle cx='21' cy='9' r='6' fill='%23f4c430'/><path d='M26 7.5l5.5 2.3L26 12z' fill='%23ef8a2b'/><path d='M7 18c3-2 8-1 8 2-3 3-8 2-8-2z' fill='%23e2a516'/><circle cx='22.6' cy='8' r='1' fill='%232b2b2b'/><path d='M15.7 14.3Q21.7 17 26.3 13.7L27.7 20.3 24.3 19.7 23.7 15.7Q19.7 17 15.7 15.7z' fill='%23cfc6f7'/><path d='M14.3 5.7Q21-5 27.7 5.7z' fill='%23ff8d6b'/><path d='M14.3 5.7H27.7' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/><circle cx='21.7' cy='-3' r='2.4' fill='%23fff' stroke='%23f0b8a0' stroke-width='.8'/></svg>");
+}
+
+/* ---------- landing ---------- */
+html.winter .landing .hero { position: relative; }
+/* Snow lumps along the top of the board card. */
+html.winter .landing .board-mock { overflow: visible; }
+html.winter .landing .board-mock::before {
+  content: ""; position: absolute; z-index: 3; left: 14px; right: 14px; top: -9px; height: 18px; pointer-events: none;
+  background: radial-gradient(circle at 12px 10px, #fff 9px, transparent 9.5px) 0 0 / 24px 18px repeat-x;
+  filter: drop-shadow(0 1px 1px rgba(20, 38, 42, .12));
+}
+/* Faint snowflakes on the grey sections. */
+html.winter .landing section.soft {
+  background-color: var(--soft);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' fill='none' stroke='%23bcd0da' stroke-width='1.4' stroke-linecap='round'><g transform='translate(30 34)'><path d='M0-9V9M-7.8-4.5 7.8 4.5M-7.8 4.5 7.8-4.5'/></g><g transform='translate(118 96) scale(.7)'><path d='M0-9V9M-7.8-4.5 7.8 4.5M-7.8 4.5 7.8-4.5'/></g><circle cx='86' cy='30' r='1.6' fill='%23cfdde4' stroke='none'/><circle cx='48' cy='128' r='1.8' fill='%23cfdde4' stroke='none'/></svg>");
+}
+/* Snowdrifts along the bottom of the final call to action. */
+html.winter .landing section.final { position: relative; padding-bottom: 150px; }
+html.winter .landing section.final::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 90px; pointer-events: none;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 90' preserveAspectRatio='none'><path d='M0 50C180 10 330 30 500 46s330-34 520-14 180 24 180 24V90H0z' fill='%23eef3f5'/><path d='M0 70c220-34 420-16 640 0s400-10 560-6V90H0z' fill='%23fff'/></svg>") bottom / 100% 100% no-repeat;
+}
+
+/* ---------- cabinet ---------- */
+/* Very faint snowflakes on the page background. */
+html.winter body {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' fill='none' stroke='%2314262a' stroke-opacity='.05' stroke-width='1.4' stroke-linecap='round'><g transform='translate(40 50)'><path d='M0-10V10M-8.7-5 8.7 5M-8.7 5 8.7-5'/></g><g transform='translate(160 150) scale(.7)'><path d='M0-10V10M-8.7-5 8.7 5M-8.7 5 8.7-5'/></g></svg>");
+}
+html.winter.dark body {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' fill='none' stroke='%23ffffff' stroke-opacity='.06' stroke-width='1.4' stroke-linecap='round'><g transform='translate(40 50)'><path d='M0-10V10M-8.7-5 8.7 5M-8.7 5 8.7-5'/></g><g transform='translate(160 150) scale(.7)'><path d='M0-10V10M-8.7-5 8.7 5M-8.7 5 8.7-5'/></g></svg>");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .season-garland ellipse { animation: none; }
+}

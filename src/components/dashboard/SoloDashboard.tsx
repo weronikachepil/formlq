@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
 import { TestCard, bestByTest } from "@/components/tests/TestCard";
 import { SectionLabel } from "@/components/ui/section-label";
 
-const RECOMMENDED = 3;
+/** Four, so the two-column grid is an even 2 × 2. */
+const RECOMMENDED = 4;
 const RECENT_BOARDS = 3;
 
 /** Own attempts at catalog tests (homework attempts aren't part of self-study). */
@@ -137,7 +138,8 @@ export function SoloOverview({ userId }: { userId: string }) {
               Усі тести <ArrowRight size={13} />
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Next to the sidebar and the right column, two cards per row is what fits. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {next.map((t) => (
               <TestCard key={t.id} test={t} />
             ))}

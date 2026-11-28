@@ -10,6 +10,7 @@ import { QueryProvider } from "@/components/QueryProvider";
 import { Toaster } from "@/components/ui/toaster";
 import { SiteIntro } from "@/components/SiteIntro";
 import { VisualViewportVars } from "@/components/VisualViewportVars";
+import { SiteWinter } from "@/components/advent/SiteWinter";
 
 /** One round geometric family for text and headings (same as the landing). */
 const onest = Onest({
@@ -150,6 +151,7 @@ export default function RootLayout({
                 <SiteIntro />
                 <HeaderProvider>{children}</HeaderProvider>
                 <Toaster />
+                <SiteWinter />
               </ExamGuardProvider>
             </AuthProvider>
           </ThemeProvider>

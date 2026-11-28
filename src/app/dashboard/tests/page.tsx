@@ -21,6 +21,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SearchInput } from "@/components/ui/search-input";
 import { FileText } from "lucide-react";
 import { TestRow, bestByTest } from "@/components/tests/TestCard";
+import { GIFT_GROUP, GIFT_TEST_IDS, getGiftTests } from "@/lib/advent-gift";
 
 type Filter = "all" | "nmt" | "teachers";
 
@@ -44,6 +45,7 @@ interface Query {
  * into formlq's own NMT imitations and real NMT sessions by year (read from the title).
  */
 function groupOf(t: TestDoc): string {
+  if (GIFT_TEST_IDS.has(t.id)) return GIFT_GROUP;
   if (t.personal) return "Від викладачів";
   if (/імітац/i.test(t.title)) return "Імітації НМТ від formlq";
   const year = t.title.match(/20\d\d/)?.[0];
@@ -101,8 +103,20 @@ export default function TestsPage() {
   });
   const best = useMemo(() => bestByTest(results), [results]);
 
-  // Newest published first — platform and teachers' tests alike (getPublishedTests sorts).
-  const ordered = tests;
+  // The advent gift: unpublished imitations, listed only for people who solved the calendar.
+  const hasGift = !!userProfile?.adventGiftAt;
+  const { data: giftTests = [] } = useQuery({
+    queryKey: ["adventGiftTests"],
+    queryFn: getGiftTests,
+    enabled: hasGift && !teacher,
+    staleTime: STALE.long,
+  });
+
+  // The gift first (as its own group), then the catalog newest first (getPublishedTests sorts).
+  const ordered = useMemo(
+    () => [...giftTests, ...tests.filter((t) => !GIFT_TEST_IDS.has(t.id))],
+    [giftTests, tests],
+  );
   const teacherCount = ordered.filter((t) => t.personal).length;
 
   const q: Query = { text: search.trim().toLowerCase(), source: filter, grade, subject };

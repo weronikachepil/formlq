@@ -97,21 +97,22 @@ export function TestCard({ test, best, query = "" }: { test: TestDoc; best?: Tes
         </div>
       )}
 
-      <div className="mt-auto flex items-center gap-3 pt-1 text-xs text-muted-foreground tabular-nums">
-        <span className="inline-flex items-center gap-1">
-          <FileText size={12} /> {pluralize(test.questions?.length ?? 0, PLURAL.question)}
+      {/* Facts wrap as whole items on narrow cards; «Почати» stays inside the card on the right. */}
+      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-1 text-xs text-muted-foreground tabular-nums">
+        <span className="inline-flex items-center gap-1 whitespace-nowrap">
+          <FileText size={12} className="shrink-0" /> {pluralize(test.questions?.length ?? 0, PLURAL.question)}
         </span>
         {test.durationMinutes && (
-          <span className="inline-flex items-center gap-1">
-            <Clock size={12} /> {test.durationMinutes} хв
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+            <Clock size={12} className="shrink-0" /> {test.durationMinutes} хв
           </span>
         )}
         {!!test.takers && (
-          <span className="inline-flex items-center gap-1" title="Скільки людей уже пройшли цей тест">
-            <Users size={12} /> {pluralize(test.takers, ["людина", "людини", "людей"])}
+          <span className="inline-flex items-center gap-1 whitespace-nowrap" title="Скільки людей уже пройшли цей тест">
+            <Users size={12} className="shrink-0" /> {pluralize(test.takers, ["людина", "людини", "людей"])}
           </span>
         )}
-        <span className="ml-auto inline-flex items-center gap-1 font-semibold text-foreground/80 group-hover:text-foreground">
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1 whitespace-nowrap font-semibold text-foreground/80 group-hover:text-foreground">
           {best ? "Ще раз" : "Почати"}
           <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
         </span>

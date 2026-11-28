@@ -16,6 +16,7 @@ import { useHomeworkBackfill } from "@/hooks/useHomeworkBackfill";
 import { SpinnerScreen } from "@/components/ui/spinner";
 import { cn, withNext } from "@/lib/utils";
 import type { UserProfile } from "@/types";
+import { SeasonGarland } from "@/components/advent/SiteWinter";
 
 const ReferenceDrawer = dynamic(
   () => import("@/components/ReferenceDrawer").then((m) => ({ default: m.ReferenceDrawer })),
@@ -107,6 +108,7 @@ export function AppShell({
               : "border-b border-transparent",
           )}
         >
+          <SeasonGarland className="app-garland" />
           <MobileNav onReportBug={() => setReporting(true)} />
           {/* Logo here only on tablets; on large screens it sits at the top of the sidebar. */}
           {/* Wrapper carries the visibility: `.mb-logo` sets its own display. */}

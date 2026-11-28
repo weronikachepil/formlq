@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { BoardMock } from "./BoardMock";
 import { ArrowIcon } from "./icons";
+import { SeasonGarland } from "../advent/SiteWinter";
 
 const FACTS = ["Тести для 5–11 класів і НМТ", "Домашні від викладача", "Дошка для уроків"];
 
 export function Hero() {
   return (
     <header className="hero" id="top">
+      <SeasonGarland className="hero-garland" />
       <div className="wrap hero-grid">
         <div>
           <p className="eyebrow">Для учнів і викладачів</p>
