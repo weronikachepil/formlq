@@ -855,3 +855,11 @@
 @media (max-width: 480px) {
   .landing .lg-grid { --c: 32px; font-size: 12px; }
 }
+
+/* «Логічні справи» get a near-full-screen dialog: grid on the left, clues and answer on the right. */
+.landing .adv-dialog.is-wide { width: min(1200px, calc(100% - 32px)); }
+.landing .lg-side { display: grid; gap: 16px; align-content: start; }
+.landing .lg-side .lg-answer, .landing .lg-side .result { margin-top: 0; }
+@media (min-width: 900px) {
+  .landing .adv-dialog.is-wide .lg-body { grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: start; }
+}

@@ -475,10 +475,10 @@ function LogicCaseView({ k, solvedBefore, onSolved, onNext }: {
           </div>
           <p className="lg-help">Торкайся клітинок: порожньо → ✗ → ✓.</p>
         </div>
+        <div className="lg-side">
         <ol className="lg-clues">
           {c.clues.map((cl) => <li key={cl.text}>{cl.text}</li>)}
         </ol>
-      </div>
 
       {ok ? (
         <div className="result ok" role="status">
@@ -507,6 +507,8 @@ function LogicCaseView({ k, solvedBefore, onSolved, onNext }: {
           {msg && <p className="err" role="alert">{msg}</p>}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

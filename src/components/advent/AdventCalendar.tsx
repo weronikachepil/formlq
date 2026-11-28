@@ -551,7 +551,7 @@ function BonusDialog({ b, state, onWin, onClose }: {
   }, []);
 
   return (
-    <dialog ref={ref} className="adv-dialog is-game" aria-labelledby="adv-bonus-title"
+    <dialog ref={ref} className={`adv-dialog is-game${b.id === "logic" ? " is-wide" : ""}`} aria-labelledby="adv-bonus-title"
       onClose={onClose} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="dlg-body">
         <header>
