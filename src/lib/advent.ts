@@ -82,12 +82,14 @@ export type AdventDay = ProblemDay | GameDay;
  * page has something to play before 1 December); each next one unlocks after `unlockAt`
  * solved windows.
  */
-export type BonusId = "sudoku" | "sleigh" | "lights" | "reindeer";
+export type BonusId = "sudoku" | "sleigh" | "lights" | "reindeer" | "logic";
 export interface Bonus { id: BonusId; title: string; text: string; unlockAt: number; icon: string }
 
 export const BONUS: Bonus[] = [
   { id: "lights", title: "Вікна у Святвечір", icon: "candle", unlockAt: 0,
     text: "Засвіти всі вікна будинку. Торкання перемикає вікно і його сусідів." },
+  { id: "logic", title: "Логічні справи", icon: "candle", unlockAt: 2,
+    text: "Шість різдвяних детективів: відмічай у сітці, хто, з чим і де був, — і назви винного. Розгадується лише логікою." },
   { id: "sudoku", title: "Сніжне судоку", icon: "flake", unlockAt: 4,
     text: "Судоку 4×4: у кожному рядку, стовпці й квадраті 2×2 — числа від 1 до 4." },
   { id: "sleigh", title: "Сани Миколая", icon: "gift", unlockAt: 8,

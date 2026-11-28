@@ -373,7 +373,7 @@
 /* ---------- «Ігротека» ---------- */
 .landing .advent .adv-arcade-sec { padding: 56px 0 80px; }
 .landing .adv-sub { margin: 0; font-size: 15px; color: var(--muted); }
-.landing .adv-arcade { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; list-style: none; margin: 24px 0 0; padding: 0; }
+.landing .adv-arcade { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; list-style: none; margin: 24px 0 0; padding: 0; }
 .landing .arc-card {
   display: flex; flex-direction: column; gap: 14px; width: 100%; height: 100%; min-height: 168px; padding: 18px; text-align: left; cursor: pointer;
   border-radius: var(--r-card); border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; box-shadow: var(--shadow);
@@ -804,4 +804,53 @@
 }
 @media (max-width: 420px) {
   .landing .nav ul.adv-nav-links li.home a { padding: 10px 8px; }
+}
+
+/* ---------- «Логічні справи» (deduction grid) ---------- */
+.landing .lg-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.landing .lg-tabs button { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font: 600 14px var(--body); color: var(--ink); cursor: pointer; }
+.landing .lg-tabs button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.landing .lg-case h4 { margin: 0; font: 700 19px/1.25 var(--head); }
+.landing .lg-story { margin: 6px 0 14px; color: var(--muted); font-size: 15px; }
+.landing .lg-body { display: grid; gap: 16px; }
+.landing .lg-grid-wrap { overflow-x: auto; }
+.landing .lg-cell { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 8px; border: 1px solid rgba(20,38,42,.16); background: #fff; cursor: pointer; font: 800 16px/1 var(--body); }
+.landing .lg-cell.m1 { color: #c2410c; background: #fff5f0; }
+.landing .lg-cell.m2 { color: #2f7d76; background: var(--mint-soft); border-color: var(--mint); }
+.landing .lg-cell:focus-visible { outline: 3px solid var(--lav); outline-offset: 1px; }
+.landing .lg-help { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.landing .lg-clues { margin: 0; padding: 12px 14px 12px 32px; border-radius: var(--r-in); background: #fdf3d3; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; }
+.landing .lg-answer { display: grid; gap: 10px; margin-top: 16px; }
+.landing .lg-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.landing .lg-pick .lbl { width: 44px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.landing .lg-pick button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font: 600 14px var(--body); color: var(--ink); cursor: pointer; }
+.landing .lg-pick button.on { border: 2px solid var(--ink); background: #fdf3d3; }
+.landing .lg-answer .btn { justify-self: start; min-height: 46px; border-radius: var(--r-in); }
+.landing .lg-answer .btn:disabled { opacity: .45; }
+.landing .lg-answer .err { margin: 0; font-size: 14px; font-weight: 600; color: #c2410c; }
+.landing .logic .result { margin-top: 16px; padding: 16px 18px; border-radius: var(--r-in); background: var(--mint-soft); border: 1px solid var(--mint); }
+.landing .logic .result p { margin: 0; }
+.landing .logic .result .res-title { font-weight: 800; }
+.landing .logic .result .res-sol { margin-top: 6px; }
+.landing .lg-clues { list-style: decimal; }
+.landing .lg-suspects { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0 0 14px; padding: 0; }
+.landing .lg-suspects li { padding: 6px 10px; border-radius: 8px; background: var(--soft); font-size: 13px; font-weight: 600; }
+
+/* Deduction grid on CSS grid: label | n items | gap | n places; below, places × items. */
+.landing .lg-grid {
+  --c: 38px;
+  display: grid; gap: 3px; align-items: center; width: max-content; font-size: 13px;
+  grid-template-columns: max-content repeat(var(--n), var(--c)) 10px repeat(var(--n), var(--c));
+}
+.landing .lg-corner, .landing .lg-gap { display: block; }
+.landing .lg-h { display: flex; align-items: flex-end; justify-content: center; height: 100px; padding-bottom: 6px; font-weight: 600; color: var(--ink-2); }
+.landing .lg-h > span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
+.landing .lg-h.place { color: #2f7d76; }
+.landing .lg-l { padding-right: 10px; text-align: right; white-space: nowrap; font-weight: 600; color: var(--ink-2); }
+.landing .lg-l.place { color: #2f7d76; }
+.landing .lg-l.first, .landing .lg-first { margin-top: 10px; }
+.landing .lg-first { display: block; }
+.landing .lg-grid .lg-cell { width: var(--c); height: var(--c); }
+@media (max-width: 480px) {
+  .landing .lg-grid { --c: 32px; font-size: 12px; }
 }

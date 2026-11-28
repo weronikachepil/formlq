@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { BonusId } from "@/lib/advent";
+import { LOGIC_CASES } from "@/lib/advent-logic";
 
 /**
  * «Ігротека»: bonus games that sit outside the 24 windows. Each one calls `onWin(note)`
@@ -11,6 +12,7 @@ export function BonusGame({ id, onWin }: { id: BonusId; onWin: (note: string) =>
   if (id === "sudoku") return <SudokuGame onWin={onWin} />;
   if (id === "sleigh") return <SleighGame onWin={onWin} />;
   if (id === "lights") return <LightsGame onWin={onWin} />;
+  if (id === "logic") return <LogicGame onWin={onWin} />;
   return <ReindeerGame onWin={onWin} />;
 }
 
@@ -369,6 +371,140 @@ function ReindeerGame({ onWin }: { onWin: (note: string) => void }) {
         <button type="button" className="link" disabled={used === 0 || reached} onClick={() => setTrail([R.start])}>Спочатку</button>
       </div>
       {out && <p className="game-tip" role="status">Ходи скінчилися. Зроби крок назад або почни маршрут спочатку.</p>}
+    </div>
+  );
+}
+
+/* ---------- «Логічні справи»: a deduction grid (who — what — where) ---------- */
+
+type Mark = 0 | 1 | 2; // empty, ✗, ✓
+const MARK = ["", "✗", "✓"];
+
+function LogicGame({ onWin }: { onWin: (note: string) => void }) {
+  const [k, setK] = useState(0);
+  const [solved, setSolved] = useState<boolean[]>(() => LOGIC_CASES.map(() => false));
+  const c = LOGIC_CASES[k];
+  const later = useLater();
+
+  function done() {
+    const next = solved.map((v, i) => (i === k ? true : v));
+    setSolved(next);
+    if (next.every(Boolean)) later(() => onWin(`Розкрито всі ${LOGIC_CASES.length} ${plural(LOGIC_CASES.length, "справу", "справи", "справ")}`), 1500);
+  }
+
+  return (
+    <div className="game logic">
+      <div className="lg-tabs" role="tablist" aria-label="Справи">
+        {LOGIC_CASES.map((x, i) => (
+          <button key={x.id} type="button" role="tab" aria-selected={i === k} className={i === k ? "on" : ""} onClick={() => setK(i)}>
+            Справа {i + 1}{solved[i] ? " ✓" : ""}
+          </button>
+        ))}
+      </div>
+      <LogicCaseView key={c.id} k={k} solvedBefore={solved[k]} onSolved={done}
+        onNext={k + 1 < LOGIC_CASES.length ? () => setK(k + 1) : undefined} />
+    </div>
+  );
+}
+
+function LogicCaseView({ k, solvedBefore, onSolved, onNext }: {
+  k: number; solvedBefore: boolean; onSolved: () => void; onNext?: () => void;
+}) {
+  const c = LOGIC_CASES[k];
+  const n = c.who.length;
+  const [marks, setMarks] = useState<Record<string, Mark>>({});
+  const [ans, setAns] = useState<{ who: number | null; what: number | null; where: number | null }>({ who: null, what: null, where: null });
+  const [msg, setMsg] = useState<string | null>(null);
+  const [ok, setOk] = useState(solvedBefore);
+
+  const cell = (key: string) => {
+    const m = marks[key] ?? 0;
+    return (
+      <button type="button" className={`lg-cell m${m}`} aria-label={MARK[m] || "порожньо"}
+        onClick={() => setMarks((prev) => ({ ...prev, [key]: (((prev[key] ?? 0) + 1) % 3) as Mark }))}>
+        {MARK[m]}
+      </button>
+    );
+  };
+  const short = (s: string) => s.replace(/\s*\(.*\)$/, "");
+
+  function check() {
+    if (ans.who === null || ans.what === null || ans.where === null) return;
+    const wrong: string[] = [];
+    if (ans.who !== c.culprit) wrong.push("хто");
+    if (ans.what !== c.item[c.culprit]) wrong.push("чим");
+    if (ans.where !== c.place[c.culprit]) wrong.push("де");
+    if (wrong.length) { setMsg(`Не сходиться: неправильно «${wrong.join("», «")}». Перевір сітку з підказками.`); return; }
+    setMsg(null); setOk(true); onSolved();
+  }
+
+  return (
+    <div className="lg-case">
+      <h4>{c.title}</h4>
+      <p className="lg-story">{c.story}</p>
+      {/* Facts the clues rely on (favourite numbers, height) — the grid shows short names only. */}
+      {c.who.some((w) => w.includes("(")) && (
+        <ul className="lg-suspects">
+          {c.who.map((w) => <li key={w}>{w}</li>)}
+        </ul>
+      )}
+      <div className="lg-body">
+        <div className="lg-grid-wrap">
+          {/* A CSS grid with fixed columns, so every header sits exactly over its cells:
+              label | n items | gap | n places, then the places × items block below. */}
+          <div className="lg-grid" style={{ ["--n" as string]: n }}>
+            <span className="lg-corner" />
+            {c.what.map((x) => <span key={x} className="lg-h"><span>{x}</span></span>)}
+            <span className="lg-gap" />
+            {c.where.map((x) => <span key={x} className="lg-h place"><span>{x}</span></span>)}
+            {c.who.map((w, s) => (
+              <Fragment key={w}>
+                <span className="lg-l">{short(w)}</span>
+                {c.what.map((_, i) => <Fragment key={i}>{cell(`si:${s}:${i}`)}</Fragment>)}
+                <span className="lg-gap" />
+                {c.where.map((_, p) => <Fragment key={p}>{cell(`sp:${s}:${p}`)}</Fragment>)}
+              </Fragment>
+            ))}
+            {c.where.map((pl, p) => (
+              <Fragment key={pl}>
+                <span className={`lg-l place${p === 0 ? " first" : ""}`}>{pl}</span>
+                {c.what.map((_, i) => <span key={i} className={p === 0 ? "lg-first" : ""}>{cell(`pi:${p}:${i}`)}</span>)}
+                <span style={{ gridColumn: `span ${n + 1}` }} />
+              </Fragment>
+            ))}
+          </div>
+          <p className="lg-help">Торкайся клітинок: порожньо → ✗ → ✓.</p>
+        </div>
+        <ol className="lg-clues">
+          {c.clues.map((cl) => <li key={cl.text}>{cl.text}</li>)}
+        </ol>
+      </div>
+
+      {ok ? (
+        <div className="result ok" role="status">
+          <p className="res-title">Справу розкрито!</p>
+          <p className="res-sol">{c.ending}</p>
+          {onNext && <button type="button" className="link" onClick={onNext}>Наступна справа →</button>}
+        </div>
+      ) : (
+        <div className="lg-answer">
+          {([["who", "Хто", c.who], ["what", "Чим", c.what], ["where", "Де", c.where]] as const).map(([key, label, list]) => (
+            <div key={key} className="lg-pick" role="radiogroup" aria-label={label}>
+              <span className="lbl">{label}</span>
+              {list.map((x, i) => (
+                <button key={x} type="button" role="radio" aria-checked={ans[key] === i}
+                  className={ans[key] === i ? "on" : ""} onClick={() => { setAns({ ...ans, [key]: i }); setMsg(null); }}>
+                  {key === "who" ? short(x) : x}
+                </button>
+              ))}
+            </div>
+          ))}
+          <button type="button" className="btn" disabled={ans.who === null || ans.what === null || ans.where === null} onClick={check}>
+            Розкрити справу
+          </button>
+          {msg && <p className="err" role="alert">{msg}</p>}
+        </div>
+      )}
     </div>
   );
 }
