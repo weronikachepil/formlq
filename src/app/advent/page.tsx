@@ -24,6 +24,15 @@ export default function AdventPage() {
       <div className="nav-wrap">
         <nav className="wrap nav">
           <Link className="logo" href="/">formlq</Link>
+          {/* The landing's menu, so visitors who came from it can go back to any section. */}
+          <ul className="adv-nav-links">
+            <li className="home"><Link href="/">← Головна</Link></li>
+            <li><Link href="/#tests">Тести</Link></li>
+            <li><Link href="/#board">Дошка</Link></li>
+            <li><Link href="/#how">Як це працює</Link></li>
+            <li><Link href="/#faq">Питання</Link></li>
+            <li><Link href="/advent" aria-current="page" className="current">Адвент 🎄</Link></li>
+          </ul>
           <AdventNavActions />
         </nav>
       </div>

@@ -785,3 +785,17 @@
 .landing .adv-scene .k { margin-bottom: 4px; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #8a6a1f; }
 .landing .adv-scene.reveal { margin-top: 14px; background: var(--lav-soft); }
 .landing .adv-scene.reveal .k { color: #5b4bb5; }
+
+/* /advent nav: the landing's menu (desktop) or a single «← Головна» (small screens) */
+.landing .nav ul.adv-nav-links .home { display: none; }
+.landing .nav ul.adv-nav-links a.current { color: var(--ink); }
+.landing .adv-nav-links + .adv-nav-actions { margin-left: 0; }
+@media (max-width: 1000px) {
+  .landing .nav ul.adv-nav-links { display: flex; margin-left: auto; }
+  .landing .nav ul.adv-nav-links li { display: none; }
+  .landing .nav ul.adv-nav-links li.home { display: block; }
+  .landing .adv-nav-links + .adv-nav-actions { margin-left: 0; }
+}
+@media (max-width: 420px) {
+  .landing .nav ul.adv-nav-links li.home a { padding: 10px 8px; }
+}
