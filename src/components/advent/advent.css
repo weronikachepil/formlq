@@ -821,8 +821,9 @@
 .landing .lg-help { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
 .landing .lg-clues { margin: 0; padding: 12px 14px 12px 32px; border-radius: var(--r-in); background: #fdf3d3; display: grid; gap: 6px; font-size: 14px; line-height: 1.45; }
 .landing .lg-answer { display: grid; gap: 10px; margin-top: 16px; }
-.landing .lg-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.landing .lg-pick .lbl { width: 44px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.landing .lg-pick { display: grid; grid-template-columns: 52px 1fr; align-items: start; gap: 8px; }
+.landing .lg-pick .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.landing .lg-pick .lbl { display: flex; align-items: center; min-height: 40px; font-size: 13px; font-weight: 700; color: var(--muted); }
 .landing .lg-pick button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font: 600 14px var(--body); color: var(--ink); cursor: pointer; }
 .landing .lg-pick button.on { border: 2px solid var(--ink); background: #fdf3d3; }
 .landing .lg-answer .btn { justify-self: start; min-height: 46px; border-radius: var(--r-in); }

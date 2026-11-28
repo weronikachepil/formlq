@@ -491,12 +491,14 @@ function LogicCaseView({ k, solvedBefore, onSolved, onNext }: {
           {([["who", "Хто", c.who], ["what", "Чим", c.what], ["where", "Де", c.where]] as const).map(([key, label, list]) => (
             <div key={key} className="lg-pick" role="radiogroup" aria-label={label}>
               <span className="lbl">{label}</span>
-              {list.map((x, i) => (
-                <button key={x} type="button" role="radio" aria-checked={ans[key] === i}
-                  className={ans[key] === i ? "on" : ""} onClick={() => { setAns({ ...ans, [key]: i }); setMsg(null); }}>
-                  {key === "who" ? short(x) : x}
-                </button>
-              ))}
+              <span className="opts">
+                {list.map((x, i) => (
+                  <button key={x} type="button" role="radio" aria-checked={ans[key] === i}
+                    className={ans[key] === i ? "on" : ""} onClick={() => { setAns({ ...ans, [key]: i }); setMsg(null); }}>
+                    {key === "who" ? short(x) : x}
+                  </button>
+                ))}
+              </span>
             </div>
           ))}
           <button type="button" className="btn" disabled={ans.who === null || ans.what === null || ans.where === null} onClick={check}>
